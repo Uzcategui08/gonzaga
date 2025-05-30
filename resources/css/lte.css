@@ -1,0 +1,138 @@
+/* --------------------------------------------------- */
+/* 1. SOBRESCRITURA DE VARIABLES (si usas CSS puro)    */
+/* --------------------------------------------------- */
+:root {
+  --primary: #8e44ad;       /* Morado */
+  --secondary: #95a5a6;     /* Gris plata */
+  --success: #00bc8c;       /* Verde esmeralda */
+  --info: #17a2b8;          /* Cian */
+  --warning: #f39c12;       /* Naranja */
+  --danger: #e74c3c;        /* Rojo */
+  --light: #f8f9fa;         /* Gris claro */
+  --dark: #b86e29;          /* Gris oscuro */
+}
+.sidebar-dark-primary {
+  background-color: var(--primary) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+/* --------------------------------------------------- */
+/* 2. MODIFICACIONES GENERALES                         */
+/* --------------------------------------------------- */
+/* Cambiar el color de fondo del body */
+body {
+  background-color: #f5f5f5 !important;
+}
+
+/* --------------------------------------------------- */
+/* 3. BARRA LATERAL (SIDEBAR)                         */
+/* --------------------------------------------------- */
+/* Fondo de la sidebar */
+.main-sidebar {
+  background-color: #2c3e50 !important;
+}
+
+/* Color de los íconos y texto en sidebar */
+.nav-sidebar .nav-link p,
+.nav-sidebar .nav-link i {
+  color: #ecf0f1 !important;
+}
+
+/* Hover en items de la sidebar */
+.nav-sidebar .nav-item:hover > .nav-link {
+  background-color: #34495e !important;
+}
+
+/* --------------------------------------------------- */
+/* 4. BARRA SUPERIOR (NAVBAR)                          */
+/* --------------------------------------------------- */
+/* Color de la barra superior */
+.main-header .navbar {
+  background-color: var(--primary) !important;
+}
+
+/* Color del texto en la barra superior */
+.main-header .navbar .nav-link {
+  color: white !important;
+}
+
+/* --------------------------------------------------- */
+/* 5. CONTENIDO PRINCIPAL                             */
+/* --------------------------------------------------- */
+/* Estilo para las cards */
+.card {
+  border-radius: 10px !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Color para los títulos de las cards */
+.card-header {
+  background-color: var(--primary) !important;
+  color: white !important;
+}
+
+/* --------------------------------------------------- */
+/* 6. BOTONES                                         */
+/* --------------------------------------------------- */
+.btn-primary {
+  background-color: var(--primary) !important;
+  border-color: darken(#8e44ad, 5%) !important;
+}
+
+.btn-primary:hover {
+  background-color: darken(#8e44ad, 10%) !important;
+}
+
+/* --------------------------------------------------- */
+/* 7. TABLAS                                          */
+/* --------------------------------------------------- */
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead th {
+  background-color: var(--primary) !important;
+  color: white !important;
+}
+
+/* --------------------------------------------------- */
+/* 8. FORMULARIOS                                     */
+/* --------------------------------------------------- */
+.form-control:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 0.2rem rgba(142, 68, 173, 0.25) !important;
+}
+
+/* --------------------------------------------------- */
+/* 9. PERSONALIZACIONES ESPECÍFICAS                   */
+/* --------------------------------------------------- */
+/* Logo en la sidebar */
+.brand-link {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Texto del logo */
+.brand-text {
+  font-weight: 300 !important;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* --------------------------------------------------- */
+/* 10. EFECTOS Y TRANSICIONES                         */
+/* --------------------------------------------------- */
+.nav-link {
+  transition: all 0.3s ease-in-out !important;
+}
+
+/* --------------------------------------------------- */
+/* MEDIA QUERIES PARA RESPONSIVE                       */
+/* --------------------------------------------------- */
+@media (max-width: 768px) {
+  .main-sidebar {
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1) !important;
+  }
+}
