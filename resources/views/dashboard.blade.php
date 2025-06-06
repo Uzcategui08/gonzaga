@@ -17,6 +17,25 @@
 
 <section class="content">
     <div class="container-fluid">
+        @if(auth()->check())
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="mb-0">
+                            @if(auth()->user()->hasRole('profesor'))
+                                ¡Hola Profesor!
+                            @elseif(auth()->user()->hasRole('admin'))
+                                ¡Hola Administrador!
+                            @elseif(auth()->user()->hasRole('coordinador'))
+                                ¡Hola Coordinador!
+                            @else
+                                ¡Bienvenido!
+                            @endif
+                        </h4>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <div class="row">
             <div class="col-lg-3 col-6">

@@ -1,0 +1,116 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\Pase;
+use App\Models\Estudiante;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class PaseController extends Controller
+{
+    public function __construct()
+    {
+        // No necesitamos middleware aquí, se maneja en las rutas
+    }
+
+    public function index()
+    {
+        $pases = Pase::with(['estudiante', 'usuario'])
+            ->orderBy('fecha', 'desc')
+            ->get();
+
+        return view('pases.index', compact('pases'));
+    }
+
+    public function create()
+    {
+        $estudiantes = Estudiante::all();
+        return view('pases.create', compact('estudiantes'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'estudiante_id' => 'required|exists:estudiantes,id',
+            'motivo' => 'required|string',
+            'observaciones' => 'nullable|string',
+            'fecha' => 'required|date',
+            'hora_llegada' => 'required|date_format:H:i',
+            'aprobado' => 'boolean'
+        ]);
+
+        $hora_llegada = strtotime($validated['hora_llegada']);
+        $hora_inicio_clases = strtotime(config('app.hora_inicio_clases'));
+        
+        if ($hora_llegada <= $hora_inicio_clases) {
+            return redirect()->back()->withErrors([
+                'hora_llegada' => 'La hora de llegada debe ser después de la hora de inicio de clases'
+            ])->withInput();
+        }
+
+        Pase::create([
+            'estudiante_id' => $validated['estudiante_id'],
+            'user_id' => Auth::id(),
+            'motivo' => $validated['motivo'],
+            'observaciones' => $validated['observaciones'],
+            'fecha' => $validated['fecha'],
+            'hora_llegada' => $validated['hora_llegada'],
+            'aprobado' => $validated['aprobado'] ?? false
+        ]);
+
+        return redirect()->route('pases.index')
+            ->with('success', 'Pase creado exitosamente');
+    }
+
+    public function show(Pase $pase)
+    {
+        return view('pases.show', compact('pase'));
+    }
+
+    public function edit(Pase $pase)
+    {
+        return view('pases.edit', compact('pase'));
+    }
+
+    public function update(Request $request, Pase $pase)
+    {
+        $validated = $request->validate([
+            'motivo' => 'nullable|string',
+            'observaciones' => 'nullable|string',
+            'fecha' => 'nullable|date',
+            'hora_llegada' => 'nullable|date_format:H:i',
+            'aprobado' => 'nullable|boolean'
+        ]);
+
+        if (isset($validated['hora_llegada'])) {
+            $hora_llegada = strtotime($validated['hora_llegada']);
+            $hora_inicio_clases = strtotime(config('app.hora_inicio_clases'));
+            
+            if ($hora_llegada <= $hora_inicio_clases) {
+                return redirect()->back()->withErrors([
+                    'hora_llegada' => 'La hora de llegada debe ser después de la hora de inicio de clases'
+                ])->withInput();
+            }
+        }
+
+        $pase->update([
+            'motivo' => $validated['motivo'] ?? $pase->motivo,
+            'observaciones' => $validated['observaciones'] ?? $pase->observaciones,
+            'fecha' => $validated['fecha'] ?? $pase->fecha,
+            'hora_llegada' => $validated['hora_llegada'] ?? $pase->hora_llegada,
+            'aprobado' => $request->has('aprobado') ? (bool)$validated['aprobado'] : $pase->aprobado
+        ]);
+
+        return redirect()->route('pases.index')
+            ->with('success', 'Pase actualizado exitosamente');
+    }
+
+    public function destroy(Pase $pase)
+    {
+        $pase->delete();
+        return redirect()->route('pases.index')
+            ->with('success', 'Pase eliminado exitosamente');
+    }
+}

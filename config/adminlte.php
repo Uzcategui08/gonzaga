@@ -51,6 +51,23 @@ return [
         'allowed' => true,
     ],
 
+    'auth' => [
+        'guards' => [
+            'web' => [
+                'driver' => 'session',
+                'provider' => 'users',
+            ],
+        ],
+    ],
+
+    'menu' => [
+        'options' => [
+            'can' => function ($permission) {
+                return auth()->user()->can($permission);
+            },
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Admin Panel Logo
@@ -318,37 +335,103 @@ return [
         [
             'text' => 'Panel de control',
             'url' => 'dashboard',
-
+            'icon' => 'fas fa-home',
         ],
         [
-            'text' => 'Asistencia',
-            'url' => 'admin/blog',
-
+            'text' => 'Estructura Académica',
+            'icon' => 'fas fa-university',
+            'submenu' => [
+                [
+                    'text' => 'Grados',
+                    'url' => 'grados',
+                    'icon' => 'fas fa-graduation-cap'
+                ],
+                [
+                    'text' => 'Secciones',
+                    'url' => 'secciones',
+                    'icon' => 'fas fa-building'
+                ],
+                [
+                    'text' => 'Materias',
+                    'url' => 'materias',
+                    'icon' => 'fas fa-book'
+                ],
+                /*
+                [
+                    'text' => 'Grado-Materia',
+                    'url' => 'grado-materia',
+                    'icon' => 'fas fa-book'
+                ]
+                    */
+            ]
         ],
         [
-            'text' => 'Alumnos',
-            'url' => 'admin/blog',
-
+            'text' => 'Personal',
+            'icon' => 'fas fa-users',
+            'submenu' => [
+                [
+                    'text' => 'Estudiantes',
+                    'url' => 'estudiantes',
+                    'icon' => 'fas fa-user-graduate'
+                ],
+                [
+                    'text' => 'Profesores',
+                    'url' => 'profesores',
+                    'icon' => 'fas fa-chalkboard-teacher'
+                ]
+            ]
         ],
         [
-            'text' => 'Materias',
-            'url' => 'admin/blog',
-
+            'text' => 'Horarios y Asignaciones',
+            'icon' => 'fas fa-calendar',
+            'submenu' => [
+                [
+                    'text' => 'Asignaciones',
+                    'url' => 'asignaciones',
+                    'icon' => 'fas fa-calendar-check'
+                ],
+                [
+                    'text' => 'Horarios',
+                    'url' => 'horarios',
+                    'icon' => 'fas fa-clock'
+                ],
+                [
+                    'text' => 'Horario Profesor',
+                    'url' => 'horario-profesor',
+                    'icon' => 'fas fa-calendar-alt'
+                ],
+                [
+                    'text' => 'Reporte Asistencia',
+                    'url' => 'asistencias/reporte',
+                    'icon' => 'fas fa-file-alt'
+                ]
+            ]
         ],
         [
             'text' => 'Justificativos',
-            'url' => 'admin/blog',
-
+            'icon' => 'fas fa-file-medical',
+            'submenu' => [
+                [
+                    'text' => 'Ver Justificativos',
+                    'url' => 'justificativos/profesor',
+                    'icon' => 'fas fa-eye',
+                ],
+                [
+                    'text' => 'Administrar Justificativos',
+                    'url' => 'justificativos',
+                    'icon' => 'fas fa-cogs',
+                ]
+            ]
         ],
         [
             'text' => 'Pases de entrada',
-            'url' => 'admin/blog',
-
+            'url' => 'pases',
+            'icon' => 'fas fa-ticket-alt'
         ],
         [
             'text' => 'Limpieza',
-            'url' => 'admin/blog',
-
+            'url' => 'admin/limpieza',
+            'icon' => 'fas fa-broom'
         ],
         ['header' => 'account_settings'],
         [
@@ -376,7 +459,6 @@ return [
     */
 
     'filters' => [
-        JeroenNoten\LaravelAdminLte\Menu\Filters\GateFilter::class,
         JeroenNoten\LaravelAdminLte\Menu\Filters\HrefFilter::class,
         JeroenNoten\LaravelAdminLte\Menu\Filters\SearchFilter::class,
         JeroenNoten\LaravelAdminLte\Menu\Filters\ActiveFilter::class,
@@ -399,7 +481,7 @@ return [
 
     'plugins' => [
         'Datatables' => [
-            'active' => false,
+            'active' => true,
             'files' => [
                 [
                     'type' => 'js',
