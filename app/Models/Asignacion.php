@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
 
 class Asignacion extends Model
 {
@@ -20,6 +21,12 @@ class Asignacion extends Model
         return $this->belongsTo(Profesor::class);
     }
 
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'profesor_id', 'id')
+            ->select('id', 'name', 'email');
+    }
+
     public function materia()
     {
         return $this->belongsTo(Materia::class);
@@ -33,5 +40,10 @@ class Asignacion extends Model
     public function grado()
     {
         return $this->belongsTo(Grado::class, 'seccion_id', 'id')->through(Seccion::class);
+    }
+
+    public function horarios()
+    {
+        return $this->hasMany(Horario::class);
     }
 }

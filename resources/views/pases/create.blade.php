@@ -22,7 +22,7 @@
                 @csrf
                 
                 <div class="row">
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                         <div class="form-group">
                             <label for="estudiante_id">Estudiante <span class="text-danger">*</span></label>
                             <select id="estudiante_id" class="form-control select2" name="estudiante_id" required>
@@ -32,6 +32,15 @@
                                         {{ $estudiante->nombres }} {{ $estudiante->apellidos }}
                                     </option>
                                 @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="horario_id">Horario <span class="text-danger">*</span></label>
+                            <select id="horario_id" class="form-control select2" name="horario_id" required>
+                                <option value="">Seleccionar horario...</option>
                             </select>
                         </div>
                     </div>
@@ -100,6 +109,9 @@
             height: calc(2.25rem + 2px) !important;
             padding: .375rem .75rem !important;
         }
+        #horario_id {
+            display: none;
+        }
         .form-control {
             height: calc(2.25rem + 2px) !important;
             font-size: 1rem;
@@ -124,20 +136,76 @@
 @stop
 
 @section('js')
-<script>
-    $(document).ready(function() {
-        // Inicializar Select2
-        $('.select2').select2({
-            theme: 'bootstrap4',
-            placeholder: 'Seleccionar estudiante...',
-            width: '100%'
-        });
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        $(document).ready(function() {
 
-        // Establecer hora mínima (8:00 AM como ejemplo)
-        $('#hora_llegada').attr('min', '08:00');
-        
-        // Validación de fecha no futura
-        $('#fecha').attr('max', new Date().toISOString().split('T')[0]);
-    });
-</script>
+            $('#estudiante_id').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Seleccionar estudiante...',
+                width: '100%'
+            });
+            $('#horario_id').select2({
+                theme: 'bootstrap4',
+                placeholder: 'Seleccionar horario...',
+                width: '100%'
+            });
+
+            $('#hora_llegada').attr('min', '08:00');
+
+            $('#fecha').attr('max', new Date().toISOString().split('T')[0]);
+            
+            $('#estudiante_id').on('change', function() {
+                const estudianteId = $(this).val();
+                
+                if (estudianteId) {
+                    $.ajax({
+                        url: `/estudiantes/${estudianteId}/horarios`,
+                        method: 'GET',
+                        success: function(response) {
+                            $('#horario_id').empty().append('<option value="">Seleccionar horario...</option>');
+
+                            if (response.horarios && response.horarios.length > 0) {
+                                response.horarios.forEach(horario => {
+                                    $('#horario_id').append(
+                                        $('<option></option>')
+                                            .attr('value', horario.id)
+                                            .text(`${horario.asignacion.materia.nombre} - ${horario.hora_inicio} a ${horario.hora_fin}`)
+                                    );
+                                });
+                                $('#horario_id').show();
+                            } else {
+                                $('#horario_id').append(
+                                    $('<option></option>')
+                                        .attr('value', '')
+                                        .text('No hay horarios disponibles para este estudiante')
+                                );
+                                $('#horario_id').show();
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            $('#horario_id').append(
+                                $('<option></option>')
+                                    .attr('value', '')
+                                    .text('Error al cargar los horarios')
+                            );
+                            $('#horario_id').show();
+                        }
+                    });
+                } else {
+                    $('#horario_id').empty().append('<option value="">Seleccionar horario...</option>');
+                    $('#horario_id').hide();
+                }
+            });
+
+            $('#horario_id').on('change', function() {
+
+            });
+
+            const estudianteSeleccionado = $('#estudiante_id').val();
+            if (estudianteSeleccionado) {
+                $('#estudiante_id').trigger('change');
+            }
+        });
+    </script>
 @stop

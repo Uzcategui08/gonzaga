@@ -17,16 +17,15 @@ class AsignacionController extends Controller
     public function index()
     {
         try {
-            $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])->orderBy('id')->get();
-            
-            if ($asignaciones === null) {
-                $asignaciones = collect([]);
-            }
+            $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
+                ->orderBy('id')
+                ->get();
             
             return view('asignaciones.index', [
                 'asignaciones' => $asignaciones
             ]);
         } catch (\Exception $e) {
+            Log::error('Error en AsignacionController@index: ' . $e->getMessage());
             return view('asignaciones.index')->with('error', 'Error al cargar las asignaciones: ' . $e->getMessage());
         }
     }

@@ -22,6 +22,7 @@
             </h3>
         </div>
 
+        <div class="card-body p-3">
             <div class="table-responsive">
                 <table id="horariosTable" class="table table-hover table-striped datatable">
                     <thead class="thead-light">

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Estudiante;
 use App\Models\Seccion;
+use App\Models\Asignacion;
+use App\Models\Horario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -74,13 +76,9 @@ class EstudianteController extends Controller
                 ->with('success', 'Estudiante creado exitosamente.');
 
         } catch (\Exception $e) {
-            Log::error('Error al crear estudiante:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
             return redirect()->back()
-                ->withInput()
-                ->with('error', 'Error al crear el estudiante: ' . $e->getMessage());
+            ->withInput()
+            ->with('error', 'Error al crear el estudiante: ' . $e->getMessage());
         }
     }
 
@@ -161,4 +159,59 @@ class EstudianteController extends Controller
                 ->with('error', 'Error al eliminar el estudiante: ' . $e->getMessage());
         }
     }
+
+    public function getHorarios(Estudiante $estudiante)
+    {
+        try {
+            $diaActual = now('America/Caracas')->format('l');
+
+            $dias = [
+                'Monday' => 'Lunes',
+                'Tuesday' => 'Martes',
+                'Wednesday' => 'Miércoles',
+                'Thursday' => 'Jueves',
+                'Friday' => 'Viernes',
+                'Saturday' => 'Sábado'
+            ];
+
+            $diaActualEsp = $dias[$diaActual] ?? null;
+            if (!$diaActualEsp) {
+                return response()->json(['error' => 'Día no válido'], 400);
+            }
+
+            if (!$estudiante->seccion_id) {
+                return response()->json([], 400);
+            }
+
+            $horarios = Horario::whereHas('asignacion', function($query) use ($estudiante) {
+                $query->where('seccion_id', $estudiante->seccion_id);
+            })
+            ->where('dia', $diaActualEsp)
+            ->with(['asignacion.materia', 'asignacion.seccion'])
+            ->get();
+
+            $horariosArray = $horarios->map(function($horario) {
+                return [
+                    'id' => $horario->id,
+                    'asignacion_id' => $horario->asignacion_id,
+                    'dia' => $horario->dia,
+                    'hora_inicio' => $horario->hora_inicio,
+                    'hora_fin' => $horario->hora_fin,
+                    'aula' => $horario->aula,
+                    'asignacion' => [
+                        'id' => $horario->asignacion->id,
+                        'materia' => [
+                            'id' => $horario->asignacion->materia->id,
+                            'nombre' => $horario->asignacion->materia->nombre
+                        ]
+                    ]
+                ];
+            });
+
+            return response()->json(['horarios' => $horariosArray]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al obtener los horarios'], 500);
+        }
+    }
+    
 }

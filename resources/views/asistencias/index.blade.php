@@ -16,7 +16,7 @@
                         @csrf
                         
                         <input type="hidden" name="horario_id" value="{{ $horario->id }}">
-                        <input type="hidden" name="fecha" value="{{ now()->format('Y-m-d') }}">
+                        <input type="hidden" name="fecha" value="{{ $fecha }}">
                         <input type="hidden" name="hora_inicio" value="{{ substr($horario->hora_inicio, 0, 5) }}">
 
                         <div class="form-group">
@@ -47,10 +47,22 @@
                                             </tr>
                                         </thead>
                                         <tbody>
+                                            @php
+                                                if(isset($estudiantesConPase) && !empty($estudiantesConPase)) {
+                                                    $pasesActivos = collect($estudiantesConPase);
+                                                } else {
+                                                    $pasesActivos = collect([]);
+                                                }
+                                            @endphp
                                             @foreach($estudiantes as $estudiante)
                                             <tr>
                                                 <td>
                                                     <strong>{{ $estudiante->nombres }} {{ $estudiante->apellidos }}</strong>
+                                                    @if($pasesActivos->contains($estudiante->id))
+                                                        <div class="d-flex align-items-center mt-1">
+                                                            <span class="badge badge-pill py-2 px-3 badge-warning mr-2">Pase Activo</span>
+                                                        </div>
+                                                    @endif
                                                     <br>
                                                     <small class="text-muted">ID: {{ $estudiante->id }}</small>
                                                 </td>
@@ -58,9 +70,9 @@
                                                     <select class="form-control form-control-sm" 
                                                             name="estudiantes[{{ $estudiante->id }}][estado]" 
                                                             required>
-                                                        <option value="P">Presente</option>
-                                                        <option value="A">Ausente</option>
-                                                        <option value="I">Tardío</option>
+                                                        <option value="A">Asistente</option>
+                                                        <option value="I">Inasistente</option>
+                                                        <option value="P">Pase</option>
                                                     </select>
                                                 </td>
                                                 <td>
@@ -188,6 +200,45 @@
 </div>
 @stop
 
+@section('css')
+<style>
+    @import url('https://cdn.jsdelivr.net/npm/sweetalert2@11');
+</style>
+@section('js')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const estudiantesConPase = @json($estudiantesConPase);
+
+        const selectoresEstado = document.querySelectorAll('select[name^="estudiantes"][name$="[estado]"]');
+
+        selectoresEstado.forEach(select => {
+            const estudianteId = select.name.match(/\[(\d+)\]/)[1];
+
+            select.addEventListener('change', function() {
+                const valorSeleccionado = this.value;
+                const tienePase = estudiantesConPase.includes(parseInt(estudianteId));
+
+                if (valorSeleccionado === 'P' && !tienePase) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Este estudiante no tiene un pase activo',
+                        confirmButtonText: 'Aceptar'
+                    }).then(() => {
+                        const opciones = this.options;
+                        for (let i = 0; i < opciones.length; i++) {
+                            if (opciones[i].value !== 'P') {
+                                this.value = opciones[i].value;
+                                break;
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
+@endsection
 @section('css')
 <style>
     .custom-control-input:checked~.custom-control-label::before {

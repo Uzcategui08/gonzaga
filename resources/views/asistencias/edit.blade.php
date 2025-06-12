@@ -70,10 +70,22 @@
                                             </tr>
                                         </thead>
                                         <tbody>
+                                            @php
+                                                if(isset($estudiantesConPase) && !empty($estudiantesConPase)) {
+                                                    $pasesActivos = collect($estudiantesConPase);
+                                                } else {
+                                                    $pasesActivos = collect([]);
+                                                }
+                                            @endphp
                                             @foreach($asistencia->estudiantes as $estudiante)
                                             <tr>
                                                 <td>
                                                     <strong>{{ $estudiante->nombres }} {{ $estudiante->apellidos }}</strong>
+                                                    @if($pasesActivos->contains($estudiante->estudiante_id))
+                                                        <div class="d-flex align-items-center mt-1">
+                                                            <span class="badge badge-pill py-2 px-3 badge-warning mr-2">Pase Activo</span>
+                                                        </div>
+                                                    @endif
                                                     <br>
                                                     <small class="text-muted">ID: {{ $estudiante->estudiante_id }}</small>
                                                 </td>
@@ -81,9 +93,9 @@
                                                     <select class="form-control form-control-sm" 
                                                             name="estudiantes[{{ $estudiante->estudiante_id }}][estado]" 
                                                             required>
-                                                        <option value="P" {{ old('estudiantes.' . $estudiante->estudiante_id . '.estado', $estudiante->estado) === 'P' ? 'selected' : '' }}>Presente</option>
-                                                        <option value="A" {{ old('estudiantes.' . $estudiante->estudiante_id . '.estado', $estudiante->estado) === 'A' ? 'selected' : '' }}>Ausente</option>
-                                                        <option value="I" {{ old('estudiantes.' . $estudiante->estudiante_id . '.estado', $estudiante->estado) === 'I' ? 'selected' : '' }}>Tardío</option>
+                                                        <option value="A" {{ old('estudiantes.' . $estudiante->estudiante_id . '.estado', $estudiante->estado) === 'A' ? 'selected' : '' }}>Asistente</option>
+                                                        <option value="I" {{ old('estudiantes.' . $estudiante->estudiante_id . '.estado', $estudiante->estado) === 'I' ? 'selected' : '' }}>Inasistente</option>
+                                                        <option value="P" {{ old('estudiantes.' . $estudiante->estudiante_id . '.estado', $estudiante->estado) === 'P' ? 'selected' : '' }}>Pase</option>
                                                     </select>
                                                 </td>
                                                 <td>
@@ -203,7 +215,7 @@
                         </div>
 
                         <div class="mt-4 d-flex justify-content-between">
-                            <a href="{{ route('asistencias.reporte', $asistencia->materia_id) }}" class="btn btn-secondary">
+                            <a href="{{ route('dashboard') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left mr-2"></i> Volver
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -218,6 +230,46 @@
 </div>
 @stop
 
+@section('css')
+<style>
+    @import url('https://cdn.jsdelivr.net/npm/sweetalert2@11');
+</style>
+@section('js')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const estudiantesConPase = @json($estudiantesConPase);
+
+        const selectoresEstado = document.querySelectorAll('select[name^="estudiantes"][name$="[estado]"]');
+
+        selectoresEstado.forEach(select => {
+            const estudianteId = select.name.match(/\[(\d+)\]/)[1];
+
+            select.addEventListener('change', function() {
+                const valorSeleccionado = this.value;
+                const tienePase = estudiantesConPase.includes(parseInt(estudianteId));
+
+                if (valorSeleccionado === 'P' && !tienePase) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Este estudiante no tiene un pase activo',
+                        confirmButtonText: 'Aceptar'
+                    }).then(() => {
+                        const opciones = this.options;
+                        for (let i = 0; i < opciones.length; i++) {
+                            if (opciones[i].value !== 'P') {
+                                this.value = opciones[i].value;
+                                break;
+                            }
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
+
+@endsection
 @section('css')
 <style>
     .custom-control-input:checked~.custom-control-label::before {

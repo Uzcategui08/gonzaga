@@ -7,12 +7,14 @@ use App\Models\Pase;
 use App\Models\Estudiante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class PaseController extends Controller
 {
     public function __construct()
     {
-        // No necesitamos middleware aquí, se maneja en las rutas
+
     }
 
     public function index()
@@ -34,6 +36,7 @@ class PaseController extends Controller
     {
         $validated = $request->validate([
             'estudiante_id' => 'required|exists:estudiantes,id',
+            'horario_id' => 'required|exists:horarios,id',
             'motivo' => 'required|string',
             'observaciones' => 'nullable|string',
             'fecha' => 'required|date',
@@ -50,18 +53,44 @@ class PaseController extends Controller
             ])->withInput();
         }
 
-        Pase::create([
+        $horario = \App\Models\Horario::with(['asignacion.materia', 'asignacion.seccion'])->find($validated['horario_id']);
+        
+        if (!$horario) {
+            return redirect()->back()->withErrors([
+                'horario_id' => 'Horario no encontrado'
+            ])->withInput();
+        }
+
+        $pase = Pase::create([
             'estudiante_id' => $validated['estudiante_id'],
-            'user_id' => Auth::id(),
+            'horario_id' => $horario->id,
             'motivo' => $validated['motivo'],
             'observaciones' => $validated['observaciones'],
             'fecha' => $validated['fecha'],
             'hora_llegada' => $validated['hora_llegada'],
-            'aprobado' => $validated['aprobado'] ?? false
+            'aprobado' => $validated['aprobado'] ?? false,
+            'user_id' => Auth::id()
         ]);
 
-        return redirect()->route('pases.index')
-            ->with('success', 'Pase creado exitosamente');
+        $profesor = $horario->asignacion->profesor;
+        
+        if ($profesor) {
+            $materia = $pase->horario?->asignacion?->materia?->nombre ?? 'Desconocida';
+            $seccion = $pase->horario?->asignacion?->seccion?->nombre ?? 'Desconocida';
+            
+            $profesor->notify(
+                new \App\Notifications\PaseAsignadoNotification(
+                    $pase,
+                    $pase->estudiante->nombres . ' ' . $pase->estudiante->apellidos,
+                    $pase->motivo,
+                    $pase->hora_llegada,
+                    $materia,
+                    $seccion
+                )
+            );
+        }
+
+        return redirect()->route('pases.index')->with('success', 'Pase creado exitosamente.');
     }
 
     public function show(Pase $pase)

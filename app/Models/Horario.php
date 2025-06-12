@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Grupo;
 
 class Horario extends Model
 {
@@ -10,7 +11,7 @@ class Horario extends Model
     
     protected $fillable = [
         'asignacion_id',
-        'dia_semana',
+        'dia',
         'hora_inicio',
         'hora_fin',
         'aula'
@@ -24,5 +25,10 @@ class Horario extends Model
     public function materia()
     {
         return $this->belongsTo(Materia::class, 'asignacion_id', 'id')->through(Asignacion::class);
+    }
+
+    public function seccion()
+    {
+        return $this->belongsTo(Seccion::class, 'asignacion_id', 'id')->through(Asignacion::class);
     }
 }

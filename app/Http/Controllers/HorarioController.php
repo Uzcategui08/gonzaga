@@ -6,6 +6,9 @@ use App\Models\Horario;
 use App\Models\Asignacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Models\Profesor;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class HorarioController extends Controller
 {
@@ -219,4 +222,52 @@ class HorarioController extends Controller
                 ->with('error', 'Error al eliminar el horario: ' . $e->getMessage());
         }
     }
+
+    public function horarioProfesorAdmin(Request $request)
+    {
+        if (!auth()->check() || !auth()->user()->hasRole('coordinador')) {
+            return redirect()->back()->with('error', 'No tienes permisos para acceder a esta sección.');
+        }
+
+        try {
+            $professors = Profesor::with('user')
+                ->join('users', 'profesores.user_id', '=', 'users.id')
+                ->orderBy('users.name')
+                ->get();
+
+            $selectedProfessor = null;
+            $horarios = collect();
+            $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+            if ($request->has('professor_id')) {
+                try {
+                    $selectedProfessor = Profesor::with('user')
+                        ->findOrFail($request->professor_id);
+
+                    $horarios = Horario::with(['asignacion.materia', 'asignacion.seccion.grado'])
+                        ->whereHas('asignacion', function($query) use ($selectedProfessor) {
+                            $query->where('profesor_id', $selectedProfessor->id);
+                        })
+                        ->orderBy('dia')
+                        ->orderBy('hora_inicio')
+                        ->get();
+                } catch (\Exception $e) {
+                    return redirect()->back()
+                        ->with('error', 'Error al buscar el profesor seleccionado.');
+                }
+            }
+
+            return view('horarios.horario', compact(
+                'professors',
+                'selectedProfessor',
+                'horarios',
+                'dias'
+            ));
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Error al cargar el horario. Por favor, contacte al administrador.');
+        }
+    }
+
 }

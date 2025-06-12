@@ -22,7 +22,8 @@ class DatabaseSeeder extends Seeder
             SeccionSeeder::class,
             EstudianteSeeder::class,
             AsignacionSeeder::class,
-            HorarioSeeder::class
+            HorarioSeeder::class,
+            RoleSeeder::class
         ]);
 
     }

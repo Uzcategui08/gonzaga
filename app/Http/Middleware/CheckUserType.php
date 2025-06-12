@@ -16,14 +16,20 @@ class CheckUserType
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, $type = null): mixed
+    public function handle(Request $request, Closure $next, ...$types): mixed
     {
         if (!auth()->check()) {
             return redirect('/dashboard')->with('error', 'No estás autenticado');
         }
 
-        if (!$type || auth()->user()->hasRole($type)) {
+        if (empty($types)) {
             return $next($request);
+        }
+
+        foreach ($types as $type) {
+            if (auth()->user()->hasRole($type)) {
+                return $next($request);
+            }
         }
 
         return redirect('/dashboard')->with('error', 'No tienes permisos para acceder a esta sección');

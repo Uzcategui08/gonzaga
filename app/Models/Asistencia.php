@@ -22,7 +22,10 @@ class Asistencia extends Model
         'horario_id',
         'pase_salida',
         'retraso',
-        's_o'
+        's_o',
+        'created_at',
+        'hora_registro',
+        'updated_at'
     ];
 
     public function horario()

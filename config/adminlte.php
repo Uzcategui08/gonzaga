@@ -319,7 +319,7 @@ return [
         // Navbar items:
         [
             'type' => 'navbar-search',
-            'text' => 'search',
+            'text' => 'Buscar',
             'topnav_right' => true,
         ],
         [
@@ -330,7 +330,7 @@ return [
         // Sidebar items:
         [
             'type' => 'sidebar-menu-search',
-            'text' => 'search',
+            'text' => 'Buscar',
         ],
         [
             'text' => 'Panel de control',
@@ -340,21 +340,22 @@ return [
         [
             'text' => 'Estructura Académica',
             'icon' => 'fas fa-university',
+            'can' => 'admin',
             'submenu' => [
                 [
                     'text' => 'Grados',
                     'url' => 'grados',
-                    'icon' => 'fas fa-graduation-cap'
+                    'icon' => 'fas fa-graduation-cap',
                 ],
                 [
                     'text' => 'Secciones',
                     'url' => 'secciones',
-                    'icon' => 'fas fa-building'
+                    'icon' => 'fas fa-building',
                 ],
                 [
                     'text' => 'Materias',
                     'url' => 'materias',
-                    'icon' => 'fas fa-book'
+                    'icon' => 'fas fa-book',
                 ],
                 /*
                 [
@@ -368,6 +369,7 @@ return [
         [
             'text' => 'Personal',
             'icon' => 'fas fa-users',
+            'can' => 'admin',
             'submenu' => [
                 [
                     'text' => 'Estudiantes',
@@ -382,8 +384,15 @@ return [
             ]
         ],
         [
+            'text' => 'Horario Profesor',
+            'url' => 'horario-profesor',
+            'icon' => 'fas fa-calendar-alt',
+            'can' => 'profesor'
+        ],
+        [
             'text' => 'Horarios y Asignaciones',
             'icon' => 'fas fa-calendar',
+            'can' => 'coordinador',
             'submenu' => [
                 [
                     'text' => 'Asignaciones',
@@ -396,9 +405,9 @@ return [
                     'icon' => 'fas fa-clock'
                 ],
                 [
-                    'text' => 'Horario Profesor',
-                    'url' => 'horario-profesor',
-                    'icon' => 'fas fa-calendar-alt'
+                    'text' => 'Calendario de Horarios',
+                    'url' => 'horarios/profesor/admin',
+                    'icon' => 'fas fa-calendar'
                 ],
                 [
                     'text' => 'Reporte Asistencia',
@@ -408,41 +417,72 @@ return [
             ]
         ],
         [
-            'text' => 'Justificativos',
-            'icon' => 'fas fa-file-medical',
+            'text' => 'Horarios y Asignaciones',
+            'icon' => 'fas fa-calendar',
+            'can' => 'admin',
             'submenu' => [
                 [
-                    'text' => 'Ver Justificativos',
-                    'url' => 'justificativos/profesor',
-                    'icon' => 'fas fa-eye',
+                    'text' => 'Asignaciones',
+                    'url' => 'asignaciones',
+                    'icon' => 'fas fa-calendar-check'
                 ],
                 [
-                    'text' => 'Administrar Justificativos',
-                    'url' => 'justificativos',
-                    'icon' => 'fas fa-cogs',
+                    'text' => 'Horarios',
+                    'url' => 'horarios',
+                    'icon' => 'fas fa-clock'
+                ],
+                [
+                    'text' => 'Calendario de Horarios',
+                    'url' => 'horarios/profesor/admin',
+                    'icon' => 'fas fa-calendar'
+                ],
+                [
+                    'text' => 'Reporte Asistencia',
+                    'url' => 'asistencias/reporte',
+                    'icon' => 'fas fa-file-alt'
                 ]
             ]
         ],
         [
+            'text' => 'Ver Justificativos',
+            'url' => 'justificativos/profesor',
+            'icon' => 'fas fa-cogs',
+            'can' => 'profesor'
+        ],
+        [
+            'text' => 'Administrar Justificativos',
+            'url' => 'justificativos',
+            'icon' => 'fas fa-cogs',
+            'can' => 'coordinador'
+        ],
+        [
+            'text' => 'Administrar Justificativos',
+            'url' => 'justificativos',
+            'icon' => 'fas fa-cogs',
+            'can' => 'admin'
+        ],
+        [
             'text' => 'Pases de entrada',
             'url' => 'pases',
-            'icon' => 'fas fa-ticket-alt'
+            'icon' => 'fas fa-ticket-alt',
+            'can' => 'coordinador'
+        ],
+        [
+            'text' => 'Pases de entrada',
+            'url' => 'pases',
+            'icon' => 'fas fa-ticket-alt',
+            'can' => 'admin'
         ],
         [
             'text' => 'Limpieza',
-            'url' => 'admin/limpieza',
-            'icon' => 'fas fa-broom'
+            'url' => 'limpiezas',
+            'icon' => 'fas fa-broom',
         ],
-        ['header' => 'account_settings'],
+        ['header' => 'CONFIGURACIÓN'],
         [
-            'text' => 'profile',
-            'url' => 'admin/settings',
+            'text' => 'Perfil',
+            'url' => 'profile',
             'icon' => 'fas fa-fw fa-user',
-        ],
-        [
-            'text' => 'change_password',
-            'url' => 'admin/settings',
-            'icon' => 'fas fa-fw fa-lock',
         ],
     ],
 
@@ -465,6 +505,7 @@ return [
         JeroenNoten\LaravelAdminLte\Menu\Filters\ClassesFilter::class,
         JeroenNoten\LaravelAdminLte\Menu\Filters\LangFilter::class,
         JeroenNoten\LaravelAdminLte\Menu\Filters\DataFilter::class,
+        JeroenNoten\LaravelAdminLte\Menu\Filters\GateFilter::class,
     ],
 
     /*

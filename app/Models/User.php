@@ -43,6 +43,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the secciones for the user (coordinador).
+     */
+    public function secciones()
+    {
+        return $this->belongsToMany(Seccion::class, 'coordinador_secciones', 'coordinador_id', 'seccion_id');
+    }
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

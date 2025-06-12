@@ -8,6 +8,7 @@ class Pase extends Model
 {
     protected $fillable = [
         'estudiante_id',
+        'horario_id',
         'motivo',
         'observaciones',
         'fecha',
@@ -30,6 +31,47 @@ class Pase extends Model
     public function usuario()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function horario()
+    {
+        return $this->belongsTo(Horario::class);
+    }
+
+    public function profesor()
+    {
+        return $this->belongsTo(Profesor::class)
+            ->through('horario', 'asignacion');
+    }
+
+    public function getProfesorNombreAttribute()
+    {
+        return $this->profesor?->user?->name;
+    }
+
+    public function getMateriaNombreAttribute()
+    {
+        return $this->horario?->asignacion?->materia?->nombre;
+    }
+
+    public function getSeccionNombreAttribute()
+    {
+        return $this->horario?->asignacion?->seccion?->nombre;
+    }
+
+    public function getHoraSalidaAttribute()
+    {
+        return $this->attributes['hora_salida'] ?? null;
+    }
+
+    public function getMotivoSalidaAttribute()
+    {
+        return $this->attributes['motivo_salida'] ?? null;
+    }
+
+    public function getNotificadoAttribute()
+    {
+        return $this->attributes['notificado'] ?? false;
     }
 
     public function scopeTarde($query)

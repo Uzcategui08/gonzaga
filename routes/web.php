@@ -14,14 +14,16 @@ use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\JustificativoController;
 use App\Http\Controllers\AsistenciaReporteController;
 use App\Http\Controllers\PaseController;
+use App\Http\Controllers\LimpiezaController;
+use App\Http\Controllers\NotificationController;
 
 Route::get('/', function () {
     return view('/auth/login');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -36,23 +38,37 @@ Route::get('/horarios/{horario}/edit', [HorarioController::class, 'edit'])->name
 Route::put('/horarios/{horario}', [HorarioController::class, 'update'])->name('horarios.update');
 Route::delete('/horarios/{horario}', [HorarioController::class, 'destroy'])->name('horarios.destroy');
 
-// Ruta para mostrar el horario del profesor autenticado
 Route::get('/horario-profesor', [HorarioController::class, 'horarioProfesor'])->name('horario.profesor');
-Route::get('/asistencias/create/{materia}/{horario}', [AsistenciaController::class, 'create'])->name('asistencias.create');
+
+Route::get('/asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
 
 require __DIR__ . '/auth.php';
 
-// Resource Routes
+Route::middleware(['auth'])->group(function () {
+    Route::post('/notifications/{notification}/mark-as-read', ['App\Http\Controllers\NotificationController', 'markAsRead'])->name('notifications.markAsRead');
+    Route::post('/notifications/mark-all-as-read', ['App\Http\Controllers\NotificationController', 'markAllAsRead'])->name('notifications.markAllAsRead');
+    Route::get('/estudiantes/{estudiante}/horarios', [EstudianteController::class, 'getHorarios'])->name('estudiantes.horarios');
+    Route::get('/notifications/update', ['App\Http\Controllers\NotificationController', 'update'])->name('notifications.update');
+});
+
+Route::get('/horarios/profesor/admin', [HorarioController::class, 'horarioProfesorAdmin'])
+    ->name('horarios.profesor.admin')
+    ->middleware('auth');
+
 Route::middleware(['auth'])->group(function () {
     Route::resource('grados', GradoController::class);
     Route::resource('secciones', SeccionController::class)->parameters(['secciones' => 'seccion']);
     Route::resource('estudiantes', EstudianteController::class);
     Route::resource('materias', MateriaController::class);
     Route::resource('profesores', ProfesorController::class)->parameters(['profesores' => 'profesor']);
-    Route::resource('pases', PaseController::class)->middleware(['auth', 'verified']);
+
+    Route::get('limpiezas/asignar/{clase?}', [LimpiezaController::class, 'create'])->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':profesor,coordinador,admin'])->name('limpiezas.create');
+
+    Route::resource('limpiezas', LimpiezaController::class, ['except' => ['create']])->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':profesor,coordinador,admin']);
+    Route::get('api/clase/{clase}/estudiantes', [LimpiezaController::class, 'getEstudiantes'])->name('api.clase.estudiantes');
 
     Route::resource('asignaciones', AsignacionController::class)->parameters(['asignaciones' => 'asignacion']);
-    // Rutas para asistencias
+
     Route::get('/asistencias/reporte', [AsistenciaReporteController::class, 'index'])->name('asistencias.reporte');
     Route::get('/asistencias/reporte-pdf', [AsistenciaReporteController::class, 'generatePdf'])->name('asistencias.reporte-pdf');
     Route::get('materias/{materia}/asistencia', [AsistenciaController::class, 'index'])->name('asistencias.index');
@@ -60,22 +76,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('asistencias/{asistencia}/pdf', [AsistenciaController::class, 'generatePdf'])->name('asistencias.generate-pdf');
     Route::get('/asistencias/create/{materiaId}/{horarioId}', [AsistenciaController::class, 'create'])->name('asistencias.create');
     Route::resource('asistencias', AsistenciaController::class);
+
+    Route::resource('pases', PaseController::class);
     Route::get('asistencias/registrar/{materia}/{horario}', [AsistenciaController::class, 'registrar'])->name('asistencias.registrar');
     Route::get('asistencias/{asistencia}/edit', [AsistenciaController::class, 'edit'])->name('asistencias.edit')->middleware('auth');
     Route::resource('horarios', HorarioController::class);
     Route::resource('grado-materia', GradoMateriaController::class);
 
-    // Ruta para ver justificativos como profesor
     Route::get('justificativos/profesor', [JustificativoController::class, 'indexProfesor'])->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':profesor'])->name('justificativos.profesor');
 
-    // Ruta para ver justificativos como profesor
     Route::get('justificativos/profesor/{justificativo}', [JustificativoController::class, 'show'])->middleware(['auth'])->name('justificativos.profesor.show');
 
-    // Ruta para ver justificativos como admin
-    Route::get('justificativos/admin', [JustificativoController::class, 'index'])->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':admin'])->name('justificativos.admin');
+    Route::get('justificativos/admin', [JustificativoController::class, 'index'])->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':coordinador,admin'])->name('justificativos.admin');
 
-    // Rutas para justificativos (admin)
-    Route::prefix('justificativos')->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':admin'])->group(function () {
+    Route::prefix('justificativos')->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':coordinador,admin'])->group(function () {
         Route::get('/', [JustificativoController::class, 'index'])->name('justificativos.index');
         Route::get('nuevo', [JustificativoController::class, 'create'])->name('justificativos.create');
         Route::get('nuevo/{estudiante}', [JustificativoController::class, 'createSpecific'])->name('justificativos.create-specific');

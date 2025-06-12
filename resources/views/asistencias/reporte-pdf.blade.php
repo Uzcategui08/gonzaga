@@ -107,7 +107,7 @@
                                                                 <small class="text-muted">(ID: {{ $detalle->estudiante_id }})</small>
                                                             </td>
                                                             <td>
-                                                                {{ $detalle->estado === 'P' ? 'Presente' : ($detalle->estado === 'A' ? 'Ausente' : 'Tardío') }}
+                                                                {{ $detalle->estado === 'A' ? 'Asistente' : ($detalle->estado === 'I' ? 'Inasistente' : 'Pase') }}
                                                             </td>
                                                             <td>{{ $detalle->observacion_individual ?? 'N/A' }}</td>
                                                         </tr>

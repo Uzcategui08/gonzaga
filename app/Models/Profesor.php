@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\User;
+use Illuminate\Notifications\Notifiable;
 
-class Profesor extends Model
+class Profesor extends User
 {
+    use Notifiable;
+
     protected $table = 'profesores';
 
     protected $fillable = [
@@ -20,11 +23,6 @@ class Profesor extends Model
         'fecha_contratacion' => 'date',
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function materias()
     {
         return $this->belongsToMany(Materia::class, 'asignaciones', 'profesor_id', 'materia_id');
@@ -33,5 +31,20 @@ class Profesor extends Model
     public function secciones()
     {
         return $this->belongsToMany(Seccion::class, 'asignaciones', 'profesor_id', 'seccion_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function limpiezas()
+    {
+        return $this->hasMany(Limpieza::class);
     }
 }

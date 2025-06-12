@@ -296,6 +296,10 @@
         @if (session('info'))
             showToast('info', '{{ session('info') }}');
         @endif
+
+        @if (session('status'))
+            showToast('success', '{{ session('status') }}');
+        @endif
     </script>
     @yield('adminlte_js')
 

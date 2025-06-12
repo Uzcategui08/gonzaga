@@ -68,5 +68,14 @@ class UserSeeder extends Seeder
             'remember_token' => Str::random(10),
             'tipo' => 'admin'
         ]);
+
+        User::create([
+            'name' => 'Coordinador',
+            'email' => 'coordinador@colegio.com',
+            'password' => bcrypt('coordinador123'),
+            'email_verified_at' => now(),
+            'remember_token' => Str::random(10),
+            'tipo' => 'coordinador'
+        ]);
     }
 }

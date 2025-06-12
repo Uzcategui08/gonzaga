@@ -9,10 +9,12 @@ use App\Models\AsistenciaEstudiante;
 use App\Models\Horario;
 use App\Models\Materia;
 use App\Models\Profesor;
+use App\Models\Pase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class AsistenciaController extends Controller
 {
@@ -71,15 +73,21 @@ class AsistenciaController extends Controller
                 )
                 ->get();
             
-            $asistencia->estudiantes = $estudiantes;;
+            $asistencia->estudiantes = $estudiantes;
 
-            return view('asistencias.edit', compact('asistencia'));
+            $fecha = $asistencia->fecha->format('Y-m-d');
+
+            $pasesActivos = Pase::where('horario_id', $asistencia->horario_id)
+                ->where('fecha', $fecha)
+                ->where('aprobado', true)
+                ->with('estudiante')
+                ->get();
+
+            $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
+
+            return view('asistencias.edit', compact('asistencia', 'estudiantesConPase'));
 
         } catch (\Exception $e) {
-            Log::error('Error al editar asistencia', [
-                'asistencia_id' => $asistencia->id,
-                'error' => $e->getMessage()
-            ]);
             return redirect()->back()->with('error', 'Error al cargar la información de la asistencia');
         }
     }
@@ -127,7 +135,7 @@ class AsistenciaController extends Controller
 
             $asistencia->estudiantes()->sync($validated['estudiantes']);
 
-            return redirect()->route('asistencias.reporte')
+            return redirect()->route('dashboard')
                 ->with('success', 'Asistencia actualizada exitosamente');
 
         } catch (\Exception $e) {
@@ -145,6 +153,14 @@ class AsistenciaController extends Controller
             $materia = Materia::findOrFail($materiaId);
             $profesor = auth()->user()->profesor;
 
+            $pasesActivos = Pase::whereHas('horario', function($query) use ($materia) {
+                $query->where('materia_id', $materia->id);
+            })
+            ->whereDate('fecha', date('Y-m-d')) 
+            ->where('aprobado', true)
+            ->with('estudiante')
+            ->get();
+
             $estudiantes = DB::table('estudiantes')
                 ->join('secciones', 'estudiantes.seccion_id', '=', 'secciones.id')
                 ->join('asignaciones', 'secciones.id', '=', 'asignaciones.seccion_id')
@@ -152,7 +168,20 @@ class AsistenciaController extends Controller
                 ->select('estudiantes.*')
                 ->get();
 
-            return view('asistencias.index', compact('materia', 'profesor', 'estudiantes'));
+            $pasesActivosParaVista = [
+                'pases' => $pasesActivos->map(function($pase) {
+                    return [
+                        'id' => $pase->id,
+                        'estudiante_id' => $pase->estudiante_id,
+                        'fecha' => $pase->fecha,
+                        'aprobado' => $pase->aprobado
+                    ];
+                })->toArray(),
+                'total' => $pasesActivos->count()
+            ];
+
+            return view('asistencias.index', compact('materia', 'profesor', 'estudiantes'))
+                ->with('pasesActivosParaVista', $pasesActivosParaVista);
         }
 
         $asistencias = Asistencia::with([
@@ -202,10 +231,30 @@ class AsistenciaController extends Controller
                 return redirect()->back()->with('error', 'No hay estudiantes asignados a esta sección');
             }
 
+            $fecha = now('America/Caracas')->format('Y-m-d');
+
+            $pasesActivos = Pase::where('horario_id', $horario->id)
+                ->where('fecha', $fecha)
+                ->where('aprobado', true)
+                ->with('estudiante')
+                ->get();
+
+            $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
+
+            $pasesConMotivos = $pasesActivos->map(function($pase) {
+                return [
+                    'estudiante_id' => $pase->estudiante_id,
+                    'motivo' => $pase->motivo
+                ];
+            })->keyBy('estudiante_id')->toArray();
+
             return view('asistencias.index', [
                 'materia' => $materia,
                 'horario' => $horario,
-                'estudiantes' => $estudiantes
+                'estudiantes' => $estudiantes,
+                'fecha' => $fecha,
+                'estudiantesConPase' => $estudiantesConPase,
+                'pasesConMotivos' => $pasesConMotivos
             ]);
 
         } catch (\Exception $e) {
@@ -250,10 +299,21 @@ class AsistenciaController extends Controller
                 return redirect()->back()->with('error', 'No hay estudiantes asignados a esta sección');
             }
 
+            $fecha = now('America/Caracas')->format('Y-m-d');
+
+            $pasesActivos = Pase::where('horario_id', $horario->id)
+                ->where('fecha', $fecha)
+                ->where('aprobado', true)
+                ->with('estudiante')
+                ->get();
+
+            $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
+
             return view('asistencias.index', [
                 'materia' => $materia,
                 'estudiantes' => $estudiantes,
-                'horario' => $horario
+                'horario' => $horario,
+                'estudiantesConPase' => $estudiantesConPase
             ]);
 
         } catch (\Exception $e) {
@@ -264,20 +324,14 @@ class AsistenciaController extends Controller
     public function store(Request $request, Materia $materia)
     {
         try {
-            Log::info('Inicio de registro de asistencia', [
-                'materia_id' => $materia->id,
-                'request_data' => $request->all()
-            ]);
-
             $checkboxes = ['aprobado', 's_o', 'falta_justificada', 'tarea_pendiente', 'conducta', 'pase_salida', 'retraso'];
             foreach ($checkboxes as $checkbox) {
                 $request[$checkbox] = $request->has($checkbox);
             }
             
-            Log::info('Validando datos de asistencia');
             $validated = $request->validate([
                 'fecha' => 'required|date',
-                'hora_inicio' => 'required',
+                'hora_inicio' => 'required|date_format:H:i',
                 'horario_id' => 'required|exists:horarios,id',
                 'contenido_clase' => 'required',
                 'estudiantes' => 'required|array',
@@ -289,32 +343,31 @@ class AsistenciaController extends Controller
                 'conducta' => 'nullable|boolean',
                 'pase_salida' => 'nullable|boolean',
                 'retraso' => 'nullable|boolean',
-                's_o' => 'nullable|boolean'
+                's_o' => 'nullable|boolean',
             ]);
 
-            Log::info('Datos validados correctamente', [
-                'validated_data' => $validated
-            ]);
+            $horario = Horario::findOrFail($validated['horario_id']);
+            
+            $fechaHora = Carbon::createFromFormat('Y-m-d H:i', $validated['fecha'] . ' ' . $validated['hora_inicio']);
+            $fechaHora->setTimezone('America/Caracas');
+            
+            $horaInicio = Carbon::parse($horario->hora_inicio);
+            $horaFin = Carbon::parse($horario->hora_fin);
+            
+            if ($fechaHora->lessThan($horaInicio) || $fechaHora->greaterThan($horaFin)) {
+                return redirect()->back()->withErrors([
+                    'hora_inicio' => 'La hora de registro debe estar dentro del horario programado.'
+                ])->withInput();
+            }
 
             DB::transaction(function () use ($request, $materia, $validated) {
-                Log::info('Buscando horario', [
-                    'horario_id' => $request->input('horario_id')
-                ]);
+                $fechaActualCaracas = Carbon::now()->setTimezone('America/Caracas');
+                $fechaActual = $fechaActualCaracas->format('Y-m-d H:i:s');
 
                 $horario = Horario::with(['asignacion.materia', 'asignacion.seccion.grado'])
                     ->findOrFail($request->input('horario_id'));
 
-                Log::info('Horario encontrado', [
-                    'horario_data' => [
-                        'id' => $horario->id,
-                        'asignacion_id' => $horario->asignacion_id,
-                        'seccion_id' => $horario->asignacion->seccion_id,
-                        'grado_id' => $horario->asignacion->seccion->grado_id
-                    ]
-                ]);
-
                 if (!$horario->asignacion || !$horario->asignacion->seccion || !$horario->asignacion->seccion->grado) {
-                    Log::error('Horario sin asignación válida');
                     return redirect()->back()->withErrors([
                         'horario_id' => 'El horario seleccionado no tiene una asignación válida'
                     ])->withInput();
@@ -324,21 +377,13 @@ class AsistenciaController extends Controller
                 $materia = $asignacion->materia;
                 $grado = $asignacion->seccion->grado;
 
-                Log::info('Creando asistencia', [
-                    'materia_id' => $materia->id,
-                    'profesor_id' => auth()->user()->profesor->id,
-                    'grado_id' => $grado->id,
-                    'horario_id' => $horario->id
-                ]);
-
                 $asistencia = Asistencia::create([
                     'materia_id' => $materia->id,
                     'profesor_id' => auth()->user()->profesor->id,
                     'grado_id' => $grado->id,
                     'horario_id' => $horario->id,
-                    'fecha' => $validated['fecha'],
+                    'fecha' => $fechaActual,
                     'hora_inicio' => $validated['hora_inicio'],
-                    'hora_registro' => now(),
                     'contenido_clase' => $validated['contenido_clase'],
                     'observacion_general' => $validated['observacion_general'],
                     'falta_justificada' => $validated['falta_justificada'] ?? false,
@@ -346,37 +391,32 @@ class AsistenciaController extends Controller
                     'conducta' => $validated['conducta'] ?? false,
                     'pase_salida' => $validated['pase_salida'] ?? false,
                     'retraso' => $validated['retraso'] ?? false,
-                    's_o' => $validated['s_o'] ?? false
+                    's_o' => $validated['s_o'] ?? false,
+                    'created_at' => $fechaActual,
+                    'updated_at' => $fechaActual
                 ]);
 
-                Log::info('Asistencia creada', [
-                    'asistencia_id' => $asistencia->id
-                ]);
+                $pasesActivos = Pase::where('horario_id', $request->horario_id)
+                    ->where('fecha', $request->fecha)
+                    ->where('aprobado', true)
+                    ->get()
+                    ->pluck('estudiante_id');
 
-                Log::info('Sincronizando estudiantes', [
-                    'estudiantes_count' => count($validated['estudiantes'])
-                ]);
+                foreach ($request->estudiantes as $estudianteId => $data) {
+                    $estado = $pasesActivos->contains($estudianteId) ? 'P' : $data['estado'];
 
-                $estudiantesData = [];
-                foreach ($validated['estudiantes'] as $estudianteId => $data) {
-                    $estudiantesData[$estudianteId] = [
-                        'estado' => $data['estado'],
+                    AsistenciaEstudiante::create([
+                        'asistencia_id' => $asistencia->id,
+                        'estudiante_id' => $estudianteId,
+                        'estado' => $estado,
                         'observacion_individual' => $data['observacion_individual'] ?? null
-                    ];
+                    ]);
                 }
-
-                $asistencia->estudiantes()->attach($estudiantesData);
-
-                Log::info('Proceso de registro completado exitosamente');
             });
 
-            return redirect()->route('horario.profesor')
+            return redirect()->route('dashboard')
                 ->with('success', 'Asistencia registrada exitosamente');
         } catch (\Exception $e) {
-            Log::error('Error al registrar asistencia', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error al registrar la asistencia. Por favor, inténtelo nuevamente.');
@@ -389,5 +429,28 @@ class AsistenciaController extends Controller
     public function show(Asistencia $asistencia)
     {
         return view('asistencias.show', compact('asistencia'));
+    }
+
+    public function reporte(Request $request)
+    {
+        $dia_semana = $request->input('dia_semana');
+        
+        $asistencias = Asistencia::with([
+            'profesor' => function($query) {
+                $query->with('user:id,name');
+            },
+            'materia' => function($query) {
+                $query->select('id', 'nombre');
+            },
+            'estudiantes' => function($query) {
+                $query->select('id', 'estudiante_id', 'estado', 'observacion_individual');
+            }
+        ])->when($dia_semana, function($query) use ($dia_semana) {
+            return $query->whereRaw("DAYOFWEEK(DATE(fecha)) = ?", [$dia_semana + 1]);
+        })
+        ->orderBy('fecha', 'desc')
+        ->get();
+    
+        return view('asistencias.reporte', compact('asistencias'));
     }
 }

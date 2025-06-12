@@ -6,7 +6,11 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h1 class="m-0 text-dark">
-            Horario Semanal - {{ auth()->user()->profesor->user->name }}
+            @php
+                $profesor = auth()->user()->profesor;
+                $profesorName = $profesor && $profesor->user ? $profesor->user->name : auth()->user()->name;
+            @endphp
+            Horario Semanal - {{ $profesorName }}
         </h1>
         <small class="text-muted">
             Semana del {{ now()->startOfWeek()->format('d/m/Y') }} al {{ now()->endOfWeek()->format('d/m/Y') }}
@@ -128,13 +132,14 @@
                                                                         {{ $horario->aula ?? 'Aula por asignar' }}
                                                                     </span>
                                                                 </div>
-                                                                
+                                                                <!--
                                                                 <a href="{{ route('asistencias.registrar', [$horario->asignacion->materia->id, $horario->id]) }}" 
                                                                    class="btn btn-sm btn-primary rounded-circle p-0"
                                                                    style="width:24px;height:24px;"
                                                                    title="Registrar asistencia">
                                                                     <i class="fas fa-plus" style="font-size:0.8rem;"></i>
                                                                 </a>
+                                                                -->
                                                             </div>
                                                         </div>
                                                     </div>

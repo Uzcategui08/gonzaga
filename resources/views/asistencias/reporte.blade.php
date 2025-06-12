@@ -7,6 +7,7 @@
         <h1 class="m-0">
             Reporte de Asistencias
         </h1>
+        <!--
         <div class="btn-group">
             <a href="{{ route('asistencias.reporte-pdf') }}" 
                class="btn btn-primary" 
@@ -14,6 +15,7 @@
                 <i class="fas fa-file-pdf mr-2"></i>Generar PDF
             </a>
         </div>
+        -->
     </div>
 @stop
 
@@ -82,24 +84,24 @@
                             <td class="text-center align-middle">
                                 @if($asistencia->estudiantes && $asistencia->estudiantes->count() > 0)
                                     @php
-                                        $presentes = $asistencia->estudiantes->where('estado', 'P')->count();
-                                        $ausentes = $asistencia->estudiantes->where('estado', 'A')->count();
-                                        $tardios = $asistencia->estudiantes->where('estado', 'I')->count();
+                                        $asistentes = $asistencia->estudiantes->where('estado', 'A')->count();
+                                        $inasistentes = $asistencia->estudiantes->where('estado', 'I')->count();
+                                        $pases = $asistencia->estudiantes->where('estado', 'P')->count();
                                     @endphp
                                     <div class="d-flex justify-content-center">
                                         <div class="mr-2">
-                                            <span class="badge badge-pill py-2 px-3 badge-success" title="Presentes">
-                                                <i class="fas fa-user-check mr-1"></i>{{ $presentes }}
+                                            <span class="badge badge-pill py-2 px-3 badge-success" title="Asistentes">
+                                                <i class="fas fa-user-check mr-1"></i>{{ $asistentes }}
                                             </span>
                                         </div>
                                         <div class="mr-2">
-                                            <span class="badge badge-pill py-2 px-3 badge-danger" title="Ausentes">
-                                                <i class="fas fa-user-times mr-1"></i>{{ $ausentes }}
+                                            <span class="badge badge-pill py-2 px-3 badge-danger" title="Inasistentes">
+                                                <i class="fas fa-user-times mr-1"></i>{{ $inasistentes }}
                                             </span>
                                         </div>
-                                        <div>
-                                            <span class="badge badge-pill py-2 px-3 badge-warning" title="Tardíos">
-                                                <i class="fas fa-user-clock mr-1"></i>{{ $tardios }}
+                                        <div class="mr-2">
+                                            <span class="badge badge-pill py-2 px-3 badge-info" title="Pases">
+                                                <i class="fas fa-user-tag mr-1"></i>{{ $pases }}
                                             </span>
                                         </div>
                                     </div>
@@ -109,12 +111,6 @@
                             </td>
                             <td class="text-center align-middle">
                                 <div class="d-flex justify-content-center">
-                                    <a href="{{ route('asistencias.edit', $asistencia->id) }}" 
-                                       class="btn btn-sm btn-light mx-1 border"
-                                       data-toggle="tooltip" 
-                                       title="Editar">
-                                        <i class="fas fa-edit text-warning"></i>
-                                    </a>
                                     <a href="{{ route('asistencias.generate-pdf', $asistencia->id) }}" 
                                        class="btn btn-sm btn-light mx-1 border"
                                        target="_blank"

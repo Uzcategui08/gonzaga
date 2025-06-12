@@ -12,7 +12,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('asistencia_id')->constrained('asistencias')->onDelete('cascade');
             $table->foreignId('estudiante_id')->constrained('estudiantes')->onDelete('cascade');
-            $table->enum('estado', ['P', 'A', 'I'])->default('P')->comment('P = Presente, A = Ausente, I = Tardío');
+            $table->enum('estado', ['A', 'I', 'P'])->default('A')
+                ->comment('A = Asistente, I = Inasistente, P = Pase');
             $table->text('observacion_individual')->nullable();
             $table->timestamps();
         });
