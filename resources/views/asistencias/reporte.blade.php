@@ -33,20 +33,21 @@
                 <table class="table table-hover mb-0 datatable" id="asistencias-table">
                     <thead class="bg-light">
                         <tr>
-                            <th class="text-nowrap py-3" style="width: 10%">Registro</th>
-                            <th class="text-nowrap py-3" style="width: 10%">Fecha Clase</th>
-                            <th class="text-nowrap py-3" style="width: 5%">Hora</th>
-                            <th class="py-3" style="width: 15%">Materia</th>
-                            <th class="py-3" style="width: 15%">Profesor</th>
-                            <th class="py-3" style="width: 20%">Contenido</th>
-                            <th class="py-3" style="width: 20%">Observaciones</th>
-                            <th class="text-nowrap py-3" style="width: 10%">Resumen</th>
-                            <th class="text-nowrap py-3" style="width: 10%">Acciones</th>
+                            <th>#</th>
+                            <th class="py-3">Registro</th>
+                            <th class="py-3">Fecha Clase</th>
+                            <th class="py-3">Hora</th>
+                            <th class="py-3">Materia</th>
+                            <th class="py-3">Profesor</th>
+                            <th class="py-3">Contenido</th>
+                            <th class="py-3">Resumen</th>
+                            <th class="py-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($asistencias as $asistencia)
                         <tr class="border-bottom">
+                            <td></td>
                             <td class="text-nowrap align-middle">{{ $asistencia->created_at->format('d/m/Y H:i') }}</td>
                             <td class="text-nowrap align-middle">{{ $asistencia->fecha ? $asistencia->fecha->format('d/m/Y') : 'N/A' }}</td>
                             <td class="text-nowrap align-middle">{{ $asistencia->hora_inicio ?? 'N/A' }}</td>
@@ -74,11 +75,6 @@
                             <td class="align-middle">
                                 <span class="text-truncate" style="max-width: 200px;" title="{{ $asistencia->contenido_clase ?? '' }}">
                                     {{ $asistencia->contenido_clase ?? 'N/A' }}
-                                </span>
-                            </td>
-                            <td class="align-middle">
-                                <span class="text-truncate" style="max-width: 200px;" title="{{ $asistencia->observacion_general ?? '' }}">
-                                    {{ $asistencia->observacion_general ?? 'N/A' }}
                                 </span>
                             </td>
                             <td class="text-center align-middle">
@@ -129,69 +125,3 @@
     </div>
 </div>
 @endsection
-
-@section('css')
-<style>
-    .table thead th {
-        vertical-align: middle;
-        font-weight: bold;
-    }
-    
-    .table td {
-        vertical-align: middle;
-    }
-    
-    .text-truncate {
-        max-width: 200px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .datatable {
-        font-size: 0.9rem;
-    }
-    
-    .badge {
-        font-size: 0.8em;
-        padding: 0.4em 0.6em;
-    }
-    
-    .badge i {
-        font-size: 0.8em;
-    }
-    
-    @media (max-width: 768px) {
-        .table-responsive {
-            border: 0;
-        }
-        .table thead {
-            display: none;
-        }
-        .table tr {
-            display: block;
-            margin-bottom: 1rem;
-            border: 1px solid #dee2e6;
-        }
-        .table td {
-            display: block;
-            text-align: right;
-            padding-left: 50%;
-            position: relative;
-            border-bottom: 1px solid #dee2e6;
-        }
-        .table td::before {
-            content: attr(data-label);
-            position: absolute;
-            left: 1rem;
-            width: calc(50% - 1rem);
-            padding-right: 1rem;
-            font-weight: bold;
-            text-align: left;
-        }
-        .table td:last-child {
-            border-bottom: 0;
-        }
-    }
-</style>
-@stop

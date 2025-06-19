@@ -55,6 +55,7 @@ class LimpiezaController extends Controller
                 ->get();
         } else {
             $limpiezas = Limpieza::where('profesor_id', auth()->id())
+                ->whereDate('fecha', $fechaActual)
                 ->with(['profesor.usuario'])
                 ->orderBy('fecha', 'desc')
                 ->get();

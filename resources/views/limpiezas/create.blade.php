@@ -187,11 +187,6 @@
         }
     }
 
-    #students-table select {
-        width: 100%;
-        height: 45px; 
-    }
-
     #agregar-fila {
         padding: 8px 16px;
     }
@@ -213,7 +208,7 @@
             nuevaFila.className = 'border-bottom';
 
             const selectEstudiantes = document.createElement('select');
-            selectEstudiantes.className = 'form-control form-control-lg select2 select-estudiante';
+            selectEstudiantes.className = 'form-control-lg select2 select-estudiante @error('estudiantes.${contadorFilas}.id') is-invalid @enderror';
             selectEstudiantes.name = `estudiantes[${contadorFilas}][id]`;
             selectEstudiantes.required = true;
 
@@ -276,7 +271,31 @@
 
             $(selectEstudiantes).select2({
                 width: '100%',
-                placeholder: 'Seleccione un estudiante...'
+                placeholder: 'Seleccione un estudiante...',
+                theme: 'bootstrap4'
+            });
+
+            $(selectEstudiantes).on('select2:select', function(e) {
+                const selectedId = e.params.data.id;
+                if (selectedId) {
+                    const otherSelects = $('.select-estudiante');
+                    let duplicateFound = false;
+
+                    otherSelects.each(function() {
+                        if (this !== selectEstudiantes && this.value === selectedId) {
+                            duplicateFound = true;
+                            $(selectEstudiantes).val('').trigger('change');
+                            
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Este estudiante ya está asignado a otra tarea',
+                            });
+                            
+                            return false;
+                        }
+                    });
+                }
             });
         }
 

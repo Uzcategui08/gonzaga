@@ -22,23 +22,23 @@
 
         <div class="card-body p-3">
             <div class="table-responsive-md rounded-lg" style="margin: 0.5rem;">
-                <table class="table table-hover mb-0 datatable" id="justificativos-table">
+                <table class="table table-hover mb-0 datatable" id="justificativos-table" style="width:100%">
                     <thead class="bg-light">
                         <tr>
-                            <th class="text-center py-3" style="width: 5%; min-width: 50px">#</th>
-                            <th class="py-3" style="width: 25%; min-width: 200px">Estudiante</th>
-                            <th class="py-3" style="width: 15%; min-width: 120px">Fecha Inicio</th>
-                            <th class="py-3" style="width: 15%; min-width: 120px">Fecha Fin</th>
-                            <th class="py-3" style="width: 15%; min-width: 100px">Tipo</th>
-                            <th class="py-3" style="width: 25%; min-width: 200px">Motivo</th>
-                            <th class="text-center py-3" style="width: 10%; min-width: 120px">Aprobado</th>
-                            <th class="text-center py-3" style="width: 10%; min-width: 120px">Acciones</th>
+                            <th class="text-nowrap">#</th>
+                            <th class="py-3">Estudiante</th>
+                            <th class="py-3">Fecha Inicio</th>
+                            <th class="py-3">Fecha Fin</th>
+                            <th class="py-3">Tipo</th>
+                            <th class="py-3">Motivo</th>
+                            <th class="text-center py-3">Aprobado</th>
+                            <th class="text-center py-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($justificativos as $justificativo)
                         <tr class="border-bottom">
-                            <td class="text-center align-middle">{{ $loop->iteration }}</td>
+                            <td class="text-nowrap align-middle"> </td>
                             <td class="align-middle">
                                 <span class="font-weight-semibold text-dark">
                                     {{ $justificativo->estudiante->nombres }} {{ $justificativo->estudiante->apellidos }}

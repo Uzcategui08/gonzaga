@@ -95,6 +95,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('nuevo/{estudiante}', [JustificativoController::class, 'createSpecific'])->name('justificativos.create-specific');
         Route::post('/', [JustificativoController::class, 'store'])->name('justificativos.store');
         Route::get('{justificativo}', [JustificativoController::class, 'show'])->name('justificativos.admin.show');
+        Route::get('show/{justificativo}', [JustificativoController::class, 'show'])->name('justificativos.show');
         Route::get('{justificativo}/edit', [JustificativoController::class, 'edit'])->name('justificativos.edit');
         Route::put('{justificativo}', [JustificativoController::class, 'update'])->name('justificativos.update');
         Route::put('{justificativo}/approve', [JustificativoController::class, 'approve'])->name('justificativos.approve');

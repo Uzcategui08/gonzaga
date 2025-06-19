@@ -109,7 +109,7 @@
                                                     <div class="card mb-2 border-left-3 border-primary">
                                                         <div class="card-body p-2">
                                                             <div class="d-flex justify-content-between align-items-start mb-1">
-                                                                <h6 class="card-title mb-0 text-primary font-weight-bold">
+                                                                <h6 class="card-title-horario mb-0 text-primary font-weight-bold">
                                                                     {{ $horario->asignacion->materia->nombre }}
                                                                 </h6>
                                                                 <span class="badge badge-light text-dark">
@@ -173,50 +173,86 @@
     .table {
         table-layout: fixed;
         font-size: 0.85rem;
+        width: 100%;
+        min-width: 800px;
     }
+    
+    .table-responsive {
+        overflow-x: auto;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
     .table th {
         vertical-align: middle;
         background-color: #f8f9fa !important;
         border-bottom: 2px solid #dee2e6;
+        white-space: nowrap;
     }
+    
     .table td {
         vertical-align: top;
-        height: 80px;
+        height: auto;
         border: 1px solid #e9ecef;
+        padding: 0.75rem;
     }
+    
     .card {
         transition: all 0.2s ease;
         border-radius: 0.25rem;
         border-left: 3px solid #2c6aa0 !important;
         background-color: #f8fafc;
+        margin-bottom: 0.75rem;
     }
+    
     .card:hover {
         background-color: #fff;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+    
     .border-left-3 {
         border-left-width: 3px !important;
     }
+    
     .badge {
-        font-size: 0.65rem;
-        font-weight: 500;
-        padding: 0.25em 0.4em;
+        font-size: 0.75rem;
     }
-    .rounded-circle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+    
+    .text-muted {
+        font-size: 0.85rem;
     }
+    
+    .card-title {
+        font-size: 1rem;
+    }
+    
     @media (max-width: 768px) {
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
         .table {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
         }
-        .table td {
-            height: 70px;
-        }
-        .card-title {
+        .card-title-horario {
             font-size: 0.8rem;
         }
     }
 </style>
+@endsection
+
+@section('js')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableContainer = document.querySelector('.table-responsive');
+        if (tableContainer) {
+            tableContainer.addEventListener('scroll', function() {
+                if (this.scrollLeft > 0) {
+                    this.style.boxShadow = '5px 0 10px rgba(0,0,0,0.1)';
+                } else {
+                    this.style.boxShadow = 'none';
+                }
+            });
+        }
+    });
+</script>
 @endsection

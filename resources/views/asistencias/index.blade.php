@@ -185,7 +185,7 @@
                         </div>
 
                         <div class="mt-4 d-flex justify-content-between">
-                            <a href="{{ route('horario.profesor') }}" class="btn btn-secondary">
+                            <a href="{{ route('dashboard') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left mr-2"></i> Volver
                             </a>
                             <button type="submit" class="btn btn-primary">

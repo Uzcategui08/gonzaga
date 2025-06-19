@@ -1,50 +1,39 @@
 $(document).ready(function() {
-    function initializeDataTable(table) {
-        try {
-            if ($(table).length) {
-                $(table).DataTable({
-                    responsive: true,
-                    autoWidth: false,
-                    language: {
-                        processing:     "Procesando...",
-                        search:         "Buscar:",
-                        lengthMenu:    "Mostrar _MENU_ registros",
-                        info:           "Mostrando registros del _START_ al _END_ de un total de _TOTAL_ registros",
-                        infoEmpty:      "Mostrando registros del 0 al 0 de un total de 0 registros",
-                        infoFiltered:   "(filtrado de un total de _MAX_ registros)",
-                        infoPostFix:    "",
-                        loadingRecords: "Cargando...",
-                        zeroRecords:    "No se encontraron registros coincidentes",
-                        emptyTable:     "No hay datos disponibles en la tabla",
-                        paginate: {
-                            first:      "Primero",
-                            previous:   "Anterior",
-                            next:       "Siguiente",
-                            last:       "Último"
-                        },
-                        aria: {
-                            sortAscending:  ": activar para ordenar la columna de manera ascendente",
-                            sortDescending: ": activar para ordenar la columna de manera descendente"
-                        }
-                    },
-                    dom: '<"top"f>rt<"bottom"ip><"clear">',
-                    pageLength: 10,
-                    lengthMenu: [[5, 10, 25, 50], [5, 10, 25, 50]],
-                    initComplete: function() {
-                        $('.dataTables_filter input').attr('placeholder', 'Buscar...');
-                    }
-                });
+    $('.datatable').DataTable({
+        responsive: true,
+        autoWidth: false,
+        language: {
+            url: '/js/datatables-spanish.json'
+        },
+        columnDefs: [
+            {
+                targets: 0,
+                className: 'control',
+                orderable: false,
+                width: '30px'
+            },
+            {
+                targets: -1,
+                className: 'text-center actions-column',
+                orderable: false,
+                responsivePriority: 100
             }
-        } catch (error) {
-            console.error('Error al inicializar la tabla:', error);
+        ],
+        responsive: {
+            details: {
+                type: 'column'
+            }
         }
-    }
-
-    $('.datatable:not(.dataTable)').each(function() {
-        initializeDataTable(this);
     });
+
+    // Inicializar tooltips
     $('[data-toggle="tooltip"]').tooltip({
         trigger: 'hover',
         placement: 'top'
+    });
+
+    // Manejar clicks en botones dentro de detalles expandidos
+    $('.datatable').on('click', '.btn', function(e) {
+        e.stopPropagation();
     });
 });

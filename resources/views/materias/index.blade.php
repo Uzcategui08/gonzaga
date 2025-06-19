@@ -22,72 +22,57 @@
 
         <div class="card-body p-3">
             <div class="table-responsive-md rounded-lg" style="margin: 0.5rem;">
-                <table class="table table-hover mb-0 datatable">
+                <table class="table table-hover mb-0 datatable" id="materias-table">
                     <thead class="bg-light">
                         <tr>
-                            <th class="text-center py-3" style="width: 5%; min-width: 50px">#</th>
-                            <th class="py-3" style="width: 55%; min-width: 200px">Nombre de la Materia</th>
-                            <th class="py-3" style="width: 20%; min-width: 150px">Nivel</th>
-                            <th class="text-center py-3" style="width: 20%; min-width: 180px">Acciones</th>
+                            <th></th> <!-- Columna de control responsive (oculta) -->
+                            <th class="text-center py-3">#</th>
+                            <th class="py-3">Nombre</th>
+                            <th class="py-3">Nivel</th>
+                            <th class="text-center py-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if(!$materias->isEmpty())
-                            @foreach($materias as $materia)
-                                <tr class="border-bottom">
-                                    <td class="text-center align-middle">{{ $loop->iteration }}</td>
-                                    <td class="align-middle">
-                                        <span class="font-weight-semibold text-dark">{{ $materia->nombre }}</span>
-                                    </td>
-                                    <td class="align-middle">
-                                        <span class="badge badge-pill py-2 px-3 
-                                                @if($materia->nivel === 'primaria') badge-primary
-                                                @else badge-info
-                                                @endif">
-                                            {{ ucfirst($materia->nivel) }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center align-middle">
-                                        <div class="d-flex justify-content-center">
-                                            <a href="{{ route('materias.show', $materia) }}" 
-                                               class="btn btn-sm btn-light mx-1 border"
-                                               data-toggle="tooltip" 
-                                               title="Ver detalles">
-                                                <i class="fas fa-eye text-info"></i>
-                                            </a>
-                                            <a href="{{ route('materias.edit', $materia) }}" 
-                                               class="btn btn-sm btn-light mx-1 border"
-                                               data-toggle="tooltip" 
-                                               title="Editar">
-                                                <i class="fas fa-edit text-warning"></i>
-                                            </a>
-                                            <form action="{{ route('materias.destroy', $materia) }}" method="POST" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" 
-                                                        class="btn btn-sm btn-light mx-1 border"
-                                                        data-toggle="tooltip" 
-                                                        title="Eliminar"
-                                                        onclick="event.preventDefault(); eliminarRegistro(this)" 
-                                                        data-nombre="{{ $materia->nombre }}" 
-                                                        data-tipo="la materia">
-                                                    <i class="fas fa-trash-alt text-danger"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @else
-                            <tr>
-                                <td colspan="3" class="text-center py-4">
-                                    <div class="text-muted">
-                                        <i class="fas fa-book fa-3x mb-3"></i>
-                                        <p class="mb-0">No hay materias registradas</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endif
+                        @foreach($materias as $materia)
+                        <tr>
+                            <td></td> <!-- Celda de control responsive -->
+                            <td class="text-center align-middle">{{ $loop->iteration }}</td>
+                            <td class="align-middle">{{ $materia->nombre }}</td>
+                            <td class="align-middle">
+                                <span class="badge badge-pill py-2 px-3 
+                                    @if($materia->nivel === 'primaria') badge-primary
+                                    @else badge-info
+                                    @endif">
+                                    {{ ucfirst($materia->nivel) }}
+                                </span>
+                            </td>
+                            <td class="text-center align-middle">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ route('materias.show', $materia) }}" 
+                                       class="btn btn-sm btn-light mx-1 border"
+                                       data-toggle="tooltip" 
+                                       title="Ver detalles">
+                                        <i class="fas fa-eye text-info"></i>
+                                    </a>
+                                    <a href="{{ route('materias.edit', $materia) }}" 
+                                       class="btn btn-sm btn-light mx-1 border"
+                                       data-toggle="tooltip" 
+                                       title="Editar">
+                                        <i class="fas fa-edit text-warning"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-light mx-1 border"
+                                            data-toggle="tooltip" 
+                                            title="Eliminar"
+                                            onclick="eliminarRegistro(this)"
+                                            data-nombre="{{ $materia->nombre }}"
+                                            data-url="{{ route('materias.destroy', $materia) }}">
+                                        <i class="fas fa-trash-alt text-danger"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>

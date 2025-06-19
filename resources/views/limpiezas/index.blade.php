@@ -8,6 +8,10 @@
 </div>
 @stop
 
+@section('css')
+    <link rel="stylesheet" href="{{ asset('css/datatables-responsive.css') }}">
+@endsection
+
 @section('content')
 <div class="container-fluid px-0">
     <div class="card shadow-sm">
@@ -19,7 +23,8 @@
                         <table class="table table-hover mb-0 datatable" id="clasesTable">
                             <thead class="bg-light">
                                 <tr>
-                                    <th class="text-nowrap py-3">Horario</th>
+                                    <th class="text-nowrap py-3">#</th>
+                                    <th class="py-3">Horario</th>
                                     <th class="py-3">Aula</th>
                                     <th class="py-3">Profesor</th>
                                     <th class="py-3">Materia</th>
@@ -30,6 +35,7 @@
                             <tbody>
                                 @forelse($clasesHoy as $clase)
                                     <tr class="align-middle">
+                                        <td></td>
                                         <td>
                                             <span class="badge badge-pill py-2 px-3 badge-dark">
                                                 {{ $clase->hora_inicio }} - {{ $clase->hora_fin }}
@@ -79,13 +85,13 @@
                 </div>
             @endif
 
-            <!-- Tabla de Limpiezas Registradas -->
             <div>
                 <h3 class="mb-3 text-muted">Limpiezas Registradas</h3>
                 <div class="table-responsive-md rounded-lg">
                     <table class="table table-hover mb-0 datatable" id="limpiezasTable">
                         <thead class="bg-light">
                             <tr>
+                                <th class="text-nowrap">#</th>
                                 <th class="py-3">Fecha</th>
                                 <th class="py-3">Horario</th>
                                 <th class="py-3">Aula</th>
@@ -97,6 +103,7 @@
                         <tbody>
                             @forelse($limpiezas as $limpieza)
                                 <tr class="align-middle {{ $limpieza->realizada ? 'table-success' : '' }}">
+                                    <td class="text-nowrap align-middle">{{ $loop->iteration }}</td>
                                     <td>
                                         {{ $limpieza->fecha->format('d/m/Y') }}
                                     </td>
@@ -166,7 +173,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center py-4">
+                                    <td colspan="7" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-broom fa-3x mb-3"></i>
                                             <p class="mb-0">No hay limpiezas registradas</p>
@@ -214,6 +221,8 @@
         font-size: 0.75rem;
         letter-spacing: 0.5px;
         border-bottom: 1px solid #e3e6f0;
+        padding-left: 1rem;
+        padding-right: 1rem;
     }
     
     .table tbody tr {
@@ -253,16 +262,6 @@
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-    }
-
-    @media (max-width: 768px) {
-        .card-header h3 {
-            font-size: 1.1rem;
-        }
-        
-        .table-responsive {
-            border: none;
-        }
     }
 </style>
 @endpush

@@ -179,6 +179,20 @@
     </div>
 </div>
 
+@section('css')
+<style>
+    .logoest {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        font-size: 0.875rem;
+    }
+</style>
+@stop
+
 @push('js')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>

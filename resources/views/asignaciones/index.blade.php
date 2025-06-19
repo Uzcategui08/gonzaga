@@ -24,10 +24,10 @@
 
         <div class="card-body p-3">
             <div class="table-responsive">
-                <table id="asignacionesTable" class="table table-hover table-striped datatable">
+                <table class="table table-hover mb-0 datatable" id="asignacionesTable">
                     <thead class="thead-light">
                         <tr>
-                            <th class="text-center align-middle">#</th>
+                            <th class="text-nowrap">#</th>
                             <th>Profesor</th>
                             <th>Materia</th>
                             <th>Sección</th>
@@ -38,7 +38,7 @@
                         @isset($asignaciones)
                             @if($asignaciones->isEmpty())
                                 <tr>
-                                    <td colspan="5" class="text-center py-4">
+                                    <td colspan="6" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-chalkboard-teacher fa-3x mb-3"></i>
                                             <p class="mb-0">¡No hay asignaciones registradas!</p>

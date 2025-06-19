@@ -68,8 +68,8 @@
         </div>
     @endif
 
-    @if(isset($horarios))
-        <div class="card shadow-sm border-0">
+    @if(isset($horarios))        
+    <div class="card shadow-sm border-0">
             <div class="card-body p-0">
                 @if($horarios->isEmpty())
                     <div class="alert alert-info m-0">
@@ -200,20 +200,6 @@
     .select2-container--default .select2-selection--single .select2-selection__arrow {
         height: calc(2.25rem + 2px) !important;
     }
-    .table {
-        table-layout: fixed;
-        font-size: 0.85rem;
-    }
-    .table th {
-        vertical-align: middle;
-        background-color: #f8f9fa !important;
-        border-bottom: 2px solid #dee2e6;
-    }
-    .table td {
-        vertical-align: top;
-        height: 80px;
-        border: 1px solid #e9ecef;
-    }
     .card {
         transition: all 0.2s ease;
         border-radius: 0.25rem;
@@ -233,13 +219,13 @@
         padding: 0.25em 0.4em;
     }
     @media (max-width: 768px) {
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
         .table {
-            font-size: 0.75rem;
+            font-size: 0.85rem;
         }
-        .table td {
-            height: 70px;
-        }
-        .card-title {
+        .card-title-horario {
             font-size: 0.8rem;
         }
     }
@@ -256,5 +242,18 @@ $(document).ready(function() {
         }
     });
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+        const tableContainer = document.querySelector('.table-responsive');
+        if (tableContainer) {
+            tableContainer.addEventListener('scroll', function() {
+                if (this.scrollLeft > 0) {
+                    this.style.boxShadow = '5px 0 10px rgba(0,0,0,0.1)';
+                } else {
+                    this.style.boxShadow = 'none';
+                }
+            });
+        }
+    });
 </script>
 @endsection

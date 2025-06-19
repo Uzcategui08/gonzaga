@@ -304,98 +304,100 @@
     @endif
 
     @if(auth()->user()->hasRole('profesor') && isset($horarioHoy))
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center">
-                            <i class="fas fa-calendar-day text-primary mr-2"></i>
-                            <span>Horario de Hoy</span>
-                        </h3>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th class="text-nowrap">Hora</th>
-                                        <th>Asignatura</th>
-                                        <th>Grupo</th>
-                                        <th>Aula</th>
-                                        <th>Sección</th>
-                                        <th>Estado</th>
-                                        <th class="text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($horarioHoy as $clase)
-                                        @php
-                                            $fechaActual = now('America/Caracas');
-                                            $asistencia = $asistenciasHoy->filter(function($a) use ($clase, $fechaActual) {
-                                                return $a->fecha->toDateString() === $fechaActual->toDateString() && 
-                                                       $a->horario_id === $clase->id;
-                                            })->first();
-                                        @endphp
-                                        <tr class="{{ $asistencia ? 'asistencia-tomada' : '' }}">
-                                            <td class="text-nowrap">
-                                                <span class="badge bg-light rounded-pill px-4 py-2 text-dark">
-                                                    {{ $clase->hora_inicio }} - {{ $clase->hora_fin }}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="table-responsive-md rounded-lg" style="margin: 0.5rem;">
+                    <h3 class="card-title mb-0 d-flex align-items-center">
+                        <i class="fas fa-calendar-day text-primary mr-2"></i>
+                        <span>Horario de Hoy</span>
+                    </h3>
+                </div>
+                <div class="card-body p-3">
+                    <div class="table-responsive">
+                        <table id="horarioHoyTable" class="table datatable table-hover mb-0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="text-nowrap">#</th>
+                                    <th class="text-nowrap">Hora</th>
+                                    <th>Asignatura</th>
+                                    <th>Grupo</th>
+                                    <th>Aula</th>
+                                    <th>Sección</th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($horarioHoy as $index => $clase)
+                                    @php
+                                        $fechaActual = now('America/Caracas');
+                                        $asistencia = $asistenciasHoy->filter(function($a) use ($clase, $fechaActual) {
+                                            return $a->fecha->toDateString() === $fechaActual->toDateString() && 
+                                                $a->horario_id === $clase->id;
+                                        })->first();
+                                    @endphp
+                                    <tr class="{{ $asistencia ? 'asistencia-tomada' : '' }}">
+                                        <td> </td>
+                                        <td class="text-nowrap">
+                                            <span class="badge bg-light rounded-pill px-4 py-2 text-dark">
+                                                {{ $clase->hora_inicio }} - {{ $clase->hora_fin }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $clase->asignacion->materia->nombre }}</td>
+                                        <td>
+                                            <span class="badge bg-primary rounded-pill px-4 py-2">
+                                                {{ $clase->asignacion->seccion->nombre }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $clase->aula ?? 'Aula por asignar' }}</td>
+                                        <td>{{ $clase->asignacion->seccion->grado->nombre }}</td>
+                                        <td>
+                                            @if($asistencia)
+                                                <span class="badge bg-success rounded-pill px-4 py-2">
+                                                    <i class="fas fa-check-circle mr-1"></i> Tomada
                                                 </span>
-                                            </td>
-                                            <td>{{ $clase->asignacion->materia->nombre }}</td>
-                                            <td>
-                                                <span class="badge bg-primary rounded-pill px-4 py-2">
-                                                    {{ $clase->asignacion->seccion->nombre }}
+                                            @else
+                                                <span class="badge bg-warning rounded-pill px-4 py-2">
+                                                    <i class="fas fa-clock mr-1"></i> Pendiente
                                                 </span>
-                                            </td>
-                                            <td>{{ $clase->aula ?? 'Aula por asignar' }}</td>
-                                            <td>{{ $clase->asignacion->seccion->grado->nombre }}</td>
-                                            <td>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="d-flex justify-content-center">
                                                 @if($asistencia)
-                                                    <span class="badge bg-success rounded-pill px-4 py-2">
-                                                        <i class="fas fa-check-circle mr-1"></i> Tomada
-                                                    </span>
+                                                    <a href="{{ route('asistencias.edit', $asistencia->id) }}" 
+                                                    class="btn btn-sm btn-light border mx-1"
+                                                    data-toggle="tooltip" 
+                                                    title="Editar asistencia">
+                                                        <i class="fas fa-edit text-warning"></i>
+                                                    </a>
                                                 @else
-                                                    <span class="badge bg-warning rounded-pill px-4 py-2">
-                                                        <i class="fas fa-clock mr-1"></i> Pendiente
-                                                    </span>
+                                                    <a href="{{ route('asistencias.registrar', [$clase->asignacion->materia->id, $clase->id]) }}" 
+                                                    class="btn btn-sm btn-light border mx-1"
+                                                    data-toggle="tooltip" 
+                                                    title="Registrar asistencia">
+                                                        <i class="fas fa-plus text-primary"></i>
+                                                    </a>
                                                 @endif
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="d-flex justify-content-center">
-                                                    @if($asistencia)
-                                                        <a href="{{ route('asistencias.edit', $asistencia->id) }}" 
-                                                           class="btn btn-sm btn-light border mx-1"
-                                                           data-toggle="tooltip" 
-                                                           title="Editar asistencia">
-                                                            <i class="fas fa-edit text-warning"></i>
-                                                        </a>
-                                                    @else
-                                                        <a href="{{ route('asistencias.registrar', [$clase->asignacion->materia->id, $clase->id]) }}" 
-                                                           class="btn btn-sm btn-light border mx-1"
-                                                           data-toggle="tooltip" 
-                                                           title="Registrar asistencia">
-                                                            <i class="fas fa-plus text-primary"></i>
-                                                        </a>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="7" class="text-center py-4 text-muted">
-                                                <i class="fas fa-calendar-times fa-2x mb-2"></i>
-                                                <p class="mb-0">No hay clases programadas para hoy</p>
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4 text-muted">
+                                            <i class="fas fa-calendar-times fa-2x mb-2"></i>
+                                            <p class="mb-0">No hay clases programadas para hoy</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
     @endif
 </div>
 @endsection
@@ -481,26 +483,8 @@
         box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
     }
     
-    .table-responsive-md {
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-    
-    .table {
-        margin-bottom: 0;
-    }
-    
-    .table thead {
-        background-color: #f8f9fa;
-    }
-    
-    .table th {
-        font-weight: 600;
-        color: #495057;
-        padding: 0.75rem;
-        border-bottom: 2px solid #dee2e6;
-    }
-    
+
+
     .asistencia-tomada {
         background-color: rgba(40, 167, 69, 0.1); 
         border-left: 4px solid #28a745; 
@@ -510,28 +494,6 @@
     .asistencia-tomada:hover {
         background-color: rgba(40, 167, 69, 0.15);
         border-left: 4px solid #218838;
-    }
-    
-    .table td {
-        padding: 0.75rem;
-    }
-    
-    .table-hover tbody tr:hover {
-        background-color: #f8f9fa;
-    }
-
-    @media (max-width: 768px) {
-        .chart-container {
-            height: auto !important;
-        }
-        
-        .card-body {
-            padding: 0.75rem;
-        }
-        
-        .table-responsive-md {
-            border-radius: 0.25rem;
-        }
     }
 
     .card {
