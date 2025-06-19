@@ -35,7 +35,7 @@
                     <tbody>
                         @foreach($materias as $materia)
                         <tr>
-                            <td></td> <!-- Celda de control responsive -->
+                            <td></td>
                             <td class="text-center align-middle">{{ $loop->iteration }}</td>
                             <td class="align-middle">{{ $materia->nombre }}</td>
                             <td class="align-middle">
