@@ -25,7 +25,6 @@
                 <table class="table table-hover mb-0 datatable" id="materias-table">
                     <thead class="bg-light">
                         <tr>
-                            <th></th> <!-- Columna de control responsive (oculta) -->
                             <th class="text-center py-3">#</th>
                             <th class="py-3">Nombre</th>
                             <th class="py-3">Nivel</th>
@@ -36,7 +35,6 @@
                         @foreach($materias as $materia)
                         <tr>
                             <td></td>
-                            <td class="text-center align-middle">{{ $loop->iteration }}</td>
                             <td class="align-middle">{{ $materia->nombre }}</td>
                             <td class="align-middle">
                                 <span class="badge badge-pill py-2 px-3 

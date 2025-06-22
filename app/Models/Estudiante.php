@@ -24,6 +24,11 @@ class Estudiante extends Model
         'contacto_emergencia_telefono'
     ];
 
+    protected $casts = [
+        'fecha_nacimiento' => 'datetime',
+        'fecha_ingreso' => 'datetime'
+    ];
+
     public function seccion()
     {
         return $this->belongsTo(Seccion::class);

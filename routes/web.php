@@ -16,9 +16,10 @@ use App\Http\Controllers\AsistenciaReporteController;
 use App\Http\Controllers\PaseController;
 use App\Http\Controllers\LimpiezaController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\TestController;
 
 Route::get('/', function () {
-    return view('/auth/login');
+    return redirect()->route('login');
 });
 
 Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])

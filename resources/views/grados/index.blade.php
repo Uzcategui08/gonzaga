@@ -27,10 +27,10 @@
                 <table class="table table-hover mb-0 datatable" id="grados-table">
                     <thead class="bg-light">
                         <tr>
-                            <th class="text-center py-3" style="width: 5%; min-width: 50px">#</th>
-                            <th class="py-3" style="width: 45%; min-width: 200px">Nombre del Grado</th>
-                            <th class="py-3" style="width: 30%; min-width: 150px">Nivel Educativo</th>
-                            <th class="text-center py-3" style="width: 20%; min-width: 180px">Acciones</th>
+                            <th class="text-center py-3">#</th>
+                            <th class="py-3">Nombre del Grado</th>
+                            <th class="py-3">Nivel Educativo</th>
+                            <th class="text-center py-3">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>

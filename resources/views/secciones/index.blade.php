@@ -21,14 +21,14 @@
             </div>
 
             <div class="card-body p-3">
-                <div class="table-responsive table-responsive-md rounded-lg" style="margin: 0.5rem;">
+                <div class="table-responsive-md rounded-lg" style="margin: 0.5rem;">
                     <table class="table table-hover mb-0 datatable" id="secciones-table">
                         <thead class="bg-light">
                             <tr>
-                                <th class="text-center py-3" style="width: 5%; min-width: 50px">#</th>
-                                <th class="py-3" style="width: 30%; min-width: 150px">Nombre de la Sección</th>
-                                <th class="py-3" style="width: 30%; min-width: 150px">Grado</th>
-                                <th class="text-center py-3" style="width: 35%; min-width: 200px">Acciones</th>
+                                <th class="text-center py-3">#</th>
+                                <th class="py-3">Nombre de la Sección</th>
+                                <th class="py-3">Grado</th>
+                                <th class="text-center py-3">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>

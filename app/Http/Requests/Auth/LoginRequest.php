@@ -42,11 +42,22 @@ class LoginRequest extends FormRequest
         $this->ensureIsNotRateLimited();
 
         if (! Auth::attempt($this->only('name', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
-
-            throw ValidationException::withMessages([
-                'name' => trans('auth.failed'),
-            ]);
+            // Primero verificamos si el usuario existe
+            $user = \App\Models\User::where('name', $this->name)->first();
+            
+            if ($user) {
+                // Si existe el usuario, el error es de contraseña
+                RateLimiter::hit($this->throttleKey());
+                throw ValidationException::withMessages([
+                    'password' => trans('auth.password'),
+                ]);
+            } else {
+                // Si no existe el usuario, el error es de credenciales
+                RateLimiter::hit($this->throttleKey());
+                throw ValidationException::withMessages([
+                    'name' => trans('auth.failed'),
+                ]);
+            }
         }
 
         RateLimiter::clear($this->throttleKey());
