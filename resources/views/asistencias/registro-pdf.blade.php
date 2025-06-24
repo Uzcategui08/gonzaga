@@ -4,275 +4,275 @@
     <meta charset="UTF-8">
     <title>Registro de Asistencia - {{ $asistencia->materia ? $asistencia->materia->nombre : 'Clase' }}</title>
     <style>
-        :root {
-            --primary-color: #3498db;
-            --secondary-color: #f8f9fa;
-            --success-color: #28a745;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --border-color: #dee2e6;
-            --text-muted: #6c757d;
-        }
-        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #212529;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 10pt;
+            line-height: 1.3;
+            color: #333;
             margin: 0;
-            padding: 20px;
-            background-color: #f5f5f5;
+            padding: 5mm;
         }
         
         .container {
-            max-width: 1000px;
+            width: 100%;
+            max-width: 210mm;
             margin: 0 auto;
-            background: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            overflow: hidden;
         }
         
         .header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 20px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 4mm;
+            padding-bottom: 3mm;
+            border-bottom: 1px solid #ddd;
         }
         
         h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
+            font-size: 14pt;
+            font-weight: bold;
+            margin: 0 0 2mm 0;
+            color: #222;
         }
         
         .subtitle {
-            font-size: 16px;
-            opacity: 0.9;
-            margin-top: 5px;
+            font-size: 11pt;
+            font-weight: normal;
+            margin: 0;
+            color: #555;
         }
         
-        .card {
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        
-        .card-header {
-            background-color: var(--secondary-color);
-            padding: 12px 15px;
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-        }
-        
-        .card-body {
-            padding: 15px;
-        }
-        
-        .row {
+        .info-line {
             display: flex;
+            justify-content: space-between;
+            margin-bottom: 3mm;
             flex-wrap: wrap;
-            margin: 0 -10px;
+            align-items: center;
         }
         
-        .col-md-6 {
-            width: 50%;
-            padding: 0 10px;
-            box-sizing: border-box;
+        .info-group {
+            display: flex;
+            gap: 8mm;
+            margin-bottom: 2mm;
+            align-items: center;
         }
         
         .info-item {
-            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            margin-bottom: 0;
         }
         
         .info-label {
-            font-weight: 600;
-            color: var(--text-muted);
-            display: block;
-            margin-bottom: 3px;
+            font-weight: bold;
+            margin-right: 2mm;
+            font-size: 9pt;
+            color: #555;
         }
         
         .info-value {
-            font-size: 15px;
+            font-size: 10pt;
         }
         
-        hr {
-            border: 0;
-            border-top: 1px solid var(--border-color);
-            margin: 20px 0;
+        .section {
+            margin-bottom: 4mm;
+        }
+        
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 1mm;
+            margin-bottom: 2mm;
+        }
+        
+        .section-content {
+            font-size: 10pt;
+            padding-left: 2mm;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 15px;
+            margin-top: 2mm;
+            font-size: 9pt;
+            page-break-inside: avoid;
         }
         
         th {
-            background-color: var(--secondary-color);
             text-align: left;
-            padding: 10px 12px;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border-color);
+            padding: 1.5mm 2mm;
+            background-color: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            font-weight: bold;
         }
         
         td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 1.5mm 2mm;
+            border-bottom: 1px solid #eee;
             vertical-align: top;
         }
         
-        tr:last-child td {
-            border-bottom: none;
+        .status {
+            font-weight: bold;
         }
         
-        .status-present {
-            color: var(--success-color);
-            font-weight: 600;
+        .present {
+            color: #2e7d32;
         }
         
-        .status-absent {
-            color: var(--danger-color);
-            font-weight: 600;
+        .absent {
+            color: #c62828;
         }
         
-        .status-late {
-            color: var(--warning-color);
-            font-weight: 600;
+        .late {
+            color: #f9a825;
         }
         
-        .text-muted {
-            color: var(--text-muted);
-            font-size: 12px;
+        .student-id {
+            font-size: 8pt;
+            color: #777;
         }
         
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding: 15px;
-            color: var(--text-muted);
-            font-size: 12px;
-            border-top: 1px solid var(--border-color);
+            font-size: 8pt;
+            color: #777;
+            margin-top: 5mm;
+            border-top: 1px solid #ddd;
+            padding-top: 2mm;
         }
-        
-        @media print {
-            body {
-                background: none;
-                padding: 0;
-            }
-            
-            .container {
-                box-shadow: none;
-                border-radius: 0;
-            }
+
+        .avoid-break {
+            page-break-inside: avoid;
         }
-        
-        @media (max-width: 768px) {
-            .col-md-6 {
-                width: 100%;
-            }
+
+        .compact-info {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 3mm;
+            table-layout: fixed;
+        }
+
+        .compact-info td {
+            padding: 1mm 2mm;
+            vertical-align: top;
+            border: none;
+        }
+
+        .compact-label {
+            font-weight: bold;
+            font-size: 9pt;
+            color: #555;
+            white-space: nowrap;
+            display: block; 
+        }
+
+        .compact-value {
+            font-size: 10pt;
+            padding-right: 5mm;
+            display: block; 
+            word-wrap: break-word; 
+        }
+
+        .separator {
+            color: #ddd;
+            padding: 0 2mm;
+            text-align: center;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Registro de Asistencia</h1>
-            <div class="subtitle">{{ $asistencia->materia ? $asistencia->materia->nombre : 'Clase' }}</div>
+            <h1>REGISTRO DE ASISTENCIA</h1>
+            <p class="subtitle">{{ $asistencia->materia ? $asistencia->materia->nombre : 'Clase' }}</p>
         </div>
         
-        <div class="card">
-            <div class="card-header">Información General</div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <span class="info-label">Fecha y Hora de Registro:</span>
-                            <span class="info-value">{{ $asistencia->created_at->format('d/m/Y H:i:s') }}</span>
+        <table class="compact-info avoid-break" style="table-layout:fixed;">
+            <tr>
+                <td style="width:16%;">
+                    <span class="compact-label">Fecha clase:</span>
+                    <span class="compact-value">{{ $asistencia->fecha ? $asistencia->fecha->format('d/m/Y') : 'N/A' }}</span>
+                </td>
+                <td class="separator" style="width:2%;">|</td>
+                <td style="width:12%;">
+                    <span class="compact-label">Hora:</span>
+                    <span class="compact-value">{{ substr($asistencia->hora_inicio, 0, 5) }}</span>
+                </td>
+                <td class="separator" style="width:2%;">|</td>
+                <td style="width:13%;">
+                    <span class="compact-label">Aula:</span>
+                    <span class="compact-value">{{ $asistencia->horario ? $asistencia->horario->aula : 'N/A' }}</span>
+                </td>
+                <td class="separator" style="width:2%;">|</td>
+                <td style="width:22%;">
+                    <span class="compact-label">Profesor:</span>
+                    <span class="compact-value">{{ $asistencia->profesor ? ($asistencia->profesor->user ? $asistencia->profesor->user->name : 'N/A') : 'N/A' }}</span>
+                </td>
+                <td class="separator" style="width:2%;">|</td>
+                <td style="width:21%;">
+                    <span class="compact-label">Registro:</span>
+                    <span class="compact-value">{{ $asistencia->created_at->format('d/m/Y H:i') }}</span>
+                </td>
+            </tr>
+        </table>
+
+        <div class="section avoid-break">
+            <div class="section-title">DETALLES DE LA CLASE</div>
+            <table class="compact-info" style="table-layout:fixed; width:100%;">
+                <tr>
+                    <td style="width:49%; vertical-align: top;">
+                        <div style="display: block;">
+                            <span class="compact-label">Contenido:</span>
+                            <div class="compact-value" style="display: block; margin-top: 2px;">{{ $asistencia->contenido_clase ?? 'No se registró contenido' }}</div>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">Fecha de Clase:</span>
-                            <span class="info-value">{{ $asistencia->fecha ? $asistencia->fecha->format('d/m/Y') : 'N/A' }}</span>
+                    </td>
+                    <td class="separator" style="width:2%; vertical-align: top;">|</td>
+                    <td style="width:49%; vertical-align: top;">
+                        <div style="display: block;">
+                            <span class="compact-label">Observaciones:</span>
+                            <div class="compact-value" style="display: block; margin-top: 2px;">{{ $asistencia->observacion_general ?? 'No hay observaciones' }}</div>
                         </div>
-                        <div class="info-item">
-                            <span class="info-label">Hora de Inicio:</span>
-                            <span class="info-value">{{ substr($asistencia->hora_inicio, 0, 5) }}</span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="info-item">
-                            <span class="info-label">Materia:</span>
-                            <span class="info-value">{{ $asistencia->materia ? $asistencia->materia->nombre : 'N/A' }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Profesor:</span>
-                            <span class="info-value">{{ $asistencia->profesor ? ($asistencia->profesor->user ? $asistencia->profesor->user->name : 'N/A') : 'N/A' }}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Aula:</span>
-                            <span class="info-value">{{ $asistencia->horario ? $asistencia->horario->aula : 'N/A' }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                    </td>
+                </tr>
+            </table>
         </div>
         
-        <div class="card">
-            <div class="card-header">Detalles de la Clase</div>
-            <div class="card-body">
-                <div class="info-item">
-                    <span class="info-label">Contenido de la Clase:</span>
-                    <p class="info-value">{{ $asistencia->contenido_clase ?? 'No se registró contenido' }}</p>
-                </div>
-                
-                <hr>
-                
-                <div class="info-item">
-                    <span class="info-label">Observación General:</span>
-                    <p class="info-value">{{ $asistencia->observacion_general ?? 'No hay observaciones' }}</p>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">Asistencia de Estudiantes</div>
-            <div class="card-body">
-                <table>
-                    <thead>
-                        <tr>
-                            <th width="40%">Estudiante</th>
-                            <th width="20%">Estado</th>
-                            <th width="40%">Observación</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($asistencia->estudiantes as $detalle)
-                        <tr>
-                            <td>
-                                {{ $detalle->nombres . ' ' . $detalle->apellidos }}
-                                <div class="text-muted">ID: {{ $detalle->estudiante_id }}</div>
-                            </td>
-                            <td>
-                                @if($detalle->estado === 'A')
-                                    <span class="status-present">Asistente</span>
-                                @elseif($detalle->estado === 'I')
-                                    <span class="status-absent">Inasistente</span>
-                                @else
-                                    <span class="status-late">Pase</span>
-                                @endif
-                            </td>
-                            <td>{{ $detalle->observacion_individual ?? 'N/A' }}</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+        <div class="section avoid-break">
+            <div class="section-title">LISTA DE ESTUDIANTES</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="50%">Estudiante</th>
+                        <th width="15%">Asistencia</th>
+                        <th width="35%">Observación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($asistencia->estudiantes as $detalle)
+                    <tr>
+                        <td>
+                            {{ $detalle->nombres }} {{ $detalle->apellidos }}
+                            <div class="student-id">ID: {{ $detalle->estudiante_id }}</div>
+                        </td>
+                        <td>
+                            @if($detalle->estado === 'A')
+                                <span class="status present">Asistió</span>
+                            @elseif($detalle->estado === 'I')
+                                <span class="status absent">Faltó</span>
+                            @else
+                                <span class="status late">Pase</span>
+                            @endif
+                        </td>
+                        <td>{{ $detalle->observacion_individual ?? '-' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
         
         <div class="footer">
-            Documento generado el {{ now()->format('d/m/Y H:i:s') }} | Sistema de Gestión Académica
+            Documento generado el {{ now()->format('d/m/Y H:i') }} | Sistema de Gestión Académica
         </div>
     </div>
 </body>

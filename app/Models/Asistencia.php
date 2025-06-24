@@ -48,6 +48,11 @@ class Asistencia extends Model
         return $this->belongsTo(Profesor::class);
     }
 
+    public function asistencia_estudiante()
+    {
+        return $this->hasMany(AsistenciaEstudiante::class);
+    }
+
     public function materia(): BelongsTo
     {
         return $this->belongsTo(Materia::class);

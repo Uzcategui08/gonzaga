@@ -17,6 +17,7 @@ use App\Http\Controllers\PaseController;
 use App\Http\Controllers\LimpiezaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TestController;
+use App\Http\Controllers\AsistenciaMensualController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -42,7 +43,6 @@ Route::delete('/horarios/{horario}', [HorarioController::class, 'destroy'])->nam
 Route::get('/horario-profesor', [HorarioController::class, 'horarioProfesor'])->name('horario.profesor');
 
 Route::get('/asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
-
 require __DIR__ . '/auth.php';
 
 Route::middleware(['auth'])->group(function () {
@@ -77,6 +77,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('asistencias/{asistencia}/pdf', [AsistenciaController::class, 'generatePdf'])->name('asistencias.generate-pdf');
     Route::get('/asistencias/create/{materiaId}/{horarioId}', [AsistenciaController::class, 'create'])->name('asistencias.create');
     Route::resource('asistencias', AsistenciaController::class);
+    Route::get('/asistencia/mensual', [AsistenciaMensualController::class, 'index'])->name('asistencia.mensual.index');
+    Route::get('/asistencia/mensual/pdf', [AsistenciaMensualController::class, 'generatePdf'])->name('asistencia.mensual.pdf');
 
     Route::resource('pases', PaseController::class);
     Route::get('asistencias/registrar/{materia}/{horario}', [AsistenciaController::class, 'registrar'])->name('asistencias.registrar');
