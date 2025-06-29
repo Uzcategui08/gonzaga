@@ -48,9 +48,17 @@ class Asistencia extends Model
         return $this->belongsTo(Profesor::class);
     }
 
-    public function asistencia_estudiante()
+    public function grado()
     {
-        return $this->hasMany(AsistenciaEstudiante::class);
+        return $this->belongsTo(Grado::class, 'grado_id')->with('secciones');
+    }
+
+    public function getSeccionNombreAttribute()
+    {
+        $grado = $this->grado?->nombre ?? 'No especificado';
+        $seccion = $this->grado?->secciones?->first()?->nombre ?? 'No especificada';
+        
+        return "{$grado} - {$seccion}";
     }
 
     public function materia(): BelongsTo
@@ -58,7 +66,7 @@ class Asistencia extends Model
         return $this->belongsTo(Materia::class);
     }
 
-    public function grado(): BelongsTo
+    public function asistencia_estudiante()
     {
         return $this->belongsTo(Grado::class);
     }

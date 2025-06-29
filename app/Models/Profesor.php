@@ -43,6 +43,11 @@ class Profesor extends User
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    public function asignaciones()
+    {
+        return $this->hasMany(Asignacion::class);
+    }
+
     public function limpiezas()
     {
         return $this->hasMany(Limpieza::class);

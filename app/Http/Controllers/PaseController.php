@@ -19,16 +19,41 @@ class PaseController extends Controller
 
     public function index()
     {
-        $pases = Pase::with(['estudiante', 'usuario'])
-            ->orderBy('fecha', 'desc')
-            ->get();
+        $user = auth()->user();
+        
+        if ($user->hasRole('coordinador')) {
+            $secciones = $user->secciones;
+            
+            $pases = Pase::with(['estudiante', 'usuario'])
+                ->whereHas('estudiante', function($query) use ($secciones) {
+                    $query->whereIn('seccion_id', $secciones->pluck('id'));
+                })
+                ->orderBy('fecha', 'desc')
+                ->get();
+        } else {
+            $pases = Pase::with(['estudiante', 'usuario'])
+                ->orderBy('fecha', 'desc')
+                ->get();
+        }
 
         return view('pases.index', compact('pases'));
     }
 
     public function create()
     {
-        $estudiantes = Estudiante::all();
+        $user = auth()->user();
+        
+        if ($user->hasRole('coordinador')) {
+            $secciones = $user->secciones;
+            
+            $estudiantes = Estudiante::whereIn('seccion_id', $secciones->pluck('id'))
+                ->with('seccion')
+                ->get();
+        } else {
+            $estudiantes = Estudiante::with('seccion')
+                ->get();
+        }
+
         return view('pases.create', compact('estudiantes'));
     }
 

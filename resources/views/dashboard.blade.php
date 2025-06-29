@@ -166,95 +166,154 @@
     @else
 
         <div class="row mb-4">
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center">
-                            <i class="fas fa-user-graduate text-primary mr-2"></i>
-                            Estudiantes
-                        </h3>
-                    </div>
-                    <div class="card-body py-3">
+            <!-- Summary Card -->
+            <div class="col-md-6 mb-4">
+                <div class="card card-statistic">
+                    <div class="card-body">
                         <div class="d-flex align-items-center">
-                            <div class="mr-3">
+                            <div class="card-icon bg-primary">
+                                <i class="fas fa-chart-pie text-white"></i>
+                            </div>
+                            <div class="ml-3">
                                 <h2 class="mb-0">{{ $totalEstudiantes }}</h2>
-                            </div>
-                            <div>
-                                <p class="mb-0">Total</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center">
-                            <i class="fas fa-chalkboard-teacher text-primary mr-2"></i>
-                            Profesores
-                        </h3>
-                    </div>
-                    <div class="card-body py-3">
-                        <div class="d-flex align-items-center">
-                            <div class="mr-3">
-                                <h2 class="mb-0">{{ $totalProfesores }}</h2>
-                            </div>
-                            <div>
-                                <p class="mb-0">Total</p>
+                                <p class="mb-0 text-muted">Estudiantes Totales</p>
+                                <small class="text-muted">{{ $totalProfesores }} profesores</small>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center">
-                            <i class="fas fa-check-circle text-success mr-2"></i>
-                            Asistencias Hoy
-                        </h3>
-                    </div>
-                    <div class="card-body py-3">
-                        <div class="d-flex align-items-center">
-                            <div class="mr-3">
-                                <h2 class="mb-0 text-success">{{ $asistenciasHoy }}</h2>
-                            </div>
-                            <div>
-                                <p class="mb-0 text-success">Total</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center">
-                            <i class="fas fa-times-circle text-danger mr-2"></i>
-                            Inasistencias Hoy
-                        </h3>
-                    </div>
-                    <div class="card-body py-3">
-                        <div class="d-flex align-items-center">
-                            <div class="mr-3">
-                                <h2 class="mb-0 text-danger">{{ $inasistenciasHoy }}</h2>
-                            </div>
-                            <div>
-                                <p class="mb-0 text-danger">Total</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <div class="row mb-4">
+            <!-- Average Attendance Rate -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card card-statistic">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon bg-success">
+                                <i class="fas fa-percentage text-white"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h2 class="mb-0">{{ $promedioAsistencia ?? 0 }}%</h2>
+                                <p class="mb-0 text-muted">Promedio Asistencia</p>
+                                <small class="text-muted">Últimos 30 días</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Classes Today -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card card-statistic">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon bg-info">
+                                <i class="fas fa-chalkboard-teacher text-white"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h2 class="mb-0">{{ $totalClasesHoy }}</h2>
+                                <p class="mb-0 text-muted">Clases Hoy</p>
+                                <small class="text-muted">Total del día</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- Asistencias Hoy -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card card-statistic">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon bg-success">
+                                <i class="fas fa-check-circle text-white"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h2 class="mb-0">{{ $asistenciasHoy }}</h2>
+                                <p class="mb-0 text-muted">Asistencias Hoy</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inasistencias Hoy -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card card-statistic">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon bg-danger">
+                                <i class="fas fa-times-circle text-white"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h2 class="mb-0">{{ $inasistenciasHoy }}</h2>
+                                <p class="mb-0 text-muted">Inasistencias Hoy</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Performing Classes -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card card-statistic">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon bg-warning">
+                                <i class="fas fa-star text-white"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h2 class="mb-0">{{ $claseTop }}</h2>
+                                <p class="mb-0 text-muted">Top Clase</p>
+                                <small class="text-muted">{{ $asistenciaClaseTop }}% asistencia</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance by Subject -->
+            <div class="col-md-3 col-sm-6 mb-4">
+                <div class="card card-statistic">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center">
+                            <div class="card-icon bg-info">
+                                <i class="fas fa-book text-white"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h2 class="mb-0">{{ $materiaTop }}</h2>
+                                <p class="mb-0 text-muted">Materia Top</p>
+                                <small class="text-muted">{{ $asistenciaMateriaTop }}% asistencia</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attendance by Day of Week -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h3 class="card-title mb-0 d-flex align-items-center">
+                            <i class="fas fa-chart-bar text-primary mr-2"></i>
+                            Asistencia por Día de la Semana
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="attendanceByDayChart" style="height: 300px;"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary of Attendance -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header bg-white border-0 py-3">
                         <h3 class="card-title mb-0 d-flex align-items-center">
                             <i class="fas fa-clipboard-check text-primary mr-2"></i>
-                            Resumen de Asistencias Hoy
+                            Resumen de Asistencia
                         </h3>
                     </div>
                     <div class="card-body">
@@ -301,9 +360,88 @@
                 </div>
             </div>
         </div>
+
+            <!-- Add Chart.js v2.x library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
+
+    <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get the canvas element
+            const canvas = document.getElementById('attendanceByDayChart');
+            if (!canvas) {
+                console.log('Canvas element not found');
+                return;
+            }
+
+            // Get the context
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                console.log('Could not get canvas context');
+                return;
+            }
+
+            // Get the attendance data from PHP
+            const attendanceData = @json($attendanceByDay);
+            console.log('Real attendance data:', attendanceData);
+
+            // Extract labels and data from real attendance data
+            const chartLabels = attendanceData.map(item => item.dia);
+            const chartValues = attendanceData.map(item => item.tasa);
+
+            // Create the chart
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Tasa de Asistencia (%)',
+                        data: chartValues,
+                        backgroundColor: '#4361ee',
+                        borderColor: '#4361ee',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    legend: {
+                        position: 'top',
+                    },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero: true,
+                                stepSize: 10,
+                                max: 100
+                            }
+                        }],
+                        xAxes: [{
+                            ticks: {
+                                autoSkip: false
+                            }
+                        }]
+                    },
+                    plugins: {
+                        datalabels: {
+                            display: true,
+                            color: 'white',
+                            anchor: 'end',
+                            align: 'top',
+                            formatter: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+
     @endif
 
     @if(auth()->user()->hasRole('profesor') && isset($horarioHoy))
+
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow">

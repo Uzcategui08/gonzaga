@@ -95,7 +95,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('justificativos')->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':coordinador,admin'])->group(function () {
         Route::get('/', [JustificativoController::class, 'index'])->name('justificativos.index');
         Route::get('nuevo', [JustificativoController::class, 'create'])->name('justificativos.create');
-        Route::get('nuevo/{estudiante}', [JustificativoController::class, 'createSpecific'])->name('justificativos.create-specific');
+        Route::get('nuevo/{estudiante}', [JustificativoController::class, 'createSpecific'])->name('justificativos .create-specific');
         Route::post('/', [JustificativoController::class, 'store'])->name('justificativos.store');
         Route::get('{justificativo}', [JustificativoController::class, 'show'])->name('justificativos.admin.show');
         Route::get('show/{justificativo}', [JustificativoController::class, 'show'])->name('justificativos.show');

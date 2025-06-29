@@ -31,25 +31,39 @@ class LimpiezaController extends Controller
 
         $diaActual = $diasTraduccion[$diaIngles] ?? 'Lunes';
 
-        $clasesHoy = Horario::where('dia', $diaActual)
-            ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
-            ->get();
-
         $esCoordinador = auth()->user()->hasRole('coordinador');
         $esProfesor = auth()->user()->hasRole('profesor');
 
-        $clasesHoy = Horario::where('dia', $diaActual)
-            ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
-            ->get();
+        if ($esCoordinador) {
+            $secciones = auth()->user()->secciones;
 
-        if ($esProfesor) {
-            $clasesHoy = $clasesHoy->filter(function($clase) {
-                return $clase->asignacion && $clase->asignacion->profesor_id === auth()->id();
-            });
+            $clasesHoy = Horario::where('dia', $diaActual)
+                ->whereHas('asignacion', function($query) use ($secciones) {
+                    $query->whereIn('seccion_id', $secciones->pluck('id'));
+                })
+                ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
+                ->get();
+        } else if ($esProfesor) {
+            $clasesHoy = Horario::where('dia', $diaActual)
+                ->whereHas('asignacion', function($query) {
+                    $query->where('profesor_id', auth()->id());
+                })
+                ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
+                ->get();
+        } else {
+            $clasesHoy = Horario::where('dia', $diaActual)
+                ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
+                ->get();
         }
 
         if ($esCoordinador) {
+
+            $secciones = auth()->user()->secciones;
+
             $limpiezas = Limpieza::whereDate('fecha', $fechaActual)
+                ->whereHas('profesor.asignaciones', function($query) use ($secciones) {
+                    $query->whereIn('seccion_id', $secciones->pluck('id'));
+                })
                 ->with(['profesor.usuario'])
                 ->orderBy('fecha', 'desc')
                 ->get();
@@ -233,20 +247,17 @@ class LimpiezaController extends Controller
         $limpieza->estudiantes_tareas = json_decode($limpieza->estudiantes_tareas, true) ?? [];
         
         $limpieza->load('horario.asignacion.seccion');
-        
-        // Obtener los IDs de estudiantes asignados a esta limpieza
+
         $idsEstudiantesAsignados = array_column($limpieza->estudiantes_tareas, 'id');
-        
-        // Obtener solo los estudiantes asignados a esta limpieza
+
         $estudiantes = $limpieza->horario->asignacion->seccion->estudiantes()
             ->whereIn('id', $idsEstudiantesAsignados)
             ->orderBy('apellidos')
             ->get();
 
-        // Crear un array con los datos de tareas para cada estudiante
         $estudiantesConTareas = [];
         foreach ($estudiantes as $estudiante) {
-            // Buscar la tarea por ID del estudiante
+
             $tareaData = null;
             foreach ($limpieza->estudiantes_tareas as $key => $tarea) {
                 if (isset($tarea['id']) && $tarea['id'] == $estudiante->id) {
@@ -273,13 +284,11 @@ class LimpiezaController extends Controller
                 ->with('error', 'No puedes editar una limpieza que ya ha sido completada');
         }
 
-        // Log de los datos iniciales
         Log::info('Datos de limpieza:', [
             'id' => $limpieza->id,
             'estudiantes_tareas' => $limpieza->estudiantes_tareas
         ]);
 
-        // Decodificar el JSON de estudiantes_tareas
         $limpieza->estudiantes_tareas = json_decode($limpieza->estudiantes_tareas, true) ?? [];
         Log::info('Después de decodificar JSON:', [
             'estudiantes_tareas' => $limpieza->estudiantes_tareas,
@@ -288,7 +297,6 @@ class LimpiezaController extends Controller
 
         $limpieza->load('horario.asignacion.seccion');
         
-        // Obtener los estudiantes con sus datos completos
         $estudiantes = $limpieza->horario->asignacion->seccion->estudiantes()
             ->get()
             ->filter(function($estudiante) use ($limpieza) {
@@ -301,7 +309,6 @@ class LimpiezaController extends Controller
             'estudiantes' => $estudiantes->pluck('id', 'nombres')->toArray()
         ]);
 
-        // Pasar los datos de las tareas a la vista
         $tareasPorEstudiante = collect($limpieza->estudiantes_tareas)
             ->mapWithKeys(function($tareaData) {
                 return [$tareaData['id'] => $tareaData];

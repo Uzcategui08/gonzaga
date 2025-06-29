@@ -47,7 +47,9 @@ class User extends Authenticatable
      */
     public function secciones()
     {
-        return $this->belongsToMany(Seccion::class, 'coordinador_secciones', 'coordinador_id', 'seccion_id');
+        return $this->belongsToMany(Seccion::class, 'coordinator_section', 'coordinator_id', 'section_id')
+                    ->using(CoordinatorSection::class)
+                    ->withTimestamps();
     }
 
     /**
