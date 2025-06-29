@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Title
@@ -80,11 +79,11 @@ return [
     |
     */
 
-    'logo' => '<b>Gonzaga</b>',
-    'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
+    'logo' => 'Gonzaga',
+    'logo_img' => '/storage/EXG-01.svg',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
-    'logo_img_xl_class' => 'brand-image-xs',
+    'logo_img_xl_class' => 'brand-image-lg',
     'logo_img_alt' => 'Admin Logo',
 
     /*
@@ -103,7 +102,7 @@ return [
     'auth_logo' => [
         'enabled' => false,
         'img' => [
-            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
+            'path' => '/storage/EXG-01.svg',
             'alt' => 'Auth Logo',
             'class' => '',
             'width' => 50,
@@ -130,7 +129,7 @@ return [
         'enabled' => true,
         'mode' => 'fullscreen',
         'img' => [
-            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
+            'path' => '/storage/EXG-01.svg',
             'alt' => 'AdminLTE Preloader Image',
             'effect' => 'animation__shake',
             'width' => 60,
@@ -215,7 +214,7 @@ return [
     'classes_content' => '',
     'classes_sidebar' => 'sidebar-dark-yellow elevation-4',
     'classes_sidebar_nav' => '',
-    'classes_topnav' => 'navbar-white navbar-light',
+    'classes_topnav' => 'navbar-gonzaga',
     'classes_topnav_nav' => 'navbar-expand',
     'classes_topnav_container' => 'container',
 
