@@ -269,21 +269,35 @@ class HorarioController extends Controller
                         ->findOrFail($request->professor_id);
                     Log::info('Profesor seleccionado:', ['id' => $selectedProfessor->id, 'name' => $selectedProfessor->user->name]);
 
-                    $seccionesProfesor = $selectedProfessor->secciones()->whereIn('seccion_id', $seccionesCoordinador)->get();
-                    Log::info('Secciones del profesor en las secciones:', ['count' => $seccionesProfesor->count()]);
+                    if ($user->hasRole('admin')) {
+                        $seccionesProfesor = $selectedProfessor->secciones()->get();
+                    } else {
+                        $seccionesProfesor = $selectedProfessor->secciones()->whereIn('seccion_id', $seccionesCoordinador)->get();
+                    }
+                    Log::info('Secciones del profesor:', ['count' => $seccionesProfesor->count()]);
 
                     if ($seccionesProfesor->isEmpty()) {
                         return redirect()->back()->with('error', 'El profesor seleccionado no tiene asignaciones en tus secciones.');
                     }
 
-                    $horarios = Horario::with(['asignacion.materia', 'asignacion.seccion.grado'])
-                        ->whereHas('asignacion', function($query) use ($selectedProfessor, $seccionesCoordinador) {
-                            $query->where('profesor_id', $selectedProfessor->id)
-                                  ->whereIn('seccion_id', $seccionesCoordinador);
-                        })
-                        ->orderBy('dia')
-                        ->orderBy('hora_inicio')
-                        ->get();
+                    if ($user->hasRole('admin')) {
+                        $horarios = Horario::with(['asignacion.materia', 'asignacion.seccion.grado'])
+                            ->whereHas('asignacion', function($query) use ($selectedProfessor) {
+                                $query->where('profesor_id', $selectedProfessor->id);
+                            })
+                            ->orderBy('dia')
+                            ->orderBy('hora_inicio')
+                            ->get();
+                    } else {
+                        $horarios = Horario::with(['asignacion.materia', 'asignacion.seccion.grado'])
+                            ->whereHas('asignacion', function($query) use ($selectedProfessor, $seccionesCoordinador) {
+                                $query->where('profesor_id', $selectedProfessor->id)
+                                      ->whereIn('seccion_id', $seccionesCoordinador);
+                            })
+                            ->orderBy('dia')
+                            ->orderBy('hora_inicio')
+                            ->get();
+                    }
                     Log::info('Horarios encontrados:', ['count' => $horarios->count()]);
                 } catch (\Exception $e) {
                     Log::error('Error buscando profesor:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
