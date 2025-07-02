@@ -42,6 +42,12 @@ class Asignacion extends Model
         return $this->belongsTo(Grado::class, 'seccion_id', 'id')->through(Seccion::class);
     }
 
+    public function gradoThroughSeccion()
+    {
+        return $this->belongsTo(Seccion::class, 'seccion_id', 'id')
+            ->with('grado');
+    }
+
     public function horarios()
     {
         return $this->hasMany(Horario::class);
