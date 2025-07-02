@@ -10,25 +10,25 @@ return new class extends Migration
     {
         Schema::create('estudiantes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('seccion_id')->constrained('secciones');
+            $table->foreignId('seccion_id')->nullable()->constrained('secciones');
 
             // Datos personales
-            $table->string('codigo_estudiante')->unique();
+            $table->string('codigo_estudiante')->unique()->nullable();
             $table->string('nombres');
             $table->string('apellidos');
-            $table->date('fecha_nacimiento');
-            $table->string('genero');
+            $table->date('fecha_nacimiento')->nullable();
+            $table->string('genero')->nullable();
             $table->string('direccion')->nullable();
 
             // Datos académicos
-            $table->enum('estado', ['activo', 'inactivo', 'egresado'])->default('activo');
-            $table->date('fecha_ingreso');
+            $table->enum('estado', ['activo', 'inactivo', 'egresado'])->default('activo')->nullable();
+            $table->date('fecha_ingreso')->nullable();
             $table->text('observaciones')->nullable();
 
             // Datos de contacto emergencia
-            $table->string('contacto_emergencia_nombre');
-            $table->string('contacto_emergencia_parentesco');
-            $table->string('contacto_emergencia_telefono');
+            $table->string('contacto_emergencia_nombre')->nullable();
+            $table->string('contacto_emergencia_parentesco')->nullable();
+            $table->string('contacto_emergencia_telefono')->nullable();
 
             $table->timestamps();
         });

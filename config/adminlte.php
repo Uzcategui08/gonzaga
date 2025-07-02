@@ -80,7 +80,7 @@ return [
     */
 
     'logo' => 'Gonzaga',
-    'logo_img' => '/storage/EXG-01.svg',
+    'logo_img' => '/img/EXG-01.svg',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-lg',
@@ -102,7 +102,7 @@ return [
     'auth_logo' => [
         'enabled' => false,
         'img' => [
-            'path' => '/storage/EXG-01.svg',
+            'path' => '/img/EXG-01.svg',
             'alt' => 'Auth Logo',
             'class' => '',
             'width' => 50,
@@ -129,7 +129,7 @@ return [
         'enabled' => true,
         'mode' => 'fullscreen',
         'img' => [
-            'path' => '/storage/EXG-01.svg',
+            'path' => '/img/EXG-01.svg',
             'alt' => 'AdminLTE Preloader Image',
             'effect' => 'animation__shake',
             'width' => 60,

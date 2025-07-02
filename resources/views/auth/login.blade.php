@@ -110,7 +110,7 @@
     <div class="max-w-md w-full space-y-8">
         <div class="text-center mb-12">
             <div class="logo-container">
-                <img class="h-25 w-auto" src="/storage/EXG-01.svg" alt="Laravel">
+                <img class="h-25 w-auto" src="/img/EXG-01.svg" alt="Laravel">
             </div>
             <h2 class="text-3xl font-extrabold text-gray-900">
                 {{ __('') }}
