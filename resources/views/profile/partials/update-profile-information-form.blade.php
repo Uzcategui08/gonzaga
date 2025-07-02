@@ -14,7 +14,7 @@
             @method('patch')
 
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label for="name" class="form-label text-gray-700">{{ __('Nombre') }}</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light">
@@ -34,7 +34,26 @@
                     </div>
                 </div>
 
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
+                    <label for="username" class="form-label text-gray-700">{{ __('Usuario') }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="fas fa-user-tag text-muted"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control @error('username') is-invalid @enderror" 
+                               id="username" 
+                               name="username" 
+                               value="{{ old('username', $user->username) }}" 
+                               required 
+                               autocomplete="username">
+                        @error('username')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
                     <label for="email" class="form-label text-gray-700">{{ __('Email') }}</label>
                     <div class="input-group">
                         <span class="input-group-text bg-light">

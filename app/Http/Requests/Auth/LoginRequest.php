@@ -27,7 +27,7 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string'],
+            'username' => ['required', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -41,10 +41,10 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('name', 'password'), $this->boolean('remember'))) {
+        if (! Auth::attempt($this->only('username', 'password'), $this->boolean('remember'))) {
             // Primero verificamos si el usuario existe
-            $user = \App\Models\User::where('name', $this->name)->first();
-            
+            $user = \App\Models\User::where('username', $this->username)->first();
+
             if ($user) {
                 // Si existe el usuario, el error es de contraseña
                 RateLimiter::hit($this->throttleKey());
@@ -55,7 +55,7 @@ class LoginRequest extends FormRequest
                 // Si no existe el usuario, el error es de credenciales
                 RateLimiter::hit($this->throttleKey());
                 throw ValidationException::withMessages([
-                    'name' => trans('auth.failed'),
+                    'username' => trans('auth.failed'),
                 ]);
             }
         }
@@ -91,6 +91,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')) . '|' . $this->ip());
+        return Str::transliterate(Str::lower($this->string('username')) . '|' . $this->ip());
     }
 }
