@@ -42,7 +42,7 @@
                             <option value="">Seleccione una materia</option>
                             @foreach($materias as $materia)
                                 <option value="{{ $materia->id }}">
-                                    {{ $materia->nombre }} - {{ $materia->nivel }}
+                                    {{ $materia->nombre }} - {{ ucfirst($materia->nivel) }}
                                 </option>
                             @endforeach
                         </select>
@@ -57,7 +57,7 @@
                             <option value="">Seleccione una sección</option>
                             @foreach($secciones as $seccion)
                                 <option value="{{ $seccion->id }}">
-                                    {{ $seccion->nombre }}
+                                    {{ $seccion->nombre }} - {{ $seccion->grado->nombre }}
                                 </option>
                             @endforeach
                         </select>
