@@ -238,22 +238,25 @@ class HorarioController extends Controller
 
     public function horarioProfesorAdmin(Request $request)
     {
-        if (!auth()->check() || !auth()->user()->hasRole('coordinador')) {
-            return redirect()->back()->with('error', 'No tienes permisos para acceder a esta sección.');
-        }
-
         try {
             $user = auth()->user();
-            $seccionesCoordinador = $user->secciones->pluck('id');
-            Log::info('Secciones del coordinador:', ['secciones' => $seccionesCoordinador->toArray()]);
+            if ($user->hasRole('admin')) {
+                $professors = Profesor::with(['user', 'secciones'])
+                    ->join('users', 'profesores.user_id', '=', 'users.id')
+                    ->orderBy('users.name')
+                    ->get();
+            } else {
+                $seccionesCoordinador = $user->secciones->pluck('id');
+                Log::info('Secciones del coordinador:', ['secciones' => $seccionesCoordinador->toArray()]);
 
-            $professors = Profesor::with(['user', 'secciones'])
-                ->whereHas('secciones', function($query) use ($seccionesCoordinador) {
-                    $query->whereIn('seccion_id', $seccionesCoordinador);
-                })
-                ->join('users', 'profesores.user_id', '=', 'users.id')
-                ->orderBy('users.name')
-                ->get();
+                $professors = Profesor::with(['user', 'secciones'])
+                    ->whereHas('secciones', function($query) use ($seccionesCoordinador) {
+                        $query->whereIn('seccion_id', $seccionesCoordinador);
+                    })
+                    ->join('users', 'profesores.user_id', '=', 'users.id')
+                    ->orderBy('users.name')
+                    ->get();
+            }
             Log::info('Profesores encontrados:', ['count' => $professors->count()]);
 
             $selectedProfessor = null;
