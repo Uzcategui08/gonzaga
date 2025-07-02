@@ -30,6 +30,8 @@
                             <th class="text-nowrap">#</th>
                             <th>Profesor</th>
                             <th>Materia</th>
+                            <th>Nivel</th>
+                            <th>Grado</th>
                             <th>Sección</th>
                             <th class="text-center align-middle">Acciones</th>
                         </tr>
@@ -58,6 +60,12 @@
                                         </td>
                                         <td class="align-middle">
                                             {{ $asignacion->materia->nombre }}
+                                        </td>
+                                        <td class="align-middle">
+                                            {{ ucfirst($asignacion->materia->nivel) }}
+                                        </td>
+                                        <td class="align-middle">
+                                            {{ $asignacion->materia->grado->nombre }}
                                         </td>
                                         <td class="align-middle">
                                             {{ $asignacion->seccion->nombre }}
