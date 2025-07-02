@@ -30,9 +30,9 @@
                                 <option value="{{ $asignacion->id }}">
                                     {{ $asignacion->profesor->user->name }} - 
                                     {{ $asignacion->materia->nombre }} - 
-                                    {{ $asignacion->materia->grado->nombre }} -
+                                    {{ $asignacion->gradoThroughSeccion->grado->nombre }} -
                                     {{ $asignacion->seccion->nombre }} -
-                                    ({{ $asignacion->materia->nivel }})
+                                    ({{ ucfirst($asignacion->materia->nivel) }})
                                 </option>
                             @endforeach
                         </select>

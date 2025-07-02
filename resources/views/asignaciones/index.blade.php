@@ -65,7 +65,7 @@
                                             {{ ucfirst($asignacion->materia->nivel) }}
                                         </td>
                                         <td class="align-middle">
-                                            {{ $asignacion->materia->grado->nombre }}
+                                            {{ $asignacion->gradoThroughSeccion->grado->nombre ?? 'N/A' }}
                                         </td>
                                         <td class="align-middle">
                                             {{ $asignacion->seccion->nombre }}
