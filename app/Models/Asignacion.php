@@ -46,4 +46,16 @@ class Asignacion extends Model
     {
         return $this->hasMany(Horario::class);
     }
+
+    public function estudiantes()
+    {
+        return $this->hasManyThrough(
+            Estudiante::class,
+            Seccion::class,
+            'id', 
+            'seccion_id', 
+            'seccion_id', 
+            'id' 
+        );
+    }
 }

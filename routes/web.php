@@ -17,6 +17,7 @@ use App\Http\Controllers\PaseController;
 use App\Http\Controllers\LimpiezaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TestController;
+use App\Http\Controllers\AsistenciaMensualController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -42,7 +43,6 @@ Route::delete('/horarios/{horario}', [HorarioController::class, 'destroy'])->nam
 Route::get('/horario-profesor', [HorarioController::class, 'horarioProfesor'])->name('horario.profesor');
 
 Route::get('/asistencias/reporte', [AsistenciaController::class, 'reporte'])->name('asistencias.reporte');
-
 require __DIR__ . '/auth.php';
 
 Route::middleware(['auth'])->group(function () {
@@ -57,7 +57,20 @@ Route::get('/horarios/profesor/admin', [HorarioController::class, 'horarioProfes
     ->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
-    Route::resource('grados', GradoController::class);
+    Route::resource('grados', GradoController::class)->names([
+        'index' => 'grados.index',
+        'create' => 'grados.create',
+        'store' => 'grados.store',
+        'show' => 'grados.show',
+        'edit' => 'grados.edit',
+        'update' => 'grados.update',
+        'destroy' => 'grados.destroy'
+    ]);
+    
+    Route::get('/grados/data', [GradoController::class, 'getData'])
+        ->name('grados.data')
+        ->middleware('auth');
+    
     Route::resource('secciones', SeccionController::class)->parameters(['secciones' => 'seccion']);
     Route::resource('estudiantes', EstudianteController::class);
     Route::resource('materias', MateriaController::class);
@@ -77,6 +90,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('asistencias/{asistencia}/pdf', [AsistenciaController::class, 'generatePdf'])->name('asistencias.generate-pdf');
     Route::get('/asistencias/create/{materiaId}/{horarioId}', [AsistenciaController::class, 'create'])->name('asistencias.create');
     Route::resource('asistencias', AsistenciaController::class);
+    Route::get('/asistencia/mensual', [AsistenciaMensualController::class, 'index'])->name('asistencia.mensual.index');
+    Route::get('/asistencia/mensual/pdf', [AsistenciaMensualController::class, 'generatePdf'])->name('asistencia.mensual.pdf');
 
     Route::resource('pases', PaseController::class);
     Route::get('asistencias/registrar/{materia}/{horario}', [AsistenciaController::class, 'registrar'])->name('asistencias.registrar');
@@ -93,7 +108,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('justificativos')->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':coordinador,admin'])->group(function () {
         Route::get('/', [JustificativoController::class, 'index'])->name('justificativos.index');
         Route::get('nuevo', [JustificativoController::class, 'create'])->name('justificativos.create');
-        Route::get('nuevo/{estudiante}', [JustificativoController::class, 'createSpecific'])->name('justificativos.create-specific');
+        Route::get('nuevo/{estudiante}', [JustificativoController::class, 'createSpecific'])->name('justificativos .create-specific');
         Route::post('/', [JustificativoController::class, 'store'])->name('justificativos.store');
         Route::get('{justificativo}', [JustificativoController::class, 'show'])->name('justificativos.admin.show');
         Route::get('show/{justificativo}', [JustificativoController::class, 'show'])->name('justificativos.show');

@@ -17,15 +17,27 @@
             </h3>
         </div>
 
-        <div class="card-body p-3">
+        <div class="card-body">
             <div class="row">
                 <div class="col-md-12">
                     <div class="form-group">
-                        <label for="estudiante_id" class="font-weight-bold">Seleccionar Estudiante</label>
-                        <select id="estudiante_id" class="form-control select2" name="estudiante_id" required>
+                        <label for="seccion_id">Sección</label>
+                        <select class="form-control select2" id="seccion_id" name="seccion_id">
+                            <option value="">Seleccionar sección...</option>
+                            @foreach($secciones as $seccion)
+                                <option value="{{ $seccion->id }}">
+                                    {{ $seccion->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estudiante_id">Estudiante</label>
+                        <select class="form-control select2" id="estudiante_id" name="estudiante_id" style="width: 100%">
                             <option value="">Seleccionar estudiante...</option>
                             @foreach($estudiantes as $estudiante)
-                                <option value="{{ $estudiante->id }}">
+                                <option value="{{ $estudiante->id }}" data-seccion="{{ $estudiante->seccion_id }}" data-nombre="{{ $estudiante->nombres }} {{ $estudiante->apellidos }}">
                                     {{ $estudiante->nombres }} {{ $estudiante->apellidos }}
                                 </option>
                             @endforeach
@@ -50,21 +62,44 @@
 </div>
 
 @section('js')
-<script>
-    $(document).ready(function() {
-        // Inicializar Select2
-        $('.select2').select2({
-            theme: 'bootstrap4',
-            placeholder: 'Seleccionar estudiante...',
-            width: '100%'
-        });
+    <script>
+        $(document).ready(function() {
+            const estudiantesSelect = $('#estudiante_id');
+            estudiantesSelect.select2({
+                theme: 'bootstrap4',
+                width: '100%',
+                placeholder: 'Seleccionar estudiante...'
+            });
 
-        // Deshabilitar botón de continuar hasta que se seleccione un estudiante
-        $('#estudiante_id').on('change', function() {
-            $('#btnContinuar').prop('disabled', $(this).val() === '');
-        }).trigger('change');
-    });
-</script>
+            const todasLasOpciones = estudiantesSelect.find('option').clone();
+
+            function filtrarEstudiantes() {
+                const seccionSeleccionada = $('#seccion_id').val();
+
+                estudiantesSelect.empty();
+                estudiantesSelect.append('<option value="">Seleccionar estudiante...</option>');
+
+                todasLasOpciones.each(function() {
+                    const seccionEstudiante = $(this).data('seccion');
+                    if (!seccionSeleccionada || seccionEstudiante == seccionSeleccionada) {
+                        estudiantesSelect.append($(this).clone());
+                    }
+                });
+
+                estudiantesSelect.trigger('change');
+            }
+
+            $('#seccion_id').on('change', function() {
+                filtrarEstudiantes();
+            });
+
+            $('#estudiante_id').on('change', function() {
+                $('#btnContinuar').prop('disabled', $(this).val() === '');
+            });
+
+            filtrarEstudiantes();
+        });
+    </script>
 @endsection
 
 @stop

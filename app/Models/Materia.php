@@ -26,10 +26,10 @@ class Materia extends Model
         return $this->hasManyThrough(
             Horario::class, 
             Asignacion::class,
-            'materia_id', // local key en asignaciones
-            'asignacion_id', // foreign key en horarios
-            'id', // local key en materias
-            'id' // foreign key en asignaciones
+            'materia_id', 
+            'asignacion_id', 
+            'id', 
+            'id' 
         );
     }
 
@@ -38,8 +38,25 @@ class Materia extends Model
         return $this->belongsToMany(Profesor::class, 'asignaciones', 'materia_id', 'profesor_id');
     }
 
+    public function estudiantes()
+    {
+        return $this->belongsToMany(
+            Estudiante::class,
+            'asignaciones',
+            'materia_id',
+            'seccion_id'
+        )->join('secciones', 'asignaciones.seccion_id', '=', 'secciones.id')
+         ->join('estudiantes as e', 'secciones.id', '=', 'e.seccion_id')
+         ->select('e.*');
+    }
+
     public function asignaciones()
     {
         return $this->hasMany(Asignacion::class);
+    }
+
+    public function asistencias()
+    {
+        return $this->hasMany(Asistencia::class, 'materia_id', 'id');
     }
 }

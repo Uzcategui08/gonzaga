@@ -12,17 +12,40 @@ class JustificativoController extends Controller
 
     public function index()
     {
-        $justificativos = Justificativo::with(['estudiante', 'usuario'])
-            ->orderBy('fecha_inicio', 'desc')
-            ->get();
+        $user = auth()->user();
+        
+        if ($user->hasRole('coordinador')) {
+            $secciones = $user->secciones;
+
+            $justificativos = Justificativo::with(['estudiante', 'usuario'])
+                ->whereHas('estudiante', function($query) use ($secciones) {
+                    $query->whereIn('seccion_id', $secciones->pluck('id'));
+                })
+                ->orderBy('fecha_inicio', 'desc')
+                ->get();
+        } else {
+            $justificativos = Justificativo::with(['estudiante', 'usuario'])
+                ->orderBy('fecha_inicio', 'desc')
+                ->get();
+        }
 
         return view('justificativos.index', compact('justificativos'));
     }
 
     public function create(Request $request)
     {
-        $estudiantes = Estudiante::all();
-        return view('justificativos.create-general', compact('estudiantes'));
+        $user = auth()->user();
+        
+        if ($user->hasRole('coordinador')) {
+            $secciones = $user->secciones;
+            $estudiantes = Estudiante::whereIn('seccion_id', $secciones->pluck('id'))
+                ->get();
+        } else {
+            $secciones = Seccion::all();
+            $estudiantes = Estudiante::all();
+        }
+
+        return view('justificativos.create-general', compact('estudiantes', 'secciones'));
     }
 
     public function createSpecific($estudiante_id)

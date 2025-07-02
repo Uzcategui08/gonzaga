@@ -18,10 +18,23 @@ class HorarioController extends Controller
     public function index()
     {
         try {
-            $horarios = Horario::with(['asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion'])
-                ->orderBy('dia')
-                ->orderBy('hora_inicio')
-                ->get();
+            $user = auth()->user();
+            
+            if ($user->hasRole('coordinador')) {
+                $seccionesCoordinador = $user->secciones->pluck('id');
+                $horarios = Horario::with(['asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion'])
+                    ->whereHas('asignacion', function($query) use ($seccionesCoordinador) {
+                        $query->whereIn('seccion_id', $seccionesCoordinador);
+                    })
+                    ->orderBy('dia')
+                    ->orderBy('hora_inicio')
+                    ->get();
+            } else {
+                $horarios = Horario::with(['asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion'])
+                    ->orderBy('dia')
+                    ->orderBy('hora_inicio')
+                    ->get();
+            }
             
             return view('horarios.index', compact('horarios'));
         } catch (\Exception $e) {
@@ -230,10 +243,18 @@ class HorarioController extends Controller
         }
 
         try {
-            $professors = Profesor::with('user')
+            $user = auth()->user();
+            $seccionesCoordinador = $user->secciones->pluck('id');
+            Log::info('Secciones del coordinador:', ['secciones' => $seccionesCoordinador->toArray()]);
+
+            $professors = Profesor::with(['user', 'secciones'])
+                ->whereHas('secciones', function($query) use ($seccionesCoordinador) {
+                    $query->whereIn('seccion_id', $seccionesCoordinador);
+                })
                 ->join('users', 'profesores.user_id', '=', 'users.id')
                 ->orderBy('users.name')
                 ->get();
+            Log::info('Profesores encontrados:', ['count' => $professors->count()]);
 
             $selectedProfessor = null;
             $horarios = collect();
@@ -243,15 +264,26 @@ class HorarioController extends Controller
                 try {
                     $selectedProfessor = Profesor::with('user')
                         ->findOrFail($request->professor_id);
+                    Log::info('Profesor seleccionado:', ['id' => $selectedProfessor->id, 'name' => $selectedProfessor->user->name]);
+
+                    $seccionesProfesor = $selectedProfessor->secciones()->whereIn('seccion_id', $seccionesCoordinador)->get();
+                    Log::info('Secciones del profesor en las secciones:', ['count' => $seccionesProfesor->count()]);
+
+                    if ($seccionesProfesor->isEmpty()) {
+                        return redirect()->back()->with('error', 'El profesor seleccionado no tiene asignaciones en tus secciones.');
+                    }
 
                     $horarios = Horario::with(['asignacion.materia', 'asignacion.seccion.grado'])
-                        ->whereHas('asignacion', function($query) use ($selectedProfessor) {
-                            $query->where('profesor_id', $selectedProfessor->id);
+                        ->whereHas('asignacion', function($query) use ($selectedProfessor, $seccionesCoordinador) {
+                            $query->where('profesor_id', $selectedProfessor->id)
+                                  ->whereIn('seccion_id', $seccionesCoordinador);
                         })
                         ->orderBy('dia')
                         ->orderBy('hora_inicio')
                         ->get();
+                    Log::info('Horarios encontrados:', ['count' => $horarios->count()]);
                 } catch (\Exception $e) {
+                    Log::error('Error buscando profesor:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                     return redirect()->back()
                         ->with('error', 'Error al buscar el profesor seleccionado.');
                 }
@@ -265,6 +297,7 @@ class HorarioController extends Controller
             ));
 
         } catch (\Exception $e) {
+            Log::error('Error en horarioProfesorAdmin:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return redirect()->back()
                 ->with('error', 'Error al cargar el horario. Por favor, contacte al administrador.');
         }
