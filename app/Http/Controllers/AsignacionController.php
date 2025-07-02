@@ -17,9 +17,19 @@ class AsignacionController extends Controller
     public function index()
     {
         try {
-            $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
-                ->orderBy('id')
-                ->get();
+            $user = auth()->user();
+            
+            if ($user->hasRole('coordinador')) {
+                $seccionesCoordinador = $user->secciones->pluck('id');
+                $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
+                    ->whereIn('seccion_id', $seccionesCoordinador)
+                    ->orderBy('id')
+                    ->get();
+            } else {
+                $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
+                    ->orderBy('id')
+                    ->get();
+            }
             
             return view('asignaciones.index', [
                 'asignaciones' => $asignaciones

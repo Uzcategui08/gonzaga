@@ -19,16 +19,21 @@ class Horario extends Model
 
     public function asignacion()
     {
-        return $this->belongsTo(Asignacion::class);
+        return $this->belongsTo(Asignacion::class, 'asignacion_id');
     }
 
     public function materia()
     {
-        return $this->belongsTo(Materia::class, 'asignacion_id', 'id')->through(Asignacion::class);
+        return $this->belongsTo(Materia::class, 'asignacion_id', 'id');
     }
 
     public function seccion()
     {
-        return $this->belongsTo(Seccion::class, 'asignacion_id', 'id')->through(Asignacion::class);
+        return $this->belongsTo(Seccion::class, 'asignacion_id', 'id');
+    }
+
+    public function asistencia()
+    {
+        return $this->hasMany(Asistencia::class);
     }
 }

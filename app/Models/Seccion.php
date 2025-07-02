@@ -27,4 +27,11 @@ class Seccion extends Model
     {
         return $this->hasMany(Asignacion::class);
     }
+
+    public function coordinators()
+    {
+        return $this->belongsToMany(User::class, 'coordinator_section', 'section_id', 'coordinator_id')
+                    ->using(CoordinatorSection::class)
+                    ->withTimestamps();
+    }
 }
