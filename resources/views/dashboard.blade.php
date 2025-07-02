@@ -361,35 +361,28 @@
             </div>
         </div>
 
-            <!-- Add Chart.js v2.x library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
 
     <script>
-        // Wait for DOM to be fully loaded
         document.addEventListener('DOMContentLoaded', function() {
-            // Get the canvas element
             const canvas = document.getElementById('attendanceByDayChart');
             if (!canvas) {
                 console.log('Canvas element not found');
                 return;
             }
 
-            // Get the context
             const ctx = canvas.getContext('2d');
             if (!ctx) {
                 console.log('Could not get canvas context');
                 return;
             }
 
-            // Get the attendance data from PHP
             const attendanceData = @json($attendanceByDay);
             console.log('Real attendance data:', attendanceData);
 
-            // Extract labels and data from real attendance data
             const chartLabels = attendanceData.map(item => item.dia);
             const chartValues = attendanceData.map(item => item.tasa);
 
-            // Create the chart
             new Chart(ctx, {
                 type: 'bar',
                 data: {

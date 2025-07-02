@@ -92,6 +92,28 @@ class DashboardController extends Controller
                 ->distinct('estudiante_id')
                 ->count('estudiante_id');
 
+            $data['totalClasesHoy'] = \App\Models\Horario::whereHas('asistencia', function($query) use ($fechaActual) {
+                $query->whereDate('fecha', $fechaActual);
+            })->count();
+
+            $attendanceByDay = \App\Models\Horario::select(
+                'dia',
+                \DB::raw('count(*) as total_clases'),
+                \DB::raw('sum(CASE WHEN asistencias.fecha IS NOT NULL THEN 1 ELSE 0 END) as clases_con_asistencia')
+            )
+            ->leftJoin('asistencias', 'horarios.id', '=', 'asistencias.horario_id')
+            ->whereDate('asistencias.fecha', $fechaActual)
+            ->groupBy('dia')
+            ->get()
+            ->mapWithKeys(function ($item) {
+                return [$item->dia => [
+                    'total_clases' => $item->total_clases,
+                    'clases_con_asistencia' => $item->clases_con_asistencia,
+                    'porcentaje' => ($item->total_clases > 0) ? round(($item->clases_con_asistencia / $item->total_clases) * 100) : 0
+                ]];
+            });
+            $data['attendanceByDay'] = $attendanceByDay;
+
             $data['tardiosHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'P')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
@@ -100,7 +122,6 @@ class DashboardController extends Controller
                 ->distinct('estudiante_id')
                 ->count('estudiante_id');
 
-            // Calculate average attendance rate for last 30 days
             $last30Days = Carbon::now('America/Caracas')->subDays(30);
             $totalStudents = \App\Models\Estudiante::count();
             $totalAttendances = \App\Models\AsistenciaEstudiante::where('estado', 'A')
@@ -109,17 +130,16 @@ class DashboardController extends Controller
                 ->count('estudiante_id');
             $data['promedioAsistencia'] = ($totalStudents > 0) ? round(($totalAttendances / $totalStudents) * 100) : 0;
 
-            // Get most active period
-            $periods = \App\Models\Horario::select('periodo', \DB::raw('count(*) as total'))
-                ->whereHas('asistencia')
-                ->whereDate('asistencia.fecha', $fechaActual)
-                ->groupBy('periodo')
+            $periods = \App\Models\Horario::select('dia', \DB::raw('count(*) as total'))
+                ->whereHas('asistencia', function($query) use ($fechaActual) {
+                    $query->whereDate('fecha', $fechaActual);
+                })
+                ->groupBy('dia')
                 ->orderBy('total', 'desc')
                 ->first();
-            $data['periodoMasActivo'] = $periods ? $periods->periodo : 'N/A';
+            $data['periodoMasActivo'] = $periods ? $periods->dia : 'N/A';
             $data['totalClasesPeriodo'] = $periods ? $periods->total : 0;
 
-            // Get top performing class
             $topClass = \App\Models\AsistenciaEstudiante::select('secciones.nombre as clase', \DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
@@ -133,7 +153,6 @@ class DashboardController extends Controller
             $data['claseTop'] = $topClass ? $topClass->clase : 'N/A';
             $data['asistenciaClaseTop'] = $topClass ? round(($topClass->total / $totalStudents) * 100) : 0;
 
-            // Get top subject
             $topSubject = \App\Models\AsistenciaEstudiante::select('materias.nombre as materia', \DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
@@ -186,7 +205,6 @@ class DashboardController extends Controller
                 ->distinct('estudiante_id')
                 ->count('estudiante_id');
 
-            // Calculate average attendance rate for last 30 days
             $last30Days = Carbon::now('America/Caracas')->subDays(30);
             $totalStudents = \App\Models\Estudiante::whereIn('seccion_id', $seccionesCoordinador)->count();
             $totalAttendances = \App\Models\AsistenciaEstudiante::where('estado', 'A')
@@ -199,9 +217,6 @@ class DashboardController extends Controller
                 ->count('estudiante_id');
             $data['promedioAsistencia'] = ($totalStudents > 0) ? round(($totalAttendances / $totalStudents) * 100) : 0;
 
-
-
-            // Get total classes today
             $totalClasesHoy = \App\Models\Horario::join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
                 ->whereIn('asignaciones.seccion_id', $seccionesCoordinador)
                 ->join('asistencias', 'horarios.id', '=', 'asistencias.horario_id')
@@ -209,7 +224,6 @@ class DashboardController extends Controller
                 ->count();
             $data['totalClasesHoy'] = $totalClasesHoy;
 
-            // Get top performing class
             $topClass = \App\Models\AsistenciaEstudiante::select('secciones.nombre as clase', \DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
@@ -224,7 +238,6 @@ class DashboardController extends Controller
             $data['claseTop'] = $topClass ? $topClass->clase : 'N/A';
             $data['asistenciaClaseTop'] = $topClass ? round(($topClass->total / $totalStudents) * 100) : 0;
 
-            // Get top subject
             $topSubject = \App\Models\AsistenciaEstudiante::select('materias.nombre as materia', \DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
@@ -265,23 +278,18 @@ class DashboardController extends Controller
                     ];
                 });
 
-            // Get attendance trend for the last 14 days (2 weeks)
             $fechaInicio = now('America/Caracas')->subDays(14);
-            // Get attendance by day of the week for the last 30 days
             $last30Days = now('America/Caracas')->subDays(30);
             $attendanceByDay = collect([]);
             
-            // Get total students for normalization
             $totalStudents = \App\Models\Estudiante::count();
             
-            // Check if there are any attendance records in the database
             $allAttendance = \App\Models\AsistenciaEstudiante::where('estado', 'A')
                 ->whereBetween('created_at', [$last30Days, now('America/Caracas')])
                 ->get();
             
             Log::info('Total attendance records:', ['count' => $allAttendance->count()]);
 
-            // Log attendance records for debugging
             $attendanceRecords = \App\Models\AsistenciaEstudiante::with('asistencia')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->where('asistencia_estudiante.estado', 'A')
@@ -290,7 +298,6 @@ class DashboardController extends Controller
             
             Log::info('Attendance records count:', ['count' => $attendanceRecords->count()]);
             
-            // Get attendance counts by day of week
             $attendanceCounts = \App\Models\AsistenciaEstudiante::select(
                 \DB::raw('"horarios"."dia" as dia'),
                 \DB::raw('count(*) as total_asistencias')
@@ -310,10 +317,8 @@ class DashboardController extends Controller
             ->groupBy('horarios.dia')
             ->get();
 
-            // Log raw data from database
             Log::info('Raw attendance data:', ['data' => $attendanceCounts->toArray()]);
 
-            // Group by day and map results
             $attendanceByDay = $attendanceCounts
                 ->groupBy(function($item) {
                     Log::info('Processing day:', ['day' => $item->dia]);
@@ -327,10 +332,8 @@ class DashboardController extends Controller
                     ];
                 });
 
-            // Log final processed data
             Log::info('Final attendance data:', ['data' => $attendanceByDay->toArray()]);
 
-            // Convert to collection for chart
             $attendanceByDay = $attendanceByDay->map(function($dayData) use ($totalStudents) {
                 return [
                     'dia' => $dayData['dia'],
@@ -338,7 +341,6 @@ class DashboardController extends Controller
                 ];
             })->values();
 
-            // Create attendance data structure exactly as shown
             $attendanceByDay = collect([
                 ['dia' => 'Lunes', 'tasa' => 0],
                 ['dia' => 'Martes', 'tasa' => 0],
@@ -349,7 +351,6 @@ class DashboardController extends Controller
                 ['dia' => 'Domingo', 'tasa' => 0]
             ]);
 
-            // Log final data structure
             Log::info('Final attendance by day data:', ['data' => $attendanceByDay->toArray()]);
 
             $data['attendanceByDay'] = $attendanceByDay;

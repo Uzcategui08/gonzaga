@@ -31,4 +31,9 @@ class Horario extends Model
     {
         return $this->belongsTo(Seccion::class, 'asignacion_id', 'id');
     }
+
+    public function asistencia()
+    {
+        return $this->hasMany(Asistencia::class);
+    }
 }

@@ -57,7 +57,20 @@ Route::get('/horarios/profesor/admin', [HorarioController::class, 'horarioProfes
     ->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
-    Route::resource('grados', GradoController::class);
+    Route::resource('grados', GradoController::class)->names([
+        'index' => 'grados.index',
+        'create' => 'grados.create',
+        'store' => 'grados.store',
+        'show' => 'grados.show',
+        'edit' => 'grados.edit',
+        'update' => 'grados.update',
+        'destroy' => 'grados.destroy'
+    ]);
+    
+    Route::get('/grados/data', [GradoController::class, 'getData'])
+        ->name('grados.data')
+        ->middleware('auth');
+    
     Route::resource('secciones', SeccionController::class)->parameters(['secciones' => 'seccion']);
     Route::resource('estudiantes', EstudianteController::class);
     Route::resource('materias', MateriaController::class);
