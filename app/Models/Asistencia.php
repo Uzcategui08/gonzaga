@@ -9,6 +9,7 @@ class Asistencia extends Model
 {
     protected $fillable = [
         'profesor_id',
+        'profesor_observacion',
         'materia_id',
         'grado_id',
         'fecha',

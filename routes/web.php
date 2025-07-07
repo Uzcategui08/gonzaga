@@ -90,6 +90,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('asistencias/{asistencia}/pdf', [AsistenciaController::class, 'generatePdf'])->name('asistencias.generate-pdf');
     Route::get('/asistencias/create/{materiaId}/{horarioId}', [AsistenciaController::class, 'create'])->name('asistencias.create');
     Route::resource('asistencias', AsistenciaController::class);
+    Route::get('/asistencia/notas-clase', [AsistenciaController::class, 'notasClase'])->name('asistencia.notas-clase');
+    Route::get('/asistencia/notas-clase/pdf/{asistencia}', [AsistenciaController::class, 'notasClasePdfIndividual'])->name('asistencia.notas-clase.pdf-individual');
     Route::get('/asistencia/mensual', [AsistenciaMensualController::class, 'index'])->name('asistencia.mensual.index');
     Route::get('/asistencia/mensual/pdf', [AsistenciaMensualController::class, 'generatePdf'])->name('asistencia.mensual.pdf');
 

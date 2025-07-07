@@ -168,6 +168,28 @@
                         </div>
 
                         <div class="form-group mt-4">
+                            <div class="custom-control custom-checkbox mb-3">
+                                <input type="checkbox" 
+                                       class="custom-control-input" 
+                                       id="tiene_observacion_profesor" 
+                                       name="tiene_observacion_profesor">
+                                <label class="custom-control-label" for="tiene_observacion_profesor">Desea guardar una nota personal</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4" id="observacion_profesor_container" style="display: none;">
+                            <label for="profesor_observacion">Observación Personal del Profesor</label>
+                            <textarea class="form-control @error('profesor_observacion') is-invalid @enderror" 
+                                      id="profesor_observacion" 
+                                      name="profesor_observacion" 
+                                      rows="3"
+                                      placeholder="Escriba su observación personal"></textarea>
+                            @error('profesor_observacion')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="form-group mt-4">
                             <div class="card border-warning">
                                 <div class="card-body bg-light-warning">
                                     <div class="custom-control custom-checkbox">
@@ -236,6 +258,19 @@
                 }
             });
         });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkbox = document.getElementById('tiene_observacion_profesor');
+        const container = document.getElementById('observacion_profesor_container');
+        
+        if (checkbox && container) {
+            checkbox.addEventListener('change', function() {
+                container.style.display = this.checked ? 'block' : 'none';
+            });
+
+            container.style.display = checkbox.checked ? 'block' : 'none';
+        }
     });
 </script>
 @endsection

@@ -7,6 +7,24 @@
 @stop
 
 @section('content')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkProfesorObservacion = document.getElementById('tiene_observacion_profesor');
+    const observacionProfesor = document.getElementById('profesor_observacion');
+    const observacionProfesorContainer = document.getElementById('observacion_profesor_container');
+
+    checkProfesorObservacion.addEventListener('change', function() {
+        if (this.checked) {
+            observacionProfesorContainer.style.display = 'block';
+            observacionProfesor.required = true;
+        } else {
+            observacionProfesorContainer.style.display = 'none';
+            observacionProfesor.required = false;
+            observacionProfesor.value = '';
+        }
+    });
+});
+</script>
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -184,7 +202,7 @@
                             </div>
                         </div>
 
-                        <div class="form-group mt-4">
+                        <div class="form-group">
                             <label for="observacion_general">Observación General</label>
                             <textarea class="form-control @error('observacion_general') is-invalid @enderror" 
                                       id="observacion_general" 
@@ -192,6 +210,30 @@
                                       rows="3"
                                       placeholder="Observaciones generales de la clase">{{ old('observacion_general', $asistencia->observacion_general) }}</textarea>
                             @error('observacion_general')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <div class="custom-control custom-checkbox mb-3">
+                                <input type="checkbox" 
+                                       class="custom-control-input" 
+                                       id="tiene_observacion_profesor" 
+                                       name="tiene_observacion_profesor"
+                                       {{ old('tiene_observacion_profesor', !empty($asistencia->profesor_observacion)) ? 'checked' : '' }}>
+                                <label class="custom-control-label" for="tiene_observacion_profesor">Desea guardar una nota personal</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4" id="observacion_profesor_container" 
+                             style="{{ old('tiene_observacion_profesor', !empty($asistencia->profesor_observacion)) ? 'display: block;' : 'display: none;' }}">
+                            <label for="profesor_observacion">Observación Personal del Profesor</label>
+                            <textarea class="form-control @error('profesor_observacion') is-invalid @enderror" 
+                                      id="profesor_observacion" 
+                                      name="profesor_observacion" 
+                                      rows="3"
+                                      placeholder="Escriba su observación personal">{{ old('profesor_observacion', $asistencia->profesor_observacion) }}</textarea>
+                            @error('profesor_observacion')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -267,8 +309,24 @@
             });
         });
     });
-</script>
 
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkProfesorObservacion = document.getElementById('tiene_observacion_profesor');
+        const observacionProfesor = document.getElementById('profesor_observacion');
+        const observacionProfesorContainer = document.getElementById('observacion_profesor_container');
+
+        checkProfesorObservacion.addEventListener('change', function() {
+            if (this.checked) {
+                observacionProfesorContainer.style.display = 'block';
+                observacionProfesor.required = true;
+            } else {
+                observacionProfesorContainer.style.display = 'none';
+                observacionProfesor.required = false;
+                observacionProfesor.value = '';
+            }
+        });
+    });
+</script>
 @endsection
 @section('css')
 <style>

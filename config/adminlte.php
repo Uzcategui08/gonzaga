@@ -474,6 +474,12 @@ return [
             'can' => 'admin'
         ],
         [
+            'text' => 'Notas por Clase',
+            'url' => 'asistencia/notas-clase',
+            'icon' => 'fas fa-sticky-note',
+            'can' => 'profesor',
+        ],
+        [
             'text' => 'Limpieza',
             'url' => 'limpiezas',
             'icon' => 'fas fa-broom',
