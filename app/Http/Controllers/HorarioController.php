@@ -266,7 +266,12 @@ class HorarioController extends Controller
             if ($request->has('professor_id')) {
                 try {
                     $selectedProfessor = Profesor::with('user')
-                        ->findOrFail($request->professor_id);
+                        ->whereHas('user', function($query) use ($request) {
+                            $query->where('id', $request->professor_id);
+                        })->first();
+                    if (!$selectedProfessor) {
+                        return redirect()->back()->with('error', 'Profesor no encontrado.');
+                    }
                     Log::info('Profesor seleccionado:', ['id' => $selectedProfessor->id, 'name' => $selectedProfessor->user->name]);
 
                     if ($user->hasRole('admin')) {
