@@ -85,7 +85,11 @@ class AsistenciaController extends Controller
 
             $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
 
-            return view('asistencias.edit', compact('asistencia', 'estudiantesConPase'));
+            return view('asistencias.edit', [
+                'asistencia' => $asistencia,
+                'estudiantesConPase' => $estudiantesConPase,
+                'tiene_observacion_profesor' => !empty($asistencia->profesor_observacion)
+            ]);
 
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al cargar la información de la asistencia');
@@ -109,6 +113,7 @@ class AsistenciaController extends Controller
                 'hora_inicio' => 'required',
                 'contenido_clase' => 'required',
                 'observacion_general' => 'nullable|string',
+                'profesor_observacion' => 'nullable|string',
                 'falta_justificada' => 'nullable|boolean',
                 'tarea_pendiente' => 'nullable|boolean',
                 'conducta' => 'nullable|boolean',
@@ -125,6 +130,7 @@ class AsistenciaController extends Controller
                 'hora_inicio' => $validated['hora_inicio'],
                 'contenido_clase' => $validated['contenido_clase'],
                 'observacion_general' => $validated['observacion_general'],
+                'profesor_observacion' => $validated['profesor_observacion'],
                 'falta_justificada' => $validated['falta_justificada'] ?? false,
                 'tarea_pendiente' => $validated['tarea_pendiente'] ?? false,
                 'conducta' => $validated['conducta'] ?? false,
@@ -201,6 +207,37 @@ class AsistenciaController extends Controller
 
         return view('asistencias.lista', compact('asistencias'));
     }
+
+    public function notasClase(Request $request)
+    {
+        $profesor = auth()->user()->profesor;
+        if (!$profesor) {
+            return redirect()->back()->with('error', 'No tienes un perfil de profesor asociado');
+        }
+
+        $asistencias = Asistencia::with(['materia', 'profesor', 'horario'])
+            ->where('profesor_id', $profesor->id)
+            ->whereNotNull('profesor_observacion')
+            ->orderBy('fecha', 'desc')
+            ->get();
+
+        return view('asistencias.notas-clase', compact('asistencias'));
+    }
+
+    public function notasClasePdfIndividual(Asistencia $asistencia)
+    {
+        $profesor = auth()->user()->profesor;
+        if (!$profesor || $asistencia->profesor_id != $profesor->id) {
+            return redirect()->back()->with('error', 'No tienes permiso para ver esta nota');
+        }
+
+        $asistencia->load(['materia', 'profesor', 'horario']);
+
+        $pdf = Pdf::loadView('asistencias.notas-clase-pdf-individual', compact('asistencia'));
+        return $pdf->stream('nota_clase_' . $asistencia->id . '_' . date('Y-m-d') . '.pdf');
+    }
+
+
 
     public function registrar($materiaId, $horarioId)
     {
@@ -338,6 +375,7 @@ class AsistenciaController extends Controller
                 'estudiantes.*.estado' => 'required|in:P,A,I',
                 'estudiantes.*.observacion_individual' => 'nullable|string',
                 'observacion_general' => 'nullable|string',
+                'profesor_observacion' => 'nullable|string',
                 'falta_justificada' => 'nullable|boolean',
                 'tarea_pendiente' => 'nullable|boolean',
                 'conducta' => 'nullable|boolean',
@@ -386,6 +424,7 @@ class AsistenciaController extends Controller
                     'hora_inicio' => $validated['hora_inicio'],
                     'contenido_clase' => $validated['contenido_clase'],
                     'observacion_general' => $validated['observacion_general'],
+                    'profesor_observacion' => $validated['profesor_observacion'],
                     'falta_justificada' => $validated['falta_justificada'] ?? false,
                     'tarea_pendiente' => $validated['tarea_pendiente'] ?? false,
                     'conducta' => $validated['conducta'] ?? false,
