@@ -212,7 +212,7 @@ return [
     'classes_content_wrapper' => '',
     'classes_content_header' => '',
     'classes_content' => '',
-    'classes_sidebar' => 'sidebar-dark-yellow elevation-4',
+    'classes_sidebar' => ' elevation-4',
     'classes_sidebar_nav' => '',
     'classes_topnav' => 'navbar-gonzaga',
     'classes_topnav_nav' => 'navbar-expand',
@@ -319,11 +319,11 @@ return [
         [
             'type' => 'navbar-search',
             'text' => 'Buscar',
-            'topnav_right' => true,
+            'topnav_right' => false,
         ],
         [
             'type' => 'fullscreen-widget',
-            'topnav_right' => true,
+            'topnav_right' => false,
         ],
 
         // Sidebar items:
