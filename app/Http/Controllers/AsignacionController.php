@@ -71,16 +71,6 @@ class AsignacionController extends Controller
                 'seccion_id.exists' => 'La sección seleccionada no existe',
             ]);
 
-            $exists = Asignacion::where('materia_id', $request->materia_id)
-                ->where('seccion_id', $request->seccion_id)
-                ->exists();
-
-            if ($exists) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Esta materia ya tiene un profesor asignado en esta sección.');
-            }
-
             $asignacion = Asignacion::create($validated);
 
             return redirect()->route('asignaciones.index')
@@ -118,17 +108,6 @@ class AsignacionController extends Controller
     public function update(Request $request, Asignacion $asignacion)
     {
         try {
-
-            $exists = Asignacion::where('materia_id', $request->materia_id)
-                ->where('seccion_id', $request->seccion_id)
-                ->where('id', '!=', $asignacion->id)
-                ->exists();
-
-            if ($exists) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', 'Esta materia ya tiene un profesor asignado en esta sección.');
-            }
 
             $request->validate([
                 'profesor_id' => 'required|exists:profesores,id',
