@@ -22,8 +22,8 @@
                 <select name="professor_id" id="professor_id" class="form-control form-control-lg select2 @error('professor_id') is-invalid @enderror" required>
                     <option value="">-- Seleccione un profesor --</option>
                     @foreach($professors as $professor)
-                        <option value="{{ $professor->id }}" 
-                            @if(isset($selectedProfessor) && $selectedProfessor->id == $professor->id) selected @endif>
+                        <option value="{{ $professor->user->id }}" 
+                            @if(isset($selectedProfessor) && $selectedProfessor->user->id == $professor->user->id) selected @endif>
                             {{ $professor->user->name }} 
                             @if($professor->user->email)
                                 ({{ $professor->user->email }})
