@@ -328,10 +328,6 @@ return [
 
         // Sidebar items:
         [
-            'type' => 'sidebar-menu-search',
-            'text' => 'Buscar',
-        ],
-        [
             'text' => 'Panel de control',
             'url' => 'dashboard',
             'icon' => 'fas fa-home',
