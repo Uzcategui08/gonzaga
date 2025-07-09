@@ -22,7 +22,7 @@ class HorarioController extends Controller
             
             if ($user->hasRole('coordinador')) {
                 $seccionesCoordinador = $user->secciones->pluck('id');
-                $horarios = Horario::with(['asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion'])
+                $horarios = Horario::with(['asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion', 'grado.seccion.grado'])
                     ->whereHas('asignacion', function($query) use ($seccionesCoordinador) {
                         $query->whereIn('seccion_id', $seccionesCoordinador);
                     })
@@ -30,7 +30,7 @@ class HorarioController extends Controller
                     ->orderBy('hora_inicio')
                     ->get();
             } else {
-                $horarios = Horario::with(['asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion'])
+                $horarios = Horario::with(['asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion', 'grado.seccion.grado'])
                     ->orderBy('dia')
                     ->orderBy('hora_inicio')
                     ->get();

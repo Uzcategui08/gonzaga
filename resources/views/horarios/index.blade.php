@@ -34,6 +34,7 @@
                             <th>Aula</th>
                             <th>Profesor</th>
                             <th>Materia</th>
+                            <th>Grado</th>
                             <th>Sección</th>
                             <th class="text-center align-middle">Acciones</th>
                         </tr>
@@ -63,7 +64,8 @@
                                         <td class="align-middle">{{ $horario->aula }}</td>
                                         <td class="align-middle">{{ $horario->asignacion->profesor->user->name }}</td>
                                         <td class="align-middle">{{ $horario->asignacion->materia->nombre }}</td>
-                                        <td class="align-middle">{{ $horario->asignacion->seccion->nombre }}</td>
+                                        <td class="align-middle">{{ $horario->grado->seccion->grado->nombre ?? 'N/A' }}</td>
+                                        <td class="align-middle">{{ $horario->grado->seccion->nombre }}</td>
                                         <td class="text-center align-middle">
                                             <div class="d-flex justify-content-center">
                                                 <a href="{{ route('horarios.show', ['horario' => $horario->id]) }}" 

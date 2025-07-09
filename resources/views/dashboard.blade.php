@@ -177,7 +177,6 @@
                             <div class="ml-3">
                                 <h2 class="mb-0">{{ $totalEstudiantes }}</h2>
                                 <p class="mb-0 text-muted">Estudiantes Totales</p>
-                                <small class="text-muted">{{ $totalProfesores }} profesores</small>
                             </div>
                         </div>
                     </div>
@@ -193,7 +192,7 @@
                                 <i class="fas fa-percentage text-white"></i>
                             </div>
                             <div class="ml-3">
-                                <h2 class="mb-0">{{ $promedioAsistencia ?? 0 }}%</h2>
+                                <h2 class="mb-0">{{ isset($promedioAsistencia) ? $promedioAsistencia : 0 }}%</h2>
                                 <p class="mb-0 text-muted">Promedio Asistencia</p>
                                 <small class="text-muted">Últimos 30 días</small>
                             </div>
@@ -298,7 +297,7 @@
                     <div class="card-header bg-white border-0 py-3">
                         <h3 class="card-title mb-0 d-flex align-items-center">
                             <i class="fas fa-chart-bar text-primary mr-2"></i>
-                            Asistencia por Día de la Semana
+                            Asistencia por Día de la Semana (últimos 30 días)
                         </h3>
                     </div>
                     <div class="card-body">
@@ -378,10 +377,18 @@
             }
 
             const attendanceData = @json($attendanceByDay);
-            console.log('Real attendance data:', attendanceData);
 
-            const chartLabels = attendanceData.map(item => item.dia);
-            const chartValues = attendanceData.map(item => item.tasa);
+            const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const chartData = daysOfWeek.map(day => {
+                const dayData = attendanceData.find(item => item.dia === day);
+                return {
+                    dia: day,
+                    tasa: dayData ? dayData.tasa : 0
+                };
+            });
+
+            const chartLabels = chartData.map(item => item.dia);
+            const chartValues = chartData.map(item => item.tasa);
 
             new Chart(ctx, {
                 type: 'bar',

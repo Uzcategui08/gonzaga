@@ -29,7 +29,14 @@ class Horario extends Model
 
     public function seccion()
     {
-        return $this->belongsTo(Seccion::class, 'asignacion_id', 'id');
+        return $this->belongsTo(Asignacion::class, 'asignacion_id')
+                    ->with('seccion');
+    }
+
+    public function grado()
+    {
+        return $this->belongsTo(Asignacion::class, 'asignacion_id')
+                    ->with('seccion.grado');
     }
 
     public function asistencia()

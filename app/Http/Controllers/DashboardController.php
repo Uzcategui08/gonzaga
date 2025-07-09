@@ -39,7 +39,8 @@ class DashboardController extends Controller
             'estadosAsistencia' => collect(),
             'estudiantesPorSeccion' => collect(),
             'profesoresPorMateria' => collect(),
-            'attendanceTrend' => collect()
+            'attendanceTrend' => collect(),
+            'promedioAsistencia' => 0
         ];
 
         $user = auth()->user();
@@ -96,22 +97,27 @@ class DashboardController extends Controller
                 $query->whereDate('fecha', $fechaActual);
             })->count();
 
-            $attendanceByDay = \App\Models\Horario::select(
-                'dia',
-                \DB::raw('count(*) as total_clases'),
-                \DB::raw('sum(CASE WHEN asistencias.fecha IS NOT NULL THEN 1 ELSE 0 END) as clases_con_asistencia')
-            )
-            ->leftJoin('asistencias', 'horarios.id', '=', 'asistencias.horario_id')
-            ->whereDate('asistencias.fecha', $fechaActual)
-            ->groupBy('dia')
-            ->get()
-            ->mapWithKeys(function ($item) {
-                return [$item->dia => [
-                    'total_clases' => $item->total_clases,
-                    'clases_con_asistencia' => $item->clases_con_asistencia,
-                    'porcentaje' => ($item->total_clases > 0) ? round(($item->clases_con_asistencia / $item->total_clases) * 100) : 0
-                ]];
-            });
+            $attendanceByDay = \DB::table('asistencia_estudiante')
+                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
+                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
+                ->where('asistencia_estudiante.estado', 'A')
+                ->whereBetween('asistencias.fecha', [Carbon::now('America/Caracas')->subDays(30), Carbon::now('America/Caracas')])
+                ->select(
+                    'horarios.dia',
+                    \DB::raw('count(*) as total_asistencias'),
+                    \DB::raw('count(DISTINCT asistencia_estudiante.estudiante_id) as estudiantes_unicos')
+                )
+                ->groupBy('horarios.dia')
+                ->get()
+                ->map(function($item) {
+                    $totalStudents = \App\Models\Estudiante::count();
+                    $attendanceRate = ($totalStudents > 0) ? round(($item->estudiantes_unicos / $totalStudents) * 100) : 0;
+                    return [
+                        'dia' => $item->dia,
+                        'tasa' => $attendanceRate
+                    ];
+                });
+            
             $data['attendanceByDay'] = $attendanceByDay;
 
             $data['tardiosHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'P')
@@ -124,11 +130,17 @@ class DashboardController extends Controller
 
             $last30Days = Carbon::now('America/Caracas')->subDays(30);
             $totalStudents = \App\Models\Estudiante::count();
+            
+            // Get attendance records for the last 30 days
             $totalAttendances = \App\Models\AsistenciaEstudiante::where('estado', 'A')
-                ->whereBetween('created_at', [$last30Days, $fechaActual])
-                ->distinct('estudiante_id')
-                ->count('estudiante_id');
-            $data['promedioAsistencia'] = ($totalStudents > 0) ? round(($totalAttendances / $totalStudents) * 100) : 0;
+                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
+                ->whereBetween('asistencias.fecha', [$last30Days, $fechaActual])
+                ->distinct('asistencia_estudiante.estudiante_id')
+                ->count('asistencia_estudiante.estudiante_id');
+            
+            $attendancePercentage = ($totalStudents > 0) ? 
+                round(($totalAttendances / $totalStudents) * 100) : 0;
+            $data['promedioAsistencia'] = $attendancePercentage;
 
             $periods = \App\Models\Horario::select('dia', \DB::raw('count(*) as total'))
                 ->whereHas('asistencia', function($query) use ($fechaActual) {
@@ -206,16 +218,49 @@ class DashboardController extends Controller
                 ->count('estudiante_id');
 
             $last30Days = Carbon::now('America/Caracas')->subDays(30);
+            
+            // Debug: Log the date range
+            Log::info('Attendance date range:', [
+                'start' => $last30Days->format('Y-m-d'),
+                'end' => $fechaActual->format('Y-m-d')
+            ]);
+
+            // Get total students in coordinator's sections
             $totalStudents = \App\Models\Estudiante::whereIn('seccion_id', $seccionesCoordinador)->count();
-            $totalAttendances = \App\Models\AsistenciaEstudiante::where('estado', 'A')
-                ->whereBetween('asistencia_estudiante.created_at', [$last30Days, $fechaActual])
+            Log::info('Total students:', ['count' => $totalStudents]);
+
+            // Get distinct students with attendance in the last 30 days
+            $studentsWithAttendance = \App\Models\AsistenciaEstudiante::where('estado', 'A')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
+                ->whereBetween('asistencias.fecha', [$last30Days, $fechaActual])
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
                 ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
                 ->whereIn('asignaciones.seccion_id', $seccionesCoordinador)
                 ->distinct('estudiante_id')
                 ->count('estudiante_id');
-            $data['promedioAsistencia'] = ($totalStudents > 0) ? round(($totalAttendances / $totalStudents) * 100) : 0;
+            Log::info('Students with attendance:', ['count' => $studentsWithAttendance]);
+
+            // Get total number of attendance records for these students
+            $totalAttendances = \App\Models\AsistenciaEstudiante::where('estado', 'A')
+                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
+                ->whereBetween('asistencias.fecha', [$last30Days, $fechaActual])
+                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
+                ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
+                ->whereIn('asignaciones.seccion_id', $seccionesCoordinador)
+                ->count();
+            Log::info('Total attendances:', ['count' => $totalAttendances]);
+
+            // Calculate average attendance percentage
+            Log::info('Calculating promedioAsistencia:', ['totalStudents' => $totalStudents, 'totalAttendances' => $totalAttendances]);
+            $attendancePercentage = ($studentsWithAttendance > 0) ? 
+                round(($totalAttendances / ($studentsWithAttendance * 30)) * 100) : 0;
+            Log::info('Attendance calculation:', [
+                'students_with_attendance' => $studentsWithAttendance,
+                'total_attendances' => $totalAttendances,
+                'percentage' => $attendancePercentage
+            ]);
+            Log::info('Setting promedioAsistencia:', ['value' => $attendancePercentage]);
+            $data['promedioAsistencia'] = $attendancePercentage;
 
             $totalClasesHoy = \App\Models\Horario::join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
                 ->whereIn('asignaciones.seccion_id', $seccionesCoordinador)
@@ -537,6 +582,6 @@ class DashboardController extends Controller
             }
         }
         
-        return view('dashboard', $data);
+            return view('dashboard', $data);
     }
 }
