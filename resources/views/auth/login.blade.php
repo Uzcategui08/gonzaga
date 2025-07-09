@@ -110,10 +110,10 @@
     <div class="max-w-md w-full space-y-8">
         <div class="text-center mb-12">
             <div class="logo-container">
-                <img class="h-16 w-auto" src="https://laravel.com/img/logomark.min.svg" alt="Laravel">
+                <img class="h-25 w-auto" src="/img/EXG-01.svg" alt="Laravel">
             </div>
             <h2 class="text-3xl font-extrabold text-gray-900">
-                {{ __('Iniciar Sesión') }}
+                {{ __('') }}
             </h2>
         </div>
 
@@ -139,17 +139,17 @@
 
             <div class="space-y-6">
                 <div>
-                    <label for="name" class="block text-base font-semibold text-gray-900 mb-2">
+                    <label for="username" class="block text-base font-semibold text-gray-900 mb-2">
                         {{ __('Usuario') }}
                     </label>
                     <div class="mt-2">
                         <div class="input-container">
-                            <input id="name" name="name" type="string" autocomplete="username" required
+                            <input id="username" name="username" type="text" autocomplete="username" required
                                 class="appearance-none block w-full px-4 py-3 pl-10 border border-yellow-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 sm:text-sm" 
-                                value="{{ old('name') }}">
+                                value="{{ old('username') }}">
                         </div>
                     </div>
-                    @error('name')
+                    @error('username')
                         <div class="mt-2 p-3 rounded-md bg-red-100 border border-red-300">
                             <div class="flex items-center">
                                 <svg class="h-5 w-5 text-red-500 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">

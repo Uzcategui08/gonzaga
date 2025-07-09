@@ -132,6 +132,28 @@
     {{-- Custom CSS --}}
     <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
     <style>
+
+.main-sidebar .nav-sidebar .nav-link,
+.main-sidebar .nav-sidebar .nav-link.active {
+    color: #ffffff !important;
+    margin-bottom: 0.7rem !important; /* Espacio entre botones */
+    border-radius: 0.375rem;
+}
+.brand-link .brand-text, .brand-link {
+    color: #ffffff !important;
+}
+.main-sidebar  {
+    background-color: #123366 !important;
+    color: #fff !important;
+}
+        .main-header {
+    background-color: #d9bc2b !important;
+    color: #ffffff !important;
+}
+.main-header .navbar-nav .nav-link,
+.main-header .navbar-nav .nav-link.active {
+    color: #ffffff !important;
+}
         .select2-container--bootstrap4 .select2-selection--single {
             border: 1px solid #ced4da !important;
             border-radius: 0.375rem !important;

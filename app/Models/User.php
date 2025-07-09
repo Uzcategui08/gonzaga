@@ -20,6 +20,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
     ];
@@ -48,8 +49,8 @@ class User extends Authenticatable
     public function secciones()
     {
         return $this->belongsToMany(Seccion::class, 'coordinator_section', 'coordinator_id', 'section_id')
-                    ->using(CoordinatorSection::class)
-                    ->withTimestamps();
+            ->using(CoordinatorSection::class)
+            ->withTimestamps();
     }
 
     /**
