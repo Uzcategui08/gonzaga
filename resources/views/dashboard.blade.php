@@ -459,9 +459,9 @@
                                     <th class="text-nowrap">#</th>
                                     <th class="text-nowrap">Hora</th>
                                     <th>Asignatura</th>
-                                    <th>Grupo</th>
-                                    <th>Aula</th>
                                     <th>Sección</th>
+                                    <th>Aula</th>
+                                    <th>Año</th>
                                     <th>Estado</th>
                                     <th class="text-center">Acciones</th>
                                 </tr>
