@@ -26,7 +26,7 @@
                             <option value="">Seleccionar sección...</option>
                             @foreach($secciones as $seccion)
                                 <option value="{{ $seccion->id }}">
-                                    {{ $seccion->nombre }}
+                                    {{ $seccion->grado->nombre }} - {{ $seccion->nombre }}
                                 </option>
                             @endforeach
                         </select>

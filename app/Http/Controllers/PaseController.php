@@ -47,10 +47,10 @@ class PaseController extends Controller
             $secciones = $user->secciones;
             
             $estudiantes = Estudiante::whereIn('seccion_id', $secciones->pluck('id'))
-                ->with('seccion')
+                ->with('seccion.grado')
                 ->get();
         } else {
-            $estudiantes = Estudiante::with('seccion')
+            $estudiantes = Estudiante::with('seccion.grado')
                 ->get();
         }
 
@@ -120,6 +120,7 @@ class PaseController extends Controller
 
     public function show(Pase $pase)
     {
+        $pase->load(['estudiante.seccion.grado', 'horario.asignacion.materia', 'horario.asignacion.seccion']);
         return view('pases.show', compact('pase'));
     }
 

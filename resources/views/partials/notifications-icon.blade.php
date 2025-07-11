@@ -34,7 +34,7 @@
                     </div>
                     <div class="media-body">
                         <div class="d-flex justify-content-between">
-                            <h6 class="notification-title">{{ $notification->data['estudiante'] ?? 'N/A' }}</h6>
+                            <h6 class="notification-title">{{ $notification->data['estudiante'] ? explode(' ', $notification->data['estudiante'])[0] . ' ' . explode(' ', $notification->data['estudiante'])[1] : 'N/A' }}</h6>
                         </div>
                         <p class="notification-text">
                             <small>

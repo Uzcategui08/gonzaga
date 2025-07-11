@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Justificativo;
 use App\Models\Estudiante;
 use Illuminate\Http\Request;
+use App\Models\Seccion;
 
 class JustificativoController extends Controller
 {
