@@ -29,7 +29,7 @@
                                 <option value="">Seleccionar estudiante...</option>
                                 @foreach($estudiantes as $estudiante)
                                     <option value="{{ $estudiante->id }}" {{ old('estudiante_id') == $estudiante->id ? 'selected' : '' }}>
-                                        {{ $estudiante->nombres }} {{ $estudiante->apellidos }} - {{ $estudiante->seccion->nombre ?? 'Sin sección' }}
+                                        {{ $estudiante->nombres }} {{ $estudiante->apellidos }} - {{ $estudiante->seccion->grado->nombre ?? 'Sin grado' }} - {{ $estudiante->seccion->nombre ?? 'Sin sección' }}
                                     </option>
                                 @endforeach
                             </select>
