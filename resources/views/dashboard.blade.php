@@ -166,7 +166,6 @@
     @else
 
         <div class="row mb-4">
-            <!-- Summary Card -->
             <div class="col-md-6 mb-4">
                 <div class="card card-statistic">
                     <div class="card-body">
@@ -183,7 +182,6 @@
                 </div>
             </div>
 
-            <!-- Average Attendance Rate -->
             <div class="col-md-3 col-sm-6 mb-4">
                 <div class="card card-statistic">
                     <div class="card-body">
@@ -201,7 +199,6 @@
                 </div>
             </div>
 
-            <!-- Classes Today -->
             <div class="col-md-3 col-sm-6 mb-4">
                 <div class="card card-statistic">
                     <div class="card-body">
@@ -219,9 +216,6 @@
                 </div>
             </div>
 
-
-
-            <!-- Asistencias Hoy -->
             <div class="col-md-3 col-sm-6 mb-4">
                 <div class="card card-statistic">
                     <div class="card-body">
@@ -238,7 +232,6 @@
                 </div>
             </div>
 
-            <!-- Inasistencias Hoy -->
             <div class="col-md-3 col-sm-6 mb-4">
                 <div class="card card-statistic">
                     <div class="card-body">
@@ -255,7 +248,6 @@
                 </div>
             </div>
 
-            <!-- Top Performing Classes -->
             <div class="col-md-3 col-sm-6 mb-4">
                 <div class="card card-statistic">
                     <div class="card-body">
@@ -273,7 +265,6 @@
                 </div>
             </div>
 
-            <!-- Attendance by Subject -->
             <div class="col-md-3 col-sm-6 mb-4">
                 <div class="card card-statistic">
                     <div class="card-body">
@@ -291,7 +282,6 @@
                 </div>
             </div>
 
-            <!-- Attendance by Day of Week -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header bg-white border-0 py-3">
@@ -306,7 +296,6 @@
                 </div>
             </div>
 
-            <!-- Summary of Attendance -->
             <div class="col-md-6 mb-4">
                 <div class="card">
                     <div class="card-header bg-white border-0 py-3">

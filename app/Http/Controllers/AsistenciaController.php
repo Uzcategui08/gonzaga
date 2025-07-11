@@ -385,18 +385,6 @@ class AsistenciaController extends Controller
             ]);
 
             $horario = Horario::findOrFail($validated['horario_id']);
-            
-            $fechaHora = Carbon::createFromFormat('Y-m-d H:i', $validated['fecha'] . ' ' . $validated['hora_inicio']);
-            $fechaHora->setTimezone('America/Caracas');
-            
-            $horaInicio = Carbon::parse($horario->hora_inicio);
-            $horaFin = Carbon::parse($horario->hora_fin);
-            
-            if ($fechaHora->lessThan($horaInicio) || $fechaHora->greaterThan($horaFin)) {
-                return redirect()->back()->withErrors([
-                    'hora_inicio' => 'La hora de registro debe estar dentro del horario programado.'
-                ])->withInput();
-            }
 
             DB::transaction(function () use ($request, $materia, $validated) {
                 $fechaActualCaracas = Carbon::now()->setTimezone('America/Caracas');
