@@ -392,12 +392,14 @@ return [
                 [
                     'text' => 'Asignaciones',
                     'url' => 'asignaciones',
-                    'icon' => 'fas fa-calendar-check'
+                    'icon' => 'fas fa-calendar-check',
+                    'can' => 'admin',
                 ],
                 [
                     'text' => 'Horarios',
                     'url' => 'horarios',
-                    'icon' => 'fas fa-clock'
+                    'icon' => 'fas fa-clock',
+                    'can' => 'admin',
                 ],
                 [
                     'text' => 'Calendario de Horarios',
