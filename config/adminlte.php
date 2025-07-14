@@ -480,6 +480,7 @@ return [
             'text' => 'Limpieza',
             'url' => 'limpiezas',
             'icon' => 'fas fa-broom',
+            'can' => 'admin'
         ],
         ['header' => 'CONFIGURACIÓN'],
         [

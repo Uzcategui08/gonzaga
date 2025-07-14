@@ -30,8 +30,8 @@
                             <th class="py-3">Grado - Sección</th>
                             <th style="width: 25%">Estudiante</th>
                             <th style="width: 15%">Fecha</th>
-                            <th style="width: 15%">Hora</th>
-                            <th style="width: 25%">Motivo</th>
+                            <th style="width: 10%">Hora</th>
+                            <th style="width: 15%">Motivo</th>
                             <th class="text-center" style="width: 10%">Estado</th>
                             <th class="text-center" style="width: 10%">Acciones</th>
                         </tr>
