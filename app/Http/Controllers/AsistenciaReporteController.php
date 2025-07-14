@@ -17,8 +17,17 @@ class AsistenciaReporteController extends Controller
 {
     public function generatePdf()
     {
-        $asistencias = Asistencia::with(['materia', 'profesor'])
-            ->get();
+        $asistencias = Asistencia::with([
+            'materia',
+            'profesor',
+            'seccion' => function($query) {
+                $query->with('asignacion.seccion');
+            },
+            'grado' => function($query) {
+                $query->select('id', 'nombre');
+            }
+        ])
+        ->get();
 
         foreach ($asistencias as $asistencia) {
             $estudiantes = AsistenciaEstudiante::join('estudiantes', 'asistencia_estudiante.estudiante_id', '=', 'estudiantes.id')

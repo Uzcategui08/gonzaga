@@ -186,7 +186,7 @@
         <div class="header">
             <h1>REGISTRO DE ASISTENCIA</h1>
             <p class="subtitle">{{ $asistencia->materia ? $asistencia->materia->nombre : 'Clase' }}</p>
-            <p class="subtitle">Sección: {{ $asistencia->seccion_nombre }}</p>
+            <p class="subtitle">{{ $asistencia->grado?->nombre ?? 'No especificado' }} - {{ $asistencia->seccion?->asignacion?->seccion?->nombre ?? 'No especificada' }}</p>
         </div>
         
         <table class="compact-info avoid-break" style="table-layout:fixed;">
