@@ -27,6 +27,7 @@
                     <thead class="thead-light">
                         <tr>
                             <th class="text-center" style="width: 5%">#</th>
+                            <th class="py-3">Grado - Sección</th>
                             <th style="width: 25%">Estudiante</th>
                             <th style="width: 15%">Fecha</th>
                             <th style="width: 15%">Hora</th>
@@ -39,6 +40,9 @@
                         @foreach($pases as $pase)
                         <tr>
                             <td class="text-center align-middle">{{ $loop->iteration }}</td>
+                                    <td class="align-middle">
+            {{ $pase->estudiante->grado->nombre ?? '' }} - {{ $pase->estudiante->seccion->nombre ?? '' }}
+        </td>
                             <td class="align-middle">
                                 {{ $pase->estudiante->nombres }} {{ $pase->estudiante->apellidos }}
                             </td>
