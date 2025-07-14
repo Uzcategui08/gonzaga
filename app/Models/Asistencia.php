@@ -54,6 +54,13 @@ class Asistencia extends Model
         return $this->belongsTo(Grado::class, 'grado_id')->with('secciones');
     }
 
+    public function seccion()
+    {
+        return $this->belongsTo(Horario::class, 'horario_id')
+            ->with('asignacion.seccion')
+            ->select('id', 'asignacion_id', 'dia', 'hora_inicio', 'hora_fin', 'aula');
+    }
+
     public function getSeccionNombreAttribute()
     {
         $grado = $this->grado?->nombre ?? 'No especificado';
@@ -61,6 +68,7 @@ class Asistencia extends Model
         
         return "{$grado} - {$seccion}";
     }
+
 
     public function materia(): BelongsTo
     {
