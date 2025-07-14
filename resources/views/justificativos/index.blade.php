@@ -40,10 +40,10 @@
                         @foreach($justificativos as $justificativo)
                             <tr class="border-bottom">
         <td class="text-nowrap align-middle"></td>
-      
-                                    <td class="align-middle">
+        <td class="align-middle">
+                                 
             {{ $justificativo->estudiante->seccion->grado->nombre ?? '' }} - {{ $justificativo->estudiante->seccion->nombre ?? '' }}
-        </td>
+        </td>       
         <td class="align-middle">
             <span class="font-weight-semibold text-dark">
                 {{ $justificativo->estudiante->nombres }} {{ $justificativo->estudiante->apellidos }}
