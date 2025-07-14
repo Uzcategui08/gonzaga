@@ -40,8 +40,8 @@
                     </p>
                     <p class="text-muted mb-0">
                         <i class="fas fa-layer-group mr-1"></i> 
-                        {{ $pase->estudiante->seccion->grado->nombre ?? 'Sin grado' }} - 
-                        {{ $pase->estudiante->seccion->nombre ?? 'Sin sección' }}
+                        {{ $justificativo->estudiante->seccion->grado->nombre ?? 'Sin grado' }} - 
+                        {{ $justificativo->estudiante->seccion->nombre ?? 'Sin sección' }}
                     </p>
                 </div>
             </div>

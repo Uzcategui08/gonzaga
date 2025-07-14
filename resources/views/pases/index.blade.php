@@ -41,7 +41,7 @@
                         <tr>
                             <td class="text-center align-middle">{{ $loop->iteration }}</td>
                                     <td class="align-middle">
-            {{ $pase->estudiante->grado->nombre ?? '' }} - {{ $pase->estudiante->seccion->nombre ?? '' }}
+            {{ $pase->estudiante->seccion->grado->nombre ?? '' }} - {{ $pase->estudiante->seccion->nombre ?? '' }}
         </td>
                             <td class="align-middle">
                                 {{ $pase->estudiante->nombres }} {{ $pase->estudiante->apellidos }}

@@ -42,7 +42,7 @@
         <td class="text-nowrap align-middle"></td>
         <td class="align-middle">
             <span class="font-weight-semibold text-dark">
-                {{ $justificativo->estudiante->grado->nombre ?? '' }} - {{ $justificativo->estudiante->seccion->nombre ?? '' }}
+                {{ $justificativo->estudiante->grado->nombre ?? '' }} - {{ $justificativo->estudiante->seccion->grado->nombre ?? '' }}
             </span>
         </td>
         <td class="align-middle">
