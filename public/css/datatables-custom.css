@@ -27,7 +27,25 @@
     box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
     display: none;
 }
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    border: none !important;
+    background: transparent !important;
+    color: #6c757d !important;
+    margin: 0 5px !important;
+    padding: 5px 10px !important;
+    border-radius: 4px !important;
+}
 
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: #3a7bd5 !important;
+    color: white !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    color: #3a7bd5 !important;
+    background: rgba(58, 123, 213, 0.1) !important;
+}
 .dt-details table {
     width: 100%;
     margin: 0;

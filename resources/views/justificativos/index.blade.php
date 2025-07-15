@@ -22,7 +22,7 @@
 
         <div class="card-body p-3">
             <div class="table-responsive-md rounded-lg" style="margin: 0.5rem;">
-                <table class="table table-hover mb-0 datatable" id="justificativos-table" style="width:100%">
+                <table class="table table-hover table-striped datatable" id="justificativos-table" style="width:100%">
                     <thead class="bg-light">
                         <tr>
                             <th class="text-nowrap">#</th>

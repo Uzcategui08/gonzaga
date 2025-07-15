@@ -17,6 +17,7 @@
         </div>
         -->
     </div>
+
 @stop
 
 @section('content')
@@ -29,19 +30,19 @@
         </div>
 
         <div class="card-body p-3">
-            <div class="table-responsive-md rounded-lg" style="margin: 0.5rem;">
-                <table class="table table-hover mb-0 datatable" id="asistencias-table">
+            <div  style="margin: 0.5rem; overflow-x: auto;">
+                <table class="table table-hover table-striped datatable" style="width:100%" id="asistencias-table">
                     <thead class="bg-light">
                         <tr>
                             <th>#</th>
-                            <th class="py-3">Registro</th>
-                            <th class="py-3">Fecha Clase</th>
-                            <th class="py-3">Hora</th>
-                            <th class="py-3">Materia</th>
-                            <th class="py-3">Profesor</th>
-                            <th class="py-3">Contenido</th>
-                            <th class="py-3">Resumen</th>
-                            <th class="py-3">Acciones</th>
+                            <th >Registro</th>
+                            <th >Fecha Clase</th>
+                            <th >Hora</th>
+                            <th >Materia</th>
+                            <th >Profesor</th>
+                            <th >Contenido</th>
+                            <th >Resumen</th>
+                            <th >Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -72,11 +73,9 @@
                                     <br><small class="text-danger">(ID: {{ $asistencia->profesor_id }})</small>
                                 @endif
                             </td>
-                            <td class="align-middle">
-                                <span class="text-truncate" style="max-width: 200px;" title="{{ $asistencia->contenido_clase ?? '' }}">
-                                    {{ $asistencia->contenido_clase ?? 'N/A' }}
-                                </span>
-                            </td>
+                            <td data-title="Contenido">
+    {{ $asistencia->contenido_clase ?? 'N/A' }}
+</td>
                             <td class="text-center align-middle">
                                 @if($asistencia->estudiantes && $asistencia->estudiantes->count() > 0)
                                     @php
@@ -124,4 +123,5 @@
         </div>
     </div>
 </div>
+
 @endsection
