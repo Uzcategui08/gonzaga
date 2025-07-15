@@ -151,7 +151,7 @@
                 width: '100%'
             });
 
-            $('#hora_llegada').attr('min', '08:00');
+            $('#hora_llegada').attr('min', '07:35');
 
             $('#fecha').attr('max', new Date().toISOString().split('T')[0]);
             
