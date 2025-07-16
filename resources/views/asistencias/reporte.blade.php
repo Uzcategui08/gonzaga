@@ -40,6 +40,7 @@
                             <th class="py-3">Materia</th>
                             <th class="py-3">Profesor</th>
                             <th class="py-3">Contenido</th>
+                            <th class="py-3">Observación General</th>
                             <th class="py-3">Resumen</th>
                             <th class="py-3">Acciones</th>
                         </tr>
@@ -53,11 +54,11 @@
                             <td class="text-nowrap align-middle">{{ $asistencia->hora_inicio ?? 'N/A' }}</td>
                             <td class="align-middle">
                                 <span class="font-weight-semibold text-dark">
-                                    {{ $asistencia->materia ? $asistencia->materia->nombre : 'N/A' }}
-                                    @if($asistencia->seccion)
+                                    {{ $asistencia->horario->asignacion->materia->nombre ?? 'N/A' }}
+                                    @if($asistencia->horario->asignacion->seccion)
                                         <br>
                                         <small class="text-muted">
-                                            {{ $asistencia->seccion->nombre }} - {{ $asistencia->seccion->grado->nombre }}
+                                            {{ $asistencia->horario->asignacion->seccion->grado->nombre }} - {{ $asistencia->horario->asignacion->seccion->nombre }}
                                         </small>
                                     @endif
                                 </span>
@@ -67,15 +68,13 @@
                                     $profesor = $asistencia->profesor;
                                     $profesorName = $profesor ? ($profesor->user ? $profesor->user->name : 'N/A') : 'N/A';
                                 @endphp
-                                <span class="font-weight-semibold text-dark">{{ $profesorName }}</span>
-                                @if(!$profesor)
-                                    <br><small class="text-danger">(ID: {{ $asistencia->profesor_id }})</small>
-                                @endif
+                                {{ $profesorName }}
                             </td>
-                            <td class="align-middle">
-                                <span class="text-truncate" style="max-width: 200px;" title="{{ $asistencia->contenido_clase ?? '' }}">
-                                    {{ $asistencia->contenido_clase ?? 'N/A' }}
-                                </span>
+                            <td class="text-wrap align-middle">
+                                {{ $asistencia->contenido_clase ?? 'N/A' }}
+                            </td>
+                            <td class="text-wrap align-middle">
+                                {{ $asistencia->observacion_general ?? 'N/A' }}
                             </td>
                             <td class="text-center align-middle">
                                 @if($asistencia->estudiantes && $asistencia->estudiantes->count() > 0)

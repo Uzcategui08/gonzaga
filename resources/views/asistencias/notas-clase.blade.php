@@ -23,6 +23,8 @@
                             <th>Día</th>
                             <th>Fecha</th>
                             <th>Materia</th>
+                            <th>Año</th>
+                            <th>Sección</th>
                             <th>Hora</th>
                             <th>Aula</th>
                             <th class="text-center align-middle">Acciones</th>
@@ -46,7 +48,9 @@
                                         <td class="text-center align-middle">{{ $loop->iteration }}</td>
                                         <td class="align-middle">{{ ucfirst($asistencia->horario->dia) }}</td>
                                         <td class="align-middle">{{ \Carbon\Carbon::parse($asistencia->fecha)->format('d/m/Y') }}</td>
-                                        <td class="align-middle">{{ $asistencia->materia->nombre }}</td>
+                                        <td class="align-middle">{{ $asistencia->horario->asignacion->materia->nombre }}</td>
+                                        <td class="align-middle">{{ $asistencia->horario->asignacion->seccion->grado->nombre }}</td>
+                                        <td class="align-middle">{{ $asistencia->horario->asignacion->seccion->nombre }}</td>
                                         <td class="align-middle">{{ $asistencia->horario->hora_inicio }}</td>
                                         <td class="align-middle">{{ $asistencia->horario->aula }}</td>
                                         <td class="text-center align-middle">

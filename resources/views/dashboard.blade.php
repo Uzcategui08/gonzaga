@@ -258,7 +258,7 @@
                             <div class="ml-3">
                                 <h2 class="mb-0">{{ $claseTop }}</h2>
                                 <p class="mb-0 text-muted">Top Clase</p>
-                                <small class="text-muted">{{ $asistenciaClaseTop }}% asistencia</small>
+                                <small class="text-muted">{{ $asistenciaClaseTop }} asistencias</small>
                             </div>
                         </div>
                     </div>
@@ -275,7 +275,7 @@
                             <div class="ml-3">
                                 <h2 class="mb-0">{{ $materiaTop }}</h2>
                                 <p class="mb-0 text-muted">Materia Top</p>
-                                <small class="text-muted">{{ $asistenciaMateriaTop }}% asistencia</small>
+                                <small class="text-muted">{{ $asistenciaMateriaTop }} asistencias</small>
                             </div>
                         </div>
                     </div>

@@ -46,7 +46,6 @@
                         <table class="table table-bordered m-0">
                             <thead>
                                 <tr>
-                                    <th style="width: 10%;" class="text-center bg-light py-2">Hora</th>
                                     @foreach($dias as $dia)
                                         @php
                                             $fecha = now()->startOfWeek(); 
@@ -91,9 +90,6 @@
                                     @endphp
                                     
                                     <tr>
-                                        <td class="text-center bg-light font-weight-bold align-middle">
-                                            <div class="py-2">{{ $horaDisplay }}</div>
-                                        </td>
                                         
                                         @foreach($dias as $dia)
                                             @php
@@ -109,11 +105,11 @@
                                                     <div class="card mb-2 border-left-3 border-primary">
                                                         <div class="card-body p-2">
                                                             <div class="d-flex justify-content-between align-items-start mb-1">
-                                                                <h6 class="card-title-horario mb-0 text-primary font-weight-bold">
+                                                                <h6 class="card-title mb-0 text-primary font-weight-bold">
                                                                     {{ $horario->asignacion->materia->nombre }}
                                                                 </h6>
                                                                 <span class="badge badge-light text-dark">
-                                                                    {{ substr($horario->hora_inicio, 0, 5) }}
+                                                                    {{ substr($horario->hora_inicio, 0, 5) }} - {{ substr($horario->hora_fin, 0, 5) }}
                                                                 </span>
                                                             </div>
                                                             
