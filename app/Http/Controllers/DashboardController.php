@@ -170,7 +170,7 @@ class DashboardController extends Controller
                 ->orderBy('total', 'desc')
                 ->first();
             $data['claseTop'] = $topClass ? $topClass->clase : 'N/A';
-            $data['asistenciaClaseTop'] = $topClass ? round(($topClass->total / $totalStudents) * 100) : 0;
+            $data['asistenciaClaseTop'] = $topClass ? $topClass->total : 0;
 
             $topSubject = \App\Models\AsistenciaEstudiante::select('materias.nombre as materia', \DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
@@ -183,7 +183,7 @@ class DashboardController extends Controller
                 ->orderBy('total', 'desc')
                 ->first();
             $data['materiaTop'] = $topSubject ? $topSubject->materia : 'N/A';
-            $data['asistenciaMateriaTop'] = $topSubject ? round(($topSubject->total / $totalStudents) * 100) : 0;
+            $data['asistenciaMateriaTop'] = $topSubject ? $topSubject->total : 0;
         } elseif ($user->hasRole('coordinador')) {
             $seccionesCoordinador = $user->secciones->pluck('id');
             

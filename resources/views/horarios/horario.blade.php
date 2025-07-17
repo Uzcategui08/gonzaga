@@ -17,23 +17,58 @@
 <div class="card mb-4 shadow-sm">
     <div class="card-body">
         <form id="professorSelectorForm" method="GET" action="{{ route('horarios.profesor.admin') }}">
-            <div class="form-group col-md-12">
-                <label for="professor_id" class="font-weight-bold text-gray-700">Seleccionar Profesor:</label>
-                <select name="professor_id" id="professor_id" class="form-control form-control-lg select2 @error('professor_id') is-invalid @enderror" required>
-                    <option value="">-- Seleccione un profesor --</option>
-                    @foreach($professors as $professor)
-                        <option value="{{ $professor->user->id }}" 
-                            @if(isset($selectedProfessor) && $selectedProfessor->user->id == $professor->user->id) selected @endif>
-                            {{ $professor->user->name }} 
-                            @if($professor->user->email)
-                                ({{ $professor->user->email }})
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-                @error('professor_id')
-                    <div class="invalid-feedback">{{ $message }}</div>
-                @enderror
+            <div class="row">
+                <div class="col-4">
+                    <div class="form-group">
+                        <label for="search_type" class="font-weight-bold text-gray-700">Tipo de Búsqueda</label>
+                        <select name="search_type" id="search_type" class="form-control form-control-lg select2">
+                            <option value="">Seleccione una opción</option>
+                            <option value="profesor">Buscar por Profesor</option>
+                            <option value="seccion">Buscar por Sección</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="professor_id" class="font-weight-bold text-gray-700">Profesor</label>
+                        <select name="professor_id" id="professor_id" class="form-control form-control-lg select2 @error('professor_id') is-invalid @enderror" required disabled>
+                            <option value="">Seleccione una opción</option>
+                            @foreach($professors as $professor)
+                                <option value="{{ $professor->user->id }}" 
+                                    @if(isset($selectedProfessor) && $selectedProfessor->user->id == $professor->user->id) selected @endif>
+                                    {{ $professor->user->name }} 
+                                    @if($professor->user->email)
+                                        ({{ $professor->user->email }})
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('professor_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="section_id" class="font-weight-bold text-gray-700">Sección</label>
+                        <select name="section_id" id="section_id" class="form-control form-control-lg select2 @error('section_id') is-invalid @enderror" disabled>
+                            <option value="">Seleccione una opción</option>
+                            @foreach($sections as $section)
+                                <option value="{{ $section->id }}" {{ old('section_id', request('section_id')) == $section->id ? 'selected' : '' }}>
+                                    {{ $section->nombre }} - {{ $section->grado->nombre }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('section_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-lg" disabled>Filtrar</button>
+                </div>
             </div>
         </form>
     </div>
@@ -52,17 +87,18 @@
     @if(isset($selectedProfessor))
         <div class="card mb-4 shadow-sm border-0">
             <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="mr-3">
-                        <i class="fas fa-chalkboard-teacher fa-3x text-primary"></i>
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="mb-0">Horario del Profesor</h3>
+                    <div class="text-muted">
+                        <span class="font-weight-bold">{{ $selectedProfessor->user->name }}</span>
+                        @if($selectedProfessor->user->email)
+                            <small class="d-block">{{ $selectedProfessor->user->email }}</small>
+                        @endif
                     </div>
-                    <div>
-                        <h4 class="mb-1">{{ $selectedProfessor->user->name }}</h4>
-                        <p class="mb-1">
-                            <span class="text-muted">Email:</span> 
-                            {{ $selectedProfessor->user->email ?? 'No especificado' }}
-                        </p>
-                    </div>
+                </div>
+                <div class="alert alert-info mb-4">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Mostrando horarios para el profesor seleccionado
                 </div>
             </div>
         </div>
@@ -76,17 +112,27 @@
                         <div class="d-flex align-items-center">
                             <i class="fas fa-info-circle fa-2x mr-3"></i>
                             <div>
-                                <h5 class="mb-2">Sin Horarios Asignados</h5>
-                                <p class="mb-1">El profesor no tiene horarios asignados.</p>
+                                <h5 class="mb-2">Seleccione una opción</h5>
+                                <p class="mb-1">Seleccione un profesor o sección para ver los horarios</p>
                             </div>
                         </div>
                     </div>
                 @else
-                    <div class="table-responsive">
-                        <table class="table table-bordered m-0">
-                            <thead>
+                    @if($horarios->isEmpty())
+                        <div class="alert alert-info m-0">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle fa-2x mr-3"></i>
+                                <div>
+                                    <h5 class="mb-2">Sin Horarios Asignados</h5>
+                                    <p class="mb-1">El profesor no tiene horarios asignados.</p>
+                                </div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-bordered m-0">
+                                <thead>
                                 <tr>
-                                    <th style="width: 10%;" class="text-center bg-light py-2">Hora</th>
                                     @foreach($dias as $dia)
                                         @php
                                             $fecha = now()->startOfWeek(); 
@@ -131,10 +177,6 @@
                                     @endphp
                                     
                                     <tr>
-                                        <td class="text-center bg-light font-weight-bold align-middle">
-                                            <div class="py-2">{{ $horaDisplay }}</div>
-                                        </td>
-                                        
                                         @foreach($dias as $dia)
                                             @php
                                                 $clasesEnEsteHorario = $horarios->filter(function($horario) use ($dia, $horaInicio, $horaFin) {
@@ -145,44 +187,47 @@
                                             @endphp
                                             
                                             <td class="p-2 @if($clasesEnEsteHorario->isEmpty()) bg-light @endif">
-                                                @foreach($clasesEnEsteHorario as $horario)
-                                                    <div class="card mb-2 border-left-3 border-primary">
-                                                        <div class="card-body p-2">
-                                                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                                                <h6 class="card-title mb-0 text-primary font-weight-bold">
-                                                                    {{ $horario->asignacion->materia->nombre }}
-                                                                </h6>
-                                                                <span class="badge badge-light text-dark">
-                                                                    {{ substr($horario->hora_inicio, 0, 5) }}
-                                                                </span>
-                                                            </div>
-                                                            
-                                                            <div class="d-flex justify-content-between align-items-center">
-                                                                <div>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <i class="fas fa-users mr-2"></i>
-                                                                        <div class="d-flex flex-column">
-                                                                            <span class="text-muted small">
-                                                                                {{ $horario->asignacion->seccion->grado->nombre }} {{ $horario->asignacion->seccion->nombre }}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <span class="text-muted small d-block">
-                                                                        <i class="fas fa-map-marker-alt mr-1"></i>
-                                                                        {{ $horario->aula ?? 'Aula por asignar' }}
+                                                @if(!$clasesEnEsteHorario->isEmpty())
+                                                    @foreach($clasesEnEsteHorario as $horario)
+                                                        <div class="card mb-2 border-left-3 border-primary">
+                                                            <div class="card-body p-2">
+                                                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                                                    <h6 class="card-title mb-0 text-primary font-weight-bold">
+                                                                        {{ $horario->asignacion->materia->nombre }}
+                                                                    </h6>
+                                                                    <span class="badge badge-light text-dark">
+                                                                        {{ substr($horario->hora_inicio, 0, 5) }} - {{ substr($horario->hora_fin, 0, 5) }}
                                                                     </span>
+                                                                </div>
+                                                                
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <div>
+                                                                        <div class="d-flex align-items-center">
+                                                                            <i class="fas fa-users mr-2"></i>
+                                                                            <div class="d-flex flex-column">
+                                                                                <span class="text-muted small">
+                                                                                    {{ $horario->asignacion->seccion->grado->nombre }} {{ $horario->asignacion->seccion->nombre }}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <span class="text-muted small d-block">
+                                                                            <i class="fas fa-map-marker-alt mr-1"></i>
+                                                                            {{ $horario->aula ?? 'Aula por asignar' }}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                @endforeach
+                                                    @endforeach
+                                                @endif
                                             </td>
                                         @endforeach
                                     </tr>
                                 @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
                 @endif
             </div>
         </div>
@@ -236,10 +281,97 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
-    $('#professor_id').change(function() {
-        if($(this).val()) {
-            $('#professorSelectorForm').submit();
+    // Inicializar Select2
+    $('.select2').select2();
+
+    // Habilitar/deshabilitar selects según el tipo de búsqueda seleccionado
+    function toggleSearchType() {
+        const searchType = $('#search_type').val();
+        
+        if (searchType === 'profesor') {
+            // Habilitar select de profesor y deshabilitar sección
+            $('#professor_id').prop('disabled', false).trigger('change');
+            $('#section_id').prop('disabled', true).trigger('change');
+            $('#professor_id').val('');
+            $('#section_id').val('');
+        } else if (searchType === 'seccion') {
+            // Habilitar select de sección y deshabilitar profesor
+            $('#section_id').prop('disabled', false).trigger('change');
+            $('#professor_id').prop('disabled', true).trigger('change');
+            $('#professor_id').val('');
+            $('#section_id').val('');
+        } else {
+            // Deshabilitar ambos selects
+            $('#professor_id').prop('disabled', true).trigger('change');
+            $('#section_id').prop('disabled', true).trigger('change');
+            $('#professor_id').val('');
+            $('#section_id').val('');
         }
+        
+        // Habilitar/deshabilitar el botón de filtrar
+        updateFilterButton();
+    }
+
+    // Función para actualizar el estado del botón de filtrar
+    function updateFilterButton() {
+        const professorId = $('#professor_id').val();
+        const sectionId = $('#section_id').val();
+        const searchType = $('#search_type').val();
+        
+        // Habilitar el botón si hay un tipo de búsqueda seleccionado
+        // y al menos uno de los selects tiene un valor
+        const hasSelection = searchType && (professorId || sectionId);
+        $('button[type="submit"]').prop('disabled', !hasSelection);
+    }
+
+    // Manejar cambios en el tipo de búsqueda
+    $('#search_type').on('change', function(e) {
+        toggleSearchType();
+    });
+
+    // Manejar cambios en los filtros
+    $('#professor_id').on('change', function(e) {
+        if (e.originalEvent) {
+            toggleSearchType();
+        }
+        updateFilterButton();
+    });
+
+    $('#section_id').on('change', function(e) {
+        if (e.originalEvent) {
+            toggleSearchType();
+        }
+        updateFilterButton();
+    });
+
+    // Manejar el submit del formulario
+    $('#professorSelectorForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        // Verificar si hay un filtro seleccionado
+        const professorId = $('#professor_id').val();
+        const sectionId = $('#section_id').val();
+        const searchType = $('#search_type').val();
+        
+        if (!searchType) {
+            alert('Por favor, seleccione el tipo de búsqueda.');
+            return;
+        }
+        
+        if (!professorId && !sectionId) {
+            alert('Por favor, seleccione un profesor o una sección para filtrar.');
+            return;
+        }
+        
+        // Limpiar el otro filtro si hay uno seleccionado
+        if (professorId) {
+            $('#section_id').val('');
+        } else if (sectionId) {
+            $('#professor_id').val('');
+        }
+        
+        // Enviar el formulario
+        this.submit();
     });
 });
 

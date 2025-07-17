@@ -163,24 +163,34 @@
             <div class="section-title">DETALLES DE LA CLASE</div>
             <table class="compact-info">
                 <tr>
-                    <td style="width: 20%;">
+                    <td style="width: 15%;">
                         <span class="compact-label">Fecha:</span>
                         <span class="compact-value">{{ \Carbon\Carbon::parse($asistencia->fecha)->format('d/m/Y') }}</span>
                     </td>
                     <td class="separator">|</td>
-                    <td style="width: 15%;">
+                    <td style="width: 20%;">
                         <span class="compact-label">Hora:</span>
                         <span class="compact-value">{{ $asistencia->horario->hora_inicio }}</span>
                     </td>
                     <td class="separator">|</td>
-                    <td style="width: 15%;">
+                    <td style="width: 10%;">
+                        <span class="compact-label">Año:</span>
+                        <span class="compact-value">{{ $asistencia->horario->asignacion->seccion->grado->nombre }}</span>
+                    </td>
+                    <td class="separator">|</td>
+                    <td style="width: 10%;">
+                        <span class="compact-label">Sección:</span>
+                        <span class="compact-value">{{ $asistencia->horario->asignacion->seccion->nombre }}</span>
+                    </td>
+                    <td class="separator">|</td>
+                    <td style="width: 10%;">
                         <span class="compact-label">Aula:</span>
                         <span class="compact-value">{{ $asistencia->horario->aula }}</span>
                     </td>
                     <td class="separator">|</td>
-                    <td style="width: 50%;">
+                    <td style="width: 25%;">
                         <span class="compact-label">Materia:</span>
-                        <span class="compact-value">{{ $asistencia->materia->nombre }}</span>
+                        <span class="compact-value">{{ $asistencia->horario->asignacion->materia->nombre }}</span>
                     </td>
                 </tr>
             </table>
