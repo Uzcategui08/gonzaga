@@ -174,18 +174,27 @@
                                     @php
                                         $horaFin = date('H:i', strtotime($horaInicio) + 60*60);
                                         $horaDisplay = substr($horaInicio, 0, 5).' - '.substr($horaFin, 0, 5);
+                                        // Verificar si hay al menos una clase en esta franja horaria
+                                        $clasesPorDia = [];
+                                        $hayClaseEnFranja = false;
+                                        foreach($dias as $dia) {
+                                            $clasesEnEsteHorario = $horarios->filter(function($horario) use ($dia, $horaInicio, $horaFin) {
+                                                return $horario->dia === $dia && 
+                                                       $horario->hora_inicio >= $horaInicio && 
+                                                       $horario->hora_inicio < $horaFin;
+                                            });
+                                            $clasesPorDia[$dia] = $clasesEnEsteHorario;
+                                            if(!$clasesEnEsteHorario->isEmpty()) {
+                                                $hayClaseEnFranja = true;
+                                            }
+                                        }
                                     @endphp
-                                    
+                                    @if($hayClaseEnFranja)
                                     <tr>
                                         @foreach($dias as $dia)
                                             @php
-                                                $clasesEnEsteHorario = $horarios->filter(function($horario) use ($dia, $horaInicio, $horaFin) {
-                                                    return $horario->dia === $dia && 
-                                                           $horario->hora_inicio >= $horaInicio && 
-                                                           $horario->hora_inicio < $horaFin;
-                                                });
+                                                $clasesEnEsteHorario = $clasesPorDia[$dia];
                                             @endphp
-                                            
                                             <td class="p-2 @if($clasesEnEsteHorario->isEmpty()) bg-light @endif">
                                                 @if(!$clasesEnEsteHorario->isEmpty())
                                                     @foreach($clasesEnEsteHorario as $horario)
@@ -199,7 +208,6 @@
                                                                         {{ substr($horario->hora_inicio, 0, 5) }} - {{ substr($horario->hora_fin, 0, 5) }}
                                                                     </span>
                                                                 </div>
-                                                                
                                                                 <div class="d-flex justify-content-between align-items-center">
                                                                     <div>
                                                                         <div class="d-flex align-items-center">
@@ -223,6 +231,7 @@
                                             </td>
                                         @endforeach
                                     </tr>
+                                    @endif
                                 @endforeach
                                 </tbody>
                             </table>
