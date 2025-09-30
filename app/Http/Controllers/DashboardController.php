@@ -17,30 +17,32 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $data = [
-            'totalEstudiantes' => 0,
-            'totalProfesores' => 0,
-            'totalSecciones' => 0,
-            'totalMaterias' => 0,
-            'tardiosHoy' => 0,
-            'inasistenciasHoy' => 0,
-            'notifications' => collect(),
-            'secciones' => collect(), 
-            'horarioHoy' => collect(),
-            'asistenciasHoy' => collect(),
-            'totalClases' => 0,
-            'clasesConAsistencia' => 0,
-            'porcentajeAsistencia' => 0,
-            'estudiantesConMasFaltas' => collect(),
-            'proximasClases' => collect(),
-            'fechaActual' => Carbon::now('America/Caracas'),
-            'asistenciasPorMateria' => collect(),
-            'asistenciaPorEstado' => collect(),
-            'estadosAsistencia' => collect(),
-            'estudiantesPorSeccion' => collect(),
-            'profesoresPorMateria' => collect(),
-            'attendanceTrend' => collect(),
-            'promedioAsistencia' => 0
+    $data = [
+        'totalEstudiantes' => 0,
+        'totalProfesores' => 0,
+        'totalSecciones' => 0,
+        'totalMaterias' => 0,
+        'tardiosHoy' => 0,
+        'inasistenciasHoy' => 0,
+        'notifications' => collect(),
+        'secciones' => collect(), 
+        'horarioHoy' => collect(),
+        'asistenciasHoy' => collect(),
+        'totalClases' => 0,
+        'clasesConAsistencia' => 0,
+        'porcentajeAsistencia' => 0,
+        'estudiantesConMasFaltas' => collect(),
+        'proximasClases' => collect(),
+        'fechaActual' => Carbon::now('America/Caracas'),
+        'asistenciasPorMateria' => collect(),
+        'asistenciaPorEstado' => collect(),
+        'estadosAsistencia' => collect(),
+        'estudiantesPorSeccion' => collect(),
+        'profesoresPorMateria' => collect(),
+        'attendanceTrend' => collect(),
+        'promedioAsistencia' => 0,
+        'totalEstudiantesProfesor' => 0,
+        'inasistenciasProfesor' => 0
         ];
 
         $user = auth()->user();
