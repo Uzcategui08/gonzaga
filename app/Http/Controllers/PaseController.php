@@ -12,26 +12,25 @@ use Illuminate\Support\Facades\Log;
 
 class PaseController extends Controller
 {
-    public function __construct()
-    {
-
-    }
+    public function __construct() {}
 
     public function index()
     {
         $user = auth()->user();
-        
+        $fecha = request('fecha', now()->format('Y-m-d'));
+
         if ($user->hasRole('coordinador')) {
             $secciones = $user->secciones;
-            
             $pases = Pase::with(['estudiante', 'usuario'])
-                ->whereHas('estudiante', function($query) use ($secciones) {
+                ->whereHas('estudiante', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
                 })
+                ->whereDate('fecha', $fecha)
                 ->orderBy('fecha', 'desc')
                 ->get();
         } else {
             $pases = Pase::with(['estudiante', 'usuario'])
+                ->whereDate('fecha', $fecha)
                 ->orderBy('fecha', 'desc')
                 ->get();
         }
@@ -42,10 +41,10 @@ class PaseController extends Controller
     public function create()
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('coordinador')) {
             $secciones = $user->secciones;
-            
+
             $estudiantes = Estudiante::whereIn('seccion_id', $secciones->pluck('id'))
                 ->with('seccion.grado')
                 ->get();
@@ -71,7 +70,7 @@ class PaseController extends Controller
 
         $hora_llegada = strtotime($validated['hora_llegada']);
         $hora_inicio_clases = strtotime(config('app.hora_inicio_clases'));
-        
+
         if ($hora_llegada <= $hora_inicio_clases) {
             return redirect()->back()->withErrors([
                 'hora_llegada' => 'La hora de llegada debe ser después de la hora de inicio de clases'
@@ -79,7 +78,7 @@ class PaseController extends Controller
         }
 
         $horario = \App\Models\Horario::with(['asignacion.materia', 'asignacion.seccion'])->find($validated['horario_id']);
-        
+
         if (!$horario) {
             return redirect()->back()->withErrors([
                 'horario_id' => 'Horario no encontrado'
@@ -98,11 +97,11 @@ class PaseController extends Controller
         ]);
 
         $profesor = $horario->asignacion->profesor;
-        
+
         if ($profesor) {
             $materia = $pase->horario?->asignacion?->materia?->nombre ?? 'Desconocida';
             $seccion = $pase->horario?->asignacion?->seccion?->nombre ?? 'Desconocida';
-            
+
             $profesor->notify(
                 new \App\Notifications\PaseAsignadoNotification(
                     $pase,
@@ -142,7 +141,7 @@ class PaseController extends Controller
         if (isset($validated['hora_llegada'])) {
             $hora_llegada = strtotime($validated['hora_llegada']);
             $hora_inicio_clases = strtotime(config('app.hora_inicio_clases'));
-            
+
             if ($hora_llegada <= $hora_inicio_clases) {
                 return redirect()->back()->withErrors([
                     'hora_llegada' => 'La hora de llegada debe ser después de la hora de inicio de clases'

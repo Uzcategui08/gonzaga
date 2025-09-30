@@ -23,8 +23,8 @@ class AsistenciaController extends Controller
         $asistencia->load([
             'materia',
             'profesor',
-            'horario' => function($query) {
-                $query->select('id', 'aula'); 
+            'horario' => function ($query) {
+                $query->select('id', 'aula');
             }
         ]);
 
@@ -39,7 +39,7 @@ class AsistenciaController extends Controller
                 'estudiantes.apellidos'
             )
             ->get();
-        
+
         $asistencia->estudiantes = $estudiantes;
 
         $pdf = Pdf::loadView('asistencias.registro-pdf', compact('asistencia'));
@@ -56,7 +56,7 @@ class AsistenciaController extends Controller
             $asistencia->load([
                 'materia',
                 'profesor',
-                'horario' => function($query) {
+                'horario' => function ($query) {
                     $query->select('id', 'aula');
                 }
             ]);
@@ -72,7 +72,7 @@ class AsistenciaController extends Controller
                     'estudiantes.apellidos'
                 )
                 ->get();
-            
+
             $asistencia->estudiantes = $estudiantes;
 
             $fecha = $asistencia->fecha->format('Y-m-d');
@@ -90,7 +90,6 @@ class AsistenciaController extends Controller
                 'estudiantesConPase' => $estudiantesConPase,
                 'tiene_observacion_profesor' => !empty($asistencia->profesor_observacion)
             ]);
-
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al cargar la información de la asistencia');
         }
@@ -107,7 +106,7 @@ class AsistenciaController extends Controller
             foreach ($checkboxes as $checkbox) {
                 $request[$checkbox] = $request->has($checkbox);
             }
-            
+
             $validated = $request->validate([
                 'fecha' => 'required|date',
                 'hora_inicio' => 'required',
@@ -143,7 +142,6 @@ class AsistenciaController extends Controller
 
             return redirect()->route('dashboard')
                 ->with('success', 'Asistencia actualizada exitosamente');
-
         } catch (\Exception $e) {
             Log::error('Error al actualizar asistencia', [
                 'asistencia_id' => $asistencia->id,
@@ -159,13 +157,13 @@ class AsistenciaController extends Controller
             $materia = Materia::findOrFail($materiaId);
             $profesor = auth()->user()->profesor;
 
-            $pasesActivos = Pase::whereHas('horario', function($query) use ($materia) {
+            $pasesActivos = Pase::whereHas('horario', function ($query) use ($materia) {
                 $query->where('materia_id', $materia->id);
             })
-            ->whereDate('fecha', date('Y-m-d')) 
-            ->where('aprobado', true)
-            ->with('estudiante')
-            ->get();
+                ->whereDate('fecha', date('Y-m-d'))
+                ->where('aprobado', true)
+                ->with('estudiante')
+                ->get();
 
             $estudiantes = DB::table('estudiantes')
                 ->join('secciones', 'estudiantes.seccion_id', '=', 'secciones.id')
@@ -175,7 +173,7 @@ class AsistenciaController extends Controller
                 ->get();
 
             $pasesActivosParaVista = [
-                'pases' => $pasesActivos->map(function($pase) {
+                'pases' => $pasesActivos->map(function ($pase) {
                     return [
                         'id' => $pase->id,
                         'estudiante_id' => $pase->estudiante_id,
@@ -191,19 +189,19 @@ class AsistenciaController extends Controller
         }
 
         $asistencias = Asistencia::with([
-            'profesor' => function($query) {
+            'profesor' => function ($query) {
                 $query->with('user:id,name');
             },
-            'materia' => function($query) {
+            'materia' => function ($query) {
                 $query->select('id', 'nombre');
             },
-            'estudiantes' => function($query) {
+            'estudiantes' => function ($query) {
                 $query->select('id', 'estudiante_id', 'estado', 'observacion_individual');
             }
         ])
-        ->where('profesor_id', auth()->user()->profesor->id)
-        ->orderBy('fecha', 'desc')
-        ->get();
+            ->where('profesor_id', auth()->user()->profesor->id)
+            ->orderBy('fecha', 'desc')
+            ->get();
 
         return view('asistencias.lista', compact('asistencias'));
     }
@@ -253,7 +251,7 @@ class AsistenciaController extends Controller
 
             $materia = Materia::findOrFail($materiaId);
             $horario = Horario::where('id', $horarioId)
-                ->whereHas('asignacion.materia', function($query) use ($materia) {
+                ->whereHas('asignacion.materia', function ($query) use ($materia) {
                     $query->where('id', $materia->id);
                 })
                 ->first();
@@ -278,7 +276,7 @@ class AsistenciaController extends Controller
 
             $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
 
-            $pasesConMotivos = $pasesActivos->map(function($pase) {
+            $pasesConMotivos = $pasesActivos->map(function ($pase) {
                 return [
                     'estudiante_id' => $pase->estudiante_id,
                     'motivo' => $pase->motivo
@@ -293,7 +291,6 @@ class AsistenciaController extends Controller
                 'estudiantesConPase' => $estudiantesConPase,
                 'pasesConMotivos' => $pasesConMotivos
             ]);
-
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al cargar la información de la clase. Por favor, contacte al administrador.');
         }
@@ -313,7 +310,7 @@ class AsistenciaController extends Controller
 
             $materia = Materia::findOrFail($materiaId);
             $horario = Horario::where('id', $horarioId)
-                ->whereHas('asignacion.materia', function($query) use ($materia) {
+                ->whereHas('asignacion.materia', function ($query) use ($materia) {
                     $query->where('id', $materia->id);
                 })
                 ->first();
@@ -352,7 +349,6 @@ class AsistenciaController extends Controller
                 'horario' => $horario,
                 'estudiantesConPase' => $estudiantesConPase
             ]);
-
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al cargar la información de la clase. Por favor, contacte al administrador.');
         }
@@ -365,7 +361,7 @@ class AsistenciaController extends Controller
             foreach ($checkboxes as $checkbox) {
                 $request[$checkbox] = $request->has($checkbox);
             }
-            
+
             $validated = $request->validate([
                 'fecha' => 'required|date',
                 'hora_inicio' => 'required|date_format:H:i',
@@ -461,23 +457,23 @@ class AsistenciaController extends Controller
     public function reporte(Request $request)
     {
         $dia_semana = $request->input('dia_semana');
-        
+
         $asistencias = Asistencia::with([
-            'profesor' => function($query) {
+            'profesor' => function ($query) {
                 $query->with('user:id,name');
             },
-            'materia' => function($query) {
+            'materia' => function ($query) {
                 $query->select('id', 'nombre');
             },
-            'estudiantes' => function($query) {
+            'estudiantes' => function ($query) {
                 $query->select('id', 'estudiante_id', 'estado', 'observacion_individual');
             }
-        ])->when($dia_semana, function($query) use ($dia_semana) {
+        ])->when($dia_semana, function ($query) use ($dia_semana) {
             return $query->whereRaw("DAYOFWEEK(DATE(fecha)) = ?", [$dia_semana + 1]);
         })
-        ->orderBy('fecha', 'desc')
-        ->get();
-    
+            ->orderBy('fecha', 'desc')
+            ->get();
+
         return view('asistencias.reporte', compact('asistencias'));
     }
 }

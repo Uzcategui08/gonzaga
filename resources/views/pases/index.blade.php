@@ -5,6 +5,13 @@
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center">
         <h1>Pases de Entrada</h1>
+        <form method="GET" action="" class="form-inline mb-0">
+            <div class="form-group mr-2">
+                <label for="fecha" class="mb-0 mr-2">Fecha</label>
+                <input type="date" name="fecha" id="fecha" class="form-control" value="{{ request('fecha', now()->format('Y-m-d')) }}">
+            </div>
+            <button type="submit" class="btn btn-primary mr-2">Filtrar</button>
+        </form>
         <a href="{{ route('pases.create') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Nuevo Pase
         </a>

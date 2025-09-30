@@ -3,7 +3,16 @@
 @section('title', 'Registro de Asistencia')
 
 @section('content_header')
-    <h1>Registro de Asistencia</h1>
+    <h1>Registro de Asistencia
+        @isset($materia)
+            <span class="ml-3 h4 text-primary">
+                {{ $materia->nombre }}
+                @if(isset($horario->asignacion->seccion->grado->nombre) && isset($horario->asignacion->seccion->nombre))
+                    <span class="text-dark"> | {{ $horario->asignacion->seccion->grado->nombre }} - {{ $horario->asignacion->seccion->nombre }}</span>
+                @endif
+            </span>
+        @endisset
+    </h1>
 @stop
 
 @section('content')

@@ -7,15 +7,15 @@
         <h1 class="m-0">
             Reporte de Asistencias
         </h1>
-        <!--
-        <div class="btn-group">
-            <a href="{{ route('asistencias.reporte-pdf') }}" 
-               class="btn btn-primary" 
-               target="_blank">
-                <i class="fas fa-file-pdf mr-2"></i>Generar PDF
-            </a>
-        </div>
-        -->
+        <form method="GET" action="" class="mb-0">
+            <div class="d-flex align-items-end">
+                <div class="mr-2">
+                    <label for="fecha" class="font-weight-bold mb-0">Fecha</label>
+                    <input type="date" name="fecha" id="fecha" class="form-control" value="{{ request('fecha', now()->format('Y-m-d')) }}">
+                </div>
+                <button type="submit" class="btn btn-primary">Filtrar</button>
+            </div>
+        </form>
     </div>
 
 @stop
@@ -30,7 +30,7 @@
         </div>
 
         <div class="card-body p-3">
-            <div  style="margin: 0.5rem; overflow-x: auto;">
+            <div style="margin: 0.5rem;">
                 <table class="table table-hover table-striped datatable" style="width:100%" id="asistencias-table">
                     <thead class="bg-light">
                         <tr>
@@ -84,21 +84,43 @@
                                         $inasistentes = $asistencia->estudiantes->where('estado', 'I')->count();
                                         $pases = $asistencia->estudiantes->where('estado', 'P')->count();
                                     @endphp
-                                    <div class="d-flex justify-content-center">
-                                        <div class="mr-2">
-                                            <span class="badge badge-pill py-2 px-3 badge-success" title="Asistentes">
-                                                <i class="fas fa-user-check mr-1"></i>{{ $asistentes }}
-                                            </span>
+                                    @php
+                                        $masculinos = $asistencia->estudiantes->filter(function($ae) {
+                                            return $ae->estado === 'A' && optional($ae->estudiante)->genero === 'M';
+                                        })->count();
+                                        $femeninos = $asistencia->estudiantes->filter(function($ae) {
+                                            return $ae->estado === 'A' && optional($ae->estudiante)->genero === 'F';
+                                        })->count();
+                                    @endphp
+                                    <div class="d-flex flex-column align-items-center">
+                                        <div class="d-flex justify-content-center mb-1">
+                                            <div class="mr-2">
+                                                <span class="badge badge-pill py-2 px-3 badge-success" title="Asistentes">
+                                                    <i class="fas fa-user-check mr-1"></i>{{ $asistentes }}
+                                                </span>
+                                            </div>
+                                            <div class="mr-2">
+                                                <span class="badge badge-pill py-2 px-3 badge-danger" title="Inasistentes">
+                                                    <i class="fas fa-user-times mr-1"></i>{{ $inasistentes }}
+                                                </span>
+                                            </div>
+                                            <div class="mr-2">
+                                                <span class="badge badge-pill py-2 px-3 badge-info" title="Pases">
+                                                    <i class="fas fa-user-tag mr-1"></i>{{ $pases }}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div class="mr-2">
-                                            <span class="badge badge-pill py-2 px-3 badge-danger" title="Inasistentes">
-                                                <i class="fas fa-user-times mr-1"></i>{{ $inasistentes }}
-                                            </span>
-                                        </div>
-                                        <div class="mr-2">
-                                            <span class="badge badge-pill py-2 px-3 badge-info" title="Pases">
-                                                <i class="fas fa-user-tag mr-1"></i>{{ $pases }}
-                                            </span>
+                                        <div class="d-flex justify-content-center">
+                                            <div class="mr-2">
+                                                <span class="badge badge-pill py-2 px-3 badge-secondary" title="Masculinos">
+                                                    <i class="fas fa-mars mr-1" style="color:#80bdff"></i>M: {{ $masculinos }}
+                                                </span>
+                                            </div>
+                                            <div class="mr-2">
+                                                <span class="badge badge-pill py-2 px-3 badge-secondary" title="Femeninos">
+                                                    <i class="fas fa-venus mr-1" style="color:#ff80ee"></i>F: {{ $femeninos }}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 @else

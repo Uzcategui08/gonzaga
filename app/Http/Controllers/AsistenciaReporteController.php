@@ -20,14 +20,14 @@ class AsistenciaReporteController extends Controller
         $asistencias = Asistencia::with([
             'materia',
             'profesor',
-            'seccion' => function($query) {
+            'seccion' => function ($query) {
                 $query->with('asignacion.seccion');
             },
-            'grado' => function($query) {
+            'grado' => function ($query) {
                 $query->select('id', 'nombre');
             }
         ])
-        ->get();
+            ->get();
 
         foreach ($asistencias as $asistencia) {
             $estudiantes = AsistenciaEstudiante::join('estudiantes', 'asistencia_estudiante.estudiante_id', '=', 'estudiantes.id')
@@ -41,7 +41,7 @@ class AsistenciaReporteController extends Controller
                     'estudiantes.apellidos'
                 )
                 ->get();
-            
+
             $asistencia->estudiantes = $estudiantes;
         }
 
@@ -51,33 +51,34 @@ class AsistenciaReporteController extends Controller
 
     public function index()
     {
+        $fecha = request('fecha', now()->format('Y-m-d'));
         $user = auth()->user();
-        
+
         if ($user->hasRole('coordinador')) {
             $seccionesCoordinador = $user->secciones->pluck('id');
-            
             $asistencias = Asistencia::with([
-                'profesor' => function($query) {
+                'profesor' => function ($query) {
                     $query->with('user:id,name');
                 },
-                'materia' => function($query) {
+                'materia' => function ($query) {
                     $query->select('id', 'nombre');
                 },
-                'horario' => function($query) {
+                'horario' => function ($query) {
                     $query->with([
-                        'asignacion' => function($query) {
+                        'asignacion' => function ($query) {
                             $query->with('seccion');
                         }
                     ]);
                 },
                 'grado'
             ])
-            ->whereHas('horario')
-            ->whereHas('horario.asignacion', function($query) use ($seccionesCoordinador) {
-                $query->whereIn('seccion_id', $seccionesCoordinador);
-            })
-            ->orderBy('fecha', 'desc')
-            ->get();
+                ->whereHas('horario')
+                ->whereHas('horario.asignacion', function ($query) use ($seccionesCoordinador) {
+                    $query->whereIn('seccion_id', $seccionesCoordinador);
+                })
+                ->whereDate('fecha', $fecha)
+                ->orderBy('fecha', 'desc')
+                ->get();
 
             foreach ($asistencias as $asistencia) {
                 $estudiantes = AsistenciaEstudiante::join('estudiantes', 'asistencia_estudiante.estudiante_id', '=', 'estudiantes.id')
@@ -92,20 +93,20 @@ class AsistenciaReporteController extends Controller
                         'estudiantes.apellidos'
                     )
                     ->get();
-                
                 $asistencia->estudiantes = $estudiantes;
             }
         } else {
             $asistencias = Asistencia::with([
-                'profesor' => function($query) {
+                'profesor' => function ($query) {
                     $query->with('user:id,name');
                 },
-                'materia' => function($query) {
+                'materia' => function ($query) {
                     $query->select('id', 'nombre');
                 }
             ])
-            ->orderBy('fecha', 'desc')
-            ->get();
+                ->whereDate('fecha', $fecha)
+                ->orderBy('fecha', 'desc')
+                ->get();
 
             foreach ($asistencias as $asistencia) {
                 $estudiantes = AsistenciaEstudiante::join('estudiantes', 'asistencia_estudiante.estudiante_id', '=', 'estudiantes.id')
@@ -119,7 +120,6 @@ class AsistenciaReporteController extends Controller
                         'estudiantes.apellidos'
                     )
                     ->get();
-                
                 $asistencia->estudiantes = $estudiantes;
             }
         }
@@ -132,21 +132,21 @@ class AsistenciaReporteController extends Controller
     public function registro($id)
     {
         $asistencia = Asistencia::with([
-            'profesor' => function($query) {
+            'profesor' => function ($query) {
                 $query->with('user:id,name');
             },
-            'materia' => function($query) {
+            'materia' => function ($query) {
                 $query->select('id', 'nombre');
             },
-            'horario' => function($query) {
+            'horario' => function ($query) {
                 $query->with([
-                    'asignacion' => function($query) {
+                    'asignacion' => function ($query) {
                         $query->with('seccion');
                     }
                 ]);
             }
         ])
-        ->findOrFail($id);
+            ->findOrFail($id);
 
         $asistenciaData = $asistencia->toArray();
         $asistenciaData['horario'] = $asistencia->horario->toArray();
