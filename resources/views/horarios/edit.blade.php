@@ -31,6 +31,7 @@
                                 <option value="{{ $asignacion->id }}" {{ $horario->asignacion_id == $asignacion->id ? 'selected' : '' }}>
                                     {{ $asignacion->profesor->user->name }} - 
                                     {{ $asignacion->materia->nombre }} - 
+                                    {{ $asignacion->seccion->grado->nombre ?? '' }} - 
                                     {{ $asignacion->seccion->nombre }}
                                 </option>
                             @endforeach
