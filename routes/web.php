@@ -82,6 +82,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('api/clase/{clase}/estudiantes', [LimpiezaController::class, 'getEstudiantes'])->name('api.clase.estudiantes');
 
     Route::resource('asignaciones', AsignacionController::class)->parameters(['asignaciones' => 'asignacion']);
+    Route::get('asignaciones/estudiantes/por-seccion', [AsignacionController::class, 'getEstudiantesBySeccion'])->name('asignaciones.estudiantes.por-seccion');
 
     Route::get('/asistencias/reporte', [AsistenciaReporteController::class, 'index'])->name('asistencias.reporte');
     Route::get('/asistencias/reporte-pdf', [AsistenciaReporteController::class, 'generatePdf'])->name('asistencias.reporte-pdf');

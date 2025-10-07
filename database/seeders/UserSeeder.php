@@ -62,6 +62,7 @@ class UserSeeder extends Seeder
 
         User::create([
             'name' => 'Admin Gonzaga',
+            'username' => 'admin',
             'email' => 'admin@colegio.com',
             'password' => bcrypt('admin123'),
             'email_verified_at' => now(),
@@ -71,6 +72,7 @@ class UserSeeder extends Seeder
 
         User::create([
             'name' => 'Coordinador',
+            'username' => 'coordinador',
             'email' => 'coordinador@colegio.com',
             'password' => bcrypt('coordinador123'),
             'email_verified_at' => now(),

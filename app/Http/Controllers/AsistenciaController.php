@@ -235,54 +235,61 @@ class AsistenciaController extends Controller
         return $pdf->stream('nota_clase_' . $asistencia->id . '_' . date('Y-m-d') . '.pdf');
     }
 
-
-
     public function registrar($materiaId, $horarioId)
     {
         try {
             if (!auth()->check()) {
                 return redirect()->route('login')->with('error', 'Por favor, inicie sesión primero');
             }
-
+    
             $profesor = auth()->user()->profesor;
             if (!$profesor) {
                 return redirect()->back()->with('error', 'No tienes un perfil de profesor asociado');
             }
-
+    
             $materia = Materia::findOrFail($materiaId);
             $horario = Horario::where('id', $horarioId)
                 ->whereHas('asignacion.materia', function ($query) use ($materia) {
                     $query->where('id', $materia->id);
                 })
+                ->with('asignacion') 
                 ->first();
-
+    
             if (!$horario) {
                 return redirect()->back()->with('error', 'Horario no encontrado o no válido');
             }
-
-            $estudiantes = $horario->asignacion->seccion->estudiantes()->orderBy('apellidos')->get();
-
-            if ($estudiantes->isEmpty()) {
-                return redirect()->back()->with('error', 'No hay estudiantes asignados a esta sección');
+    
+            $estudiantesIds = json_decode($horario->asignacion->estudiantes_id, true) ?? [];
+            
+            if (empty($estudiantesIds)) {
+                return redirect()->back()->with('error', 'No hay estudiantes asignados a esta materia en la sección seleccionada');
             }
-
+                            
+            $estudiantes = Estudiante::whereIn('id', $estudiantesIds)
+                ->orderBy('apellidos')
+                ->get();
+    
+            if ($estudiantes->isEmpty()) {
+                return redirect()->back()->with('error', 'No se encontraron estudiantes con los IDs especificados en la asignación');
+            }
+    
             $fecha = now('America/Caracas')->format('Y-m-d');
-
+    
             $pasesActivos = Pase::where('horario_id', $horario->id)
                 ->where('fecha', $fecha)
                 ->where('aprobado', true)
                 ->with('estudiante')
                 ->get();
-
+    
             $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
-
+    
             $pasesConMotivos = $pasesActivos->map(function ($pase) {
                 return [
                     'estudiante_id' => $pase->estudiante_id,
                     'motivo' => $pase->motivo
                 ];
             })->keyBy('estudiante_id')->toArray();
-
+    
             return view('asistencias.index', [
                 'materia' => $materia,
                 'horario' => $horario,
@@ -292,6 +299,7 @@ class AsistenciaController extends Controller
                 'pasesConMotivos' => $pasesConMotivos
             ]);
         } catch (\Exception $e) {
+            \Log::error('Error en AsistenciaController@registrar: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Error al cargar la información de la clase. Por favor, contacte al administrador.');
         }
     }

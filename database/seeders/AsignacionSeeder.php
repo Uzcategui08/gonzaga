@@ -28,7 +28,8 @@ class AsignacionSeeder extends Seeder
                 Asignacion::create([
                     'seccion_id' => $seccion->id,
                     'materia_id' => $materia->id,
-                    'profesor_id' => $profesor->id
+                    'profesor_id' => $profesor->id,
+                    'estudiantes_id' => $seccion->estudiantes->isNotEmpty() ? $seccion->estudiantes->pluck('id')->random() : null
                 ]);
             }
         }

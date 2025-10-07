@@ -6,6 +6,7 @@ use App\Models\Asignacion;
 use App\Models\Profesor;
 use App\Models\Materia;
 use App\Models\Seccion;
+use App\Models\Estudiante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -57,11 +58,14 @@ class AsignacionController extends Controller
     public function store(Request $request)
     {
         try {
-
+            \Log::info('Form data received:', $request->all());
+            
             $validated = $request->validate([
                 'profesor_id' => 'required|exists:profesores,id',
                 'materia_id' => 'required|exists:materias,id',
                 'seccion_id' => 'required|exists:secciones,id',
+                'estudiantes_id' => 'required|array|min:1',
+                'estudiantes_id.*' => 'exists:estudiantes,id'
             ], [
                 'profesor_id.required' => 'El profesor es requerido',
                 'profesor_id.exists' => 'El profesor seleccionado no existe',
@@ -69,14 +73,26 @@ class AsignacionController extends Controller
                 'materia_id.exists' => 'La materia seleccionada no existe',
                 'seccion_id.required' => 'La sección es requerida',
                 'seccion_id.exists' => 'La sección seleccionada no existe',
+                'estudiantes_id.required' => 'Debe seleccionar al menos un estudiante',
+                'estudiantes_id.array' => 'Formato de estudiantes inválido',
+                'estudiantes_id.min' => 'Debe seleccionar al menos un estudiante',
+                'estudiantes_id.*.exists' => 'Uno o más estudiantes seleccionados no existen'
             ]);
 
-            $asignacion = Asignacion::create($validated);
+            $asignacion = Asignacion::create([
+                'profesor_id' => $validated['profesor_id'],
+                'materia_id' => $validated['materia_id'],
+                'seccion_id' => $validated['seccion_id'],
+                'estudiantes_id' => json_encode($validated['estudiantes_id'])
+            ]);
 
             return redirect()->route('asignaciones.index')
                 ->with('success', 'Asignación creada exitosamente.');
 
         } catch (\Exception $e) {
+            \Log::error('Error creating asignación: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error al crear la asignación: ' . $e->getMessage());
@@ -113,6 +129,7 @@ class AsignacionController extends Controller
                 'profesor_id' => 'required|exists:profesores,id',
                 'materia_id' => 'required|exists:materias,id',
                 'seccion_id' => 'required|exists:secciones,id',
+                'estudiantes_id' => 'required|array|exists:estudiantes,id',
             ], [
                 'profesor_id.required' => 'El profesor es requerido',
                 'profesor_id.exists' => 'El profesor seleccionado no existe',
@@ -120,6 +137,9 @@ class AsignacionController extends Controller
                 'materia_id.exists' => 'La materia seleccionada no existe',
                 'seccion_id.required' => 'La sección es requerida',
                 'seccion_id.exists' => 'La sección seleccionada no existe',
+                'estudiantes_id.required' => 'Los estudiantes son requeridos',
+                'estudiantes_id.array' => 'Los estudiantes deben ser un array',
+                'estudiantes_id.exists' => 'Algunos estudiantes seleccionados no existen',
             ]);
 
             $asignacion->update($request->only(['profesor_id', 'materia_id', 'seccion_id']));
@@ -146,6 +166,41 @@ class AsignacionController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Error al eliminar la asignación: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get students by section
+     */
+    public function getEstudiantesBySeccion(Request $request)
+    {
+        try {
+            $request->validate([
+                'seccion_id' => 'required|exists:secciones,id'
+            ]);
+
+            $estudiantes = Estudiante::where('seccion_id', $request->seccion_id)
+                ->select('id', 'nombres', 'apellidos', 'codigo_estudiante', 'estado')
+                ->get()
+                ->map(function($estudiante) {
+                    return [
+                        'id' => $estudiante->id,
+                        'nombre_completo' => $estudiante->nombres . ' ' . $estudiante->apellidos,
+                        'cedula' => $estudiante->codigo_estudiante,
+                        'estado' => $estudiante->estado
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'estudiantes' => $estudiantes
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar los estudiantes: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

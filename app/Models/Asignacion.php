@@ -12,7 +12,8 @@ class Asignacion extends Model
     protected $fillable = [
         'profesor_id',
         'materia_id',
-        'seccion_id'
+        'seccion_id',
+        'estudiantes_id'
     ];
 
 
