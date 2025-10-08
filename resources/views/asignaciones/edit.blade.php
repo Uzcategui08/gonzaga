@@ -18,10 +18,9 @@
         </div>
 
         <div class="card-body p-3">
-            <form action="{{ route('asignaciones.update', ['asignacion' => $asignacion->id]) }}" method="POST">
+            <form id="asignacionForm" action="{{ route('asignaciones.update', $asignacion->id) }}" method="POST">
                 @csrf
                 @method('PUT')
-
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="profesor_id" class="font-weight-bold text-gray-700">Profesor</label>
@@ -44,7 +43,7 @@
                             <option value="">Seleccione una materia</option>
                             @foreach($materias as $materia)
                                 <option value="{{ $materia->id }}" {{ $asignacion->materia_id == $materia->id ? 'selected' : '' }}>
-                                    {{ $materia->nombre }} - {{ $materia->nivel }}
+                                    {{ $materia->nombre }} - {{ ucfirst($materia->nivel) }}
                                 </option>
                             @endforeach
                         </select>
@@ -59,7 +58,7 @@
                             <option value="">Seleccione una sección</option>
                             @foreach($secciones as $seccion)
                                 <option value="{{ $seccion->id }}" {{ $asignacion->seccion_id == $seccion->id ? 'selected' : '' }}>
-                                    {{ $seccion->nombre }}
+                                    {{ $seccion->nombre }} - {{ $seccion->grado->nombre }}
                                 </option>
                             @endforeach
                         </select>
@@ -69,14 +68,34 @@
                     </div>
                 </div>
 
+                <!-- Tabla de estudiantes -->
+                <div class="mt-4">
+                    <h5 class="font-weight-bold text-gray-700 mb-3">Estudiantes de la Sección</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="estudiantes-table">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Seleccionar</th>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Cédula</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Los estudiantes se cargarán aquí dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <div class="mt-6">
                     <div class="d-flex flex-wrap justify-content-start">
-                        <button type="submit" class="btn btn-warning btn-lg">
+                        <button type="submit" class="btn btn-warning btn-lg mr-2 mb-2">
                             <i class="fas fa-save mr-1"></i> Actualizar
                         </button>
-                        </a>
-                        <a href="{{ route('asignaciones.index') }}" class="btn btn-secondary btn-lg ml-2">
-                            <i class="fas fa-times mr-1"></i> Cancelar  
+                        <a href="{{ route('asignaciones.index') }}" class="btn btn-secondary btn-lg ml-2 mb-2">
+                            <i class="fas fa-times mr-1"></i> Cancelar
                         </a>
                     </div>
                 </div>
@@ -84,4 +103,84 @@
         </div>
     </div>
 </div>
+
+@push('js')
+<script>
+// Función para manejar el envío del formulario
+document.getElementById('asignacionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // Validar que al menos un estudiante esté seleccionado
+    const checkboxes = document.querySelectorAll('.estudiante-checkbox:checked');
+    if (checkboxes.length === 0) {
+        Swal.fire({
+            title: 'Error',
+            text: 'Debe seleccionar al menos un estudiante',
+            icon: 'error',
+            confirmButtonText: 'Entendido'
+        });
+        return false;
+    }
+    // Si hay estudiantes seleccionados, enviar el formulario
+    this.submit();
+});
+
+$(document).ready(function() {
+    // Inicializar select2
+    $('.select2').select2({
+        theme: 'bootstrap4'
+    });
+
+    // Cargar estudiantes de la sección seleccionada
+    function cargarEstudiantes(seccionId, seleccionados = []) {
+        var tbody = $('#estudiantes-table tbody');
+        if (seccionId) {
+            tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
+            $.ajax({
+                url: '{{ route("asignaciones.estudiantes.por-seccion") }}',
+                type: 'GET',
+                data: { seccion_id: seccionId },
+                success: function(response) {
+                    if (response.success && response.estudiantes && response.estudiantes.length > 0) {
+                        var html = '';
+                        response.estudiantes.forEach(function(estudiante) {
+                            var checked = seleccionados.includes(estudiante.id) ? 'checked' : '';
+                            html += '<tr>';
+                            html += '<td class="text-center"><input type="checkbox" name="estudiantes_id[]" value="' + estudiante.id + '" class="estudiante-checkbox" ' + checked + '></td>';
+                            html += '<td>' + estudiante.id + '</td>';
+                            html += '<td>' + estudiante.nombre_completo + '</td>';
+                            html += '<td>' + (estudiante.cedula || 'N/A') + '</td>';
+                            html += '<td><span class="badge ' + (estudiante.estado === 'activo' ? 'badge-success' : 'badge-secondary') + '">' + (estudiante.estado || 'N/A') + '</span></td>';
+                            html += '</tr>';
+                        });
+                        tbody.html(html);
+                    } else {
+                        tbody.html('<tr><td colspan="5" class="text-center">No hay estudiantes en esta sección</td></tr>');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error al cargar estudiantes:', error);
+                    tbody.html('<tr><td colspan="5" class="text-center text-danger">Error al cargar los estudiantes</td></tr>');
+                }
+            });
+        } else {
+            tbody.html('<tr><td colspan="5" class="text-center">Seleccione una sección para ver los estudiantes</td></tr>');
+        }
+    }
+
+    // Al cambiar la sección, cargar estudiantes
+    $('#seccion_id').change(function() {
+        var seccionId = $(this).val();
+        cargarEstudiantes(seccionId);
+    });
+
+    // Cargar estudiantes al cargar la página si hay sección seleccionada
+    var seccionInicial = $('#seccion_id').val();
+    var estudiantesSeleccionados = @json($asignacion->estudiantes->pluck('id')->toArray() ?? []);
+    if (seccionInicial) {
+        cargarEstudiantes(seccionInicial, estudiantesSeleccionados);
+    }
+});
+</script>
+@endpush
+
 @stop
