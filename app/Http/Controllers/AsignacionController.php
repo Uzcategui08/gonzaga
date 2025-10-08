@@ -124,12 +124,12 @@ class AsignacionController extends Controller
     public function update(Request $request, Asignacion $asignacion)
     {
         try {
-
             $request->validate([
                 'profesor_id' => 'required|exists:profesores,id',
                 'materia_id' => 'required|exists:materias,id',
                 'seccion_id' => 'required|exists:secciones,id',
-                'estudiantes_id' => 'required|array|exists:estudiantes,id',
+                'estudiantes_id' => 'required|array|min:1',
+                'estudiantes_id.*' => 'exists:estudiantes,id',
             ], [
                 'profesor_id.required' => 'El profesor es requerido',
                 'profesor_id.exists' => 'El profesor seleccionado no existe',
@@ -137,16 +137,21 @@ class AsignacionController extends Controller
                 'materia_id.exists' => 'La materia seleccionada no existe',
                 'seccion_id.required' => 'La sección es requerida',
                 'seccion_id.exists' => 'La sección seleccionada no existe',
-                'estudiantes_id.required' => 'Los estudiantes son requeridos',
-                'estudiantes_id.array' => 'Los estudiantes deben ser un array',
-                'estudiantes_id.exists' => 'Algunos estudiantes seleccionados no existen',
+                'estudiantes_id.required' => 'Debe seleccionar al menos un estudiante',
+                'estudiantes_id.array' => 'Formato de estudiantes inválido',
+                'estudiantes_id.min' => 'Debe seleccionar al menos un estudiante',
+                'estudiantes_id.*.exists' => 'Uno o más estudiantes seleccionados no existen'
             ]);
 
-            $asignacion->update($request->only(['profesor_id', 'materia_id', 'seccion_id']));
-            
+            $asignacion->update([
+                'profesor_id' => $request->profesor_id,
+                'materia_id' => $request->materia_id,
+                'seccion_id' => $request->seccion_id,
+                'estudiantes_id' => json_encode($request->estudiantes_id)
+            ]);
+
             return redirect()->route('asignaciones.index')
                 ->with('success', 'Asignación actualizada exitosamente.');
-
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
