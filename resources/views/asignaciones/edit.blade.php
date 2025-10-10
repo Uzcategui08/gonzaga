@@ -142,8 +142,11 @@ $(document).ready(function() {
                 success: function(response) {
                     if (response.success && response.estudiantes && response.estudiantes.length > 0) {
                         var html = '';
+                        
                         response.estudiantes.forEach(function(estudiante) {
-                            var checked = seleccionados.includes(estudiante.id) ? 'checked' : '';
+                            // comparar como strings para evitar problemas de tipo
+                            var estudianteIdStr = estudiante.id.toString();
+                            var checked = seleccionados.includes(estudianteIdStr) ? 'checked' : '';
                             html += '<tr>';
                             html += '<td class="text-center"><input type="checkbox" name="estudiantes_id[]" value="' + estudiante.id + '" class="estudiante-checkbox" ' + checked + '></td>';
                             html += '<td>' + estudiante.id + '</td>';
