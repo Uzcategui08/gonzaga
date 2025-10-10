@@ -175,7 +175,10 @@ $(document).ready(function() {
 
     // Cargar estudiantes al cargar la página si hay sección seleccionada
     var seccionInicial = $('#seccion_id').val();
-    var estudiantesSeleccionados = @json($asignacion->estudiantes->pluck('id')->toArray() ?? []);
+    // Obtener los IDs guardados en la asignación (campo JSON estudiantes_id)
+    var estudiantesSeleccionados = @json($asignacion->estudiantes_id ? json_decode($asignacion->estudiantes_id, true) : []);
+    // Normalizar a strings para comparar con los ids que vienen del servidor (evita fallo por tipo)
+    estudiantesSeleccionados = estudiantesSeleccionados.map(function(v) { return v.toString(); });
     if (seccionInicial) {
         cargarEstudiantes(seccionInicial, estudiantesSeleccionados);
     }
