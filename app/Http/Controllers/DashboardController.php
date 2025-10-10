@@ -17,32 +17,32 @@ class DashboardController extends Controller
 {
     public function index()
     {
-    $data = [
-        'totalEstudiantes' => 0,
-        'totalProfesores' => 0,
-        'totalSecciones' => 0,
-        'totalMaterias' => 0,
-        'tardiosHoy' => 0,
-        'inasistenciasHoy' => 0,
-        'notifications' => collect(),
-        'secciones' => collect(), 
-        'horarioHoy' => collect(),
-        'asistenciasHoy' => collect(),
-        'totalClases' => 0,
-        'clasesConAsistencia' => 0,
-        'porcentajeAsistencia' => 0,
-        'estudiantesConMasFaltas' => collect(),
-        'proximasClases' => collect(),
-        'fechaActual' => Carbon::now('America/Caracas'),
-        'asistenciasPorMateria' => collect(),
-        'asistenciaPorEstado' => collect(),
-        'estadosAsistencia' => collect(),
-        'estudiantesPorSeccion' => collect(),
-        'profesoresPorMateria' => collect(),
-        'attendanceTrend' => collect(),
-        'promedioAsistencia' => 0,
-        'totalEstudiantesProfesor' => 0,
-        'inasistenciasProfesor' => 0
+        $data = [
+            'totalEstudiantes' => 0,
+            'totalProfesores' => 0,
+            'totalSecciones' => 0,
+            'totalMaterias' => 0,
+            'tardiosHoy' => 0,
+            'inasistenciasHoy' => 0,
+            'notifications' => collect(),
+            'secciones' => collect(),
+            'horarioHoy' => collect(),
+            'asistenciasHoy' => collect(),
+            'totalClases' => 0,
+            'clasesConAsistencia' => 0,
+            'porcentajeAsistencia' => 0,
+            'estudiantesConMasFaltas' => collect(),
+            'proximasClases' => collect(),
+            'fechaActual' => Carbon::now('America/Caracas'),
+            'asistenciasPorMateria' => collect(),
+            'asistenciaPorEstado' => collect(),
+            'estadosAsistencia' => collect(),
+            'estudiantesPorSeccion' => collect(),
+            'profesoresPorMateria' => collect(),
+            'attendanceTrend' => collect(),
+            'promedioAsistencia' => 0,
+            'totalEstudiantesProfesor' => 0,
+            'inasistenciasProfesor' => 0
         ];
 
         $user = auth()->user();
@@ -75,7 +75,7 @@ class DashboardController extends Controller
             $data['totalEstudiantes'] = \App\Models\Estudiante::count();
             $data['totalProfesores'] = \App\Models\Profesor::count();
             $fechaActual = now('America/Caracas');
-            $diaActual = $fechaActual->format('l'); 
+            $diaActual = $fechaActual->format('l');
 
             $asistenciasQuery = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'A')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
@@ -84,7 +84,7 @@ class DashboardController extends Controller
                 ->join('secciones', 'asignaciones.seccion_id', '=', 'secciones.id')
                 ->join('estudiantes', 'secciones.id', '=', 'estudiantes.seccion_id')
                 ->whereDate('asistencias.fecha', $fechaActual);
-            
+
             $data['asistenciasHoy'] = $asistenciasQuery->distinct('estudiante_id')->count('estudiante_id');
 
             $data['inasistenciasHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'I')
@@ -95,7 +95,7 @@ class DashboardController extends Controller
                 ->distinct('estudiante_id')
                 ->count('estudiante_id');
 
-            $data['totalClasesHoy'] = \App\Models\Horario::whereHas('asistencia', function($query) use ($fechaActual) {
+            $data['totalClasesHoy'] = \App\Models\Horario::whereHas('asistencia', function ($query) use ($fechaActual) {
                 $query->whereDate('fecha', $fechaActual);
             })->count();
 
@@ -107,7 +107,7 @@ class DashboardController extends Controller
                 ->join('estudiantes', 'secciones.id', '=', 'estudiantes.seccion_id')
                 ->where('asistencia_estudiante.estado', 'A')
                 ->whereBetween('asistencias.fecha', [Carbon::now('America/Caracas')->subDays(30), Carbon::now('America/Caracas')])
-                ->when($user->hasRole('coordinador'), function($query) use ($user) {
+                ->when($user->hasRole('coordinador'), function ($query) use ($user) {
                     $query->whereIn('secciones.id', $user->secciones->pluck('id'));
                 })
                 ->select(
@@ -117,9 +117,9 @@ class DashboardController extends Controller
                 )
                 ->groupBy('horarios.dia')
                 ->get()
-                ->map(function($item) use ($user) {
-                    $totalStudents = $user->hasRole('coordinador') ? 
-                        \App\Models\Estudiante::whereIn('seccion_id', $user->secciones->pluck('id'))->count() : 
+                ->map(function ($item) use ($user) {
+                    $totalStudents = $user->hasRole('coordinador') ?
+                        \App\Models\Estudiante::whereIn('seccion_id', $user->secciones->pluck('id'))->count() :
                         \App\Models\Estudiante::count();
                     $attendanceRate = ($totalStudents > 0) ? round(($item->estudiantes_unicos / $totalStudents) * 100) : 0;
                     return [
@@ -127,7 +127,7 @@ class DashboardController extends Controller
                         'tasa' => $attendanceRate
                     ];
                 });
-            
+
             $data['attendanceByDay'] = $attendanceByDay;
 
             $data['tardiosHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'P')
@@ -140,19 +140,19 @@ class DashboardController extends Controller
 
             $last30Days = Carbon::now('America/Caracas')->subDays(30);
             $totalStudents = \App\Models\Estudiante::count();
-            
+
             $totalAttendances = \App\Models\AsistenciaEstudiante::where('estado', 'A')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->whereBetween('asistencias.fecha', [$last30Days, $fechaActual])
                 ->distinct('asistencia_estudiante.estudiante_id')
                 ->count('asistencia_estudiante.estudiante_id');
-            
-            $attendancePercentage = ($totalStudents > 0) ? 
+
+            $attendancePercentage = ($totalStudents > 0) ?
                 round(($totalAttendances / $totalStudents) * 100) : 0;
             $data['promedioAsistencia'] = $attendancePercentage;
 
             $periods = \App\Models\Horario::select('dia', \DB::raw('count(*) as total'))
-                ->whereHas('asistencia', function($query) use ($fechaActual) {
+                ->whereHas('asistencia', function ($query) use ($fechaActual) {
                     $query->whereDate('fecha', $fechaActual);
                 })
                 ->groupBy('dia')
@@ -188,14 +188,14 @@ class DashboardController extends Controller
             $data['asistenciaMateriaTop'] = $topSubject ? $topSubject->total : 0;
         } elseif ($user->hasRole('coordinador')) {
             $seccionesCoordinador = $user->secciones->pluck('id');
-            
+
             $data['totalEstudiantes'] = \App\Models\Estudiante::whereIn('seccion_id', $seccionesCoordinador)->count();
-            $data['totalProfesores'] = \App\Models\Profesor::whereHas('secciones', function($query) use ($seccionesCoordinador) {
+            $data['totalProfesores'] = \App\Models\Profesor::whereHas('secciones', function ($query) use ($seccionesCoordinador) {
                 $query->whereIn('secciones.id', $seccionesCoordinador);
             })->distinct()->count();
-            
+
             $fechaActual = now('America/Caracas');
-            $diaActual = $fechaActual->format('l'); 
+            $diaActual = $fechaActual->format('l');
 
             $asistenciasQuery = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'A')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
@@ -205,7 +205,7 @@ class DashboardController extends Controller
                 ->join('estudiantes', 'secciones.id', '=', 'estudiantes.seccion_id')
                 ->whereIn('secciones.id', $seccionesCoordinador)
                 ->whereDate('asistencias.fecha', $fechaActual);
-            
+
             $data['asistenciasHoy'] = $asistenciasQuery->distinct('estudiante_id')->count('estudiante_id');
 
             $data['inasistenciasHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'I')
@@ -256,7 +256,7 @@ class DashboardController extends Controller
             Log::info('Total attendances:', ['count' => $totalAttendances]);
 
             Log::info('Calculating promedioAsistencia:', ['totalStudents' => $totalStudents, 'totalAttendances' => $totalAttendances]);
-            $attendancePercentage = ($studentsWithAttendance > 0) ? 
+            $attendancePercentage = ($studentsWithAttendance > 0) ?
                 round(($totalAttendances / ($studentsWithAttendance * 30)) * 100) : 0;
             Log::info('Attendance calculation:', [
                 'students_with_attendance' => $studentsWithAttendance,
@@ -302,7 +302,7 @@ class DashboardController extends Controller
             $data['asistenciaMateriaTop'] = $topSubject ? round(($topSubject->total / $totalStudents) * 100) : 0;
 
             $data['totalSecciones'] = \App\Models\Seccion::whereIn('id', $seccionesCoordinador)->count();
-            $data['totalMaterias'] = \App\Models\Materia::whereHas('asignaciones', function($query) use ($seccionesCoordinador) {
+            $data['totalMaterias'] = \App\Models\Materia::whereHas('asignaciones', function ($query) use ($seccionesCoordinador) {
                 $query->whereIn('seccion_id', $seccionesCoordinador);
             })->distinct()->count();
 
@@ -310,7 +310,7 @@ class DashboardController extends Controller
                 ->withCount('estudiantes')
                 ->whereHas('estudiantes')
                 ->get()
-                ->map(function($seccion) {
+                ->map(function ($seccion) {
                     return [
                         'nombre' => $seccion->nombre,
                         'total' => $seccion->estudiantes_count
@@ -320,7 +320,7 @@ class DashboardController extends Controller
             $data['profesoresPorMateria'] = \App\Models\Materia::with(['profesores'])
                 ->whereHas('profesores')
                 ->get()
-                ->map(function($materia) {
+                ->map(function ($materia) {
                     return [
                         'nombre' => $materia->nombre,
                         'total' => $materia->profesores->count()
@@ -330,13 +330,13 @@ class DashboardController extends Controller
             $fechaInicio = now('America/Caracas')->subDays(14);
             $last30Days = now('America/Caracas')->subDays(30);
             $attendanceByDay = collect([]);
-            
+
             $totalStudents = \App\Models\Estudiante::count();
-            
+
             $allAttendance = \App\Models\AsistenciaEstudiante::where('estado', 'A')
                 ->whereBetween('created_at', [$last30Days, now('America/Caracas')])
                 ->get();
-            
+
             Log::info('Total attendance records:', ['count' => $allAttendance->count()]);
 
             $attendanceRecords = \App\Models\AsistenciaEstudiante::with('asistencia')
@@ -344,36 +344,36 @@ class DashboardController extends Controller
                 ->where('asistencia_estudiante.estado', 'A')
                 ->whereBetween('asistencias.fecha', [$last30Days, now('America/Caracas')])
                 ->get();
-            
+
             Log::info('Attendance records count:', ['count' => $attendanceRecords->count()]);
-            
+
             $attendanceCounts = \App\Models\AsistenciaEstudiante::select(
                 \DB::raw('"horarios"."dia" as dia'),
                 \DB::raw('count(*) as total_asistencias')
             )
-            ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
-            ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
-            ->where('asistencia_estudiante.estado', 'A')
-            ->when($user->hasRole('coordinador'), function($query) use ($user) {
-                $query->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                    ->whereIn('asignaciones.seccion_id', $user->secciones->pluck('id'));
-            })
-            ->when($user->hasRole('profesor'), function($query) use ($user) {
-                $query->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                    ->join('profesores', 'asignaciones.profesor_id', '=', 'profesores.id')
-                    ->where('profesores.user_id', $user->id);
-            })
-            ->groupBy('horarios.dia')
-            ->get();
+                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
+                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
+                ->where('asistencia_estudiante.estado', 'A')
+                ->when($user->hasRole('coordinador'), function ($query) use ($user) {
+                    $query->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
+                        ->whereIn('asignaciones.seccion_id', $user->secciones->pluck('id'));
+                })
+                ->when($user->hasRole('profesor'), function ($query) use ($user) {
+                    $query->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
+                        ->join('profesores', 'asignaciones.profesor_id', '=', 'profesores.id')
+                        ->where('profesores.user_id', $user->id);
+                })
+                ->groupBy('horarios.dia')
+                ->get();
 
             Log::info('Raw attendance data:', ['data' => $attendanceCounts->toArray()]);
 
             $attendanceByDay = $attendanceCounts
-                ->groupBy(function($item) {
+                ->groupBy(function ($item) {
                     Log::info('Processing day:', ['day' => $item->dia]);
                     return $item->dia;
                 })
-                ->map(function($group) {
+                ->map(function ($group) {
                     Log::info('Group data:', ['count' => $group->sum('total_asistencias')]);
                     return [
                         'dia' => $group[0]->dia,
@@ -383,7 +383,7 @@ class DashboardController extends Controller
 
             Log::info('Final attendance data:', ['data' => $attendanceByDay->toArray()]);
 
-            $attendanceByDay = $attendanceByDay->map(function($dayData) use ($totalStudents) {
+            $attendanceByDay = $attendanceByDay->map(function ($dayData) use ($totalStudents) {
                 return [
                     'dia' => $dayData['dia'],
                     'tasa' => round(($dayData['total_asistencias'] / $totalStudents) * 100, 2)
@@ -409,7 +409,7 @@ class DashboardController extends Controller
                 ->join('estudiantes', 'secciones.id', '=', 'estudiantes.seccion_id')
                 ->where('asistencia_estudiante.estado', 'A')
                 ->whereBetween('asistencias.fecha', [Carbon::now('America/Caracas')->subDays(30), Carbon::now('America/Caracas')])
-                ->when($user->hasRole('coordinador'), function($query) use ($user) {
+                ->when($user->hasRole('coordinador'), function ($query) use ($user) {
                     $query->whereIn('secciones.id', $user->secciones->pluck('id'));
                 })
                 ->select(
@@ -421,10 +421,10 @@ class DashboardController extends Controller
 
             if (!$attendanceData->isEmpty()) {
                 $totalStudents = \App\Models\Estudiante::whereIn('seccion_id', $seccionesCoordinador)->count();
-                
+
                 foreach ($attendanceData as $item) {
                     $attendanceRate = ($totalStudents > 0) ? round(($item->estudiantes_unicos / $totalStudents) * 100) : 0;
-                    $attendanceByDay = $attendanceByDay->map(function($day) use ($item, $attendanceRate) {
+                    $attendanceByDay = $attendanceByDay->map(function ($day) use ($item, $attendanceRate) {
                         if ($day['dia'] === $item->dia) {
                             $day['tasa'] = $attendanceRate;
                         }
@@ -436,26 +436,23 @@ class DashboardController extends Controller
             Log::info('Final attendance by day data:', ['data' => $attendanceByDay->toArray()]);
 
             $data['attendanceByDay'] = $attendanceByDay;
-
-
-
-            } elseif ($user->hasRole('profesor') && $user->profesor) {
+        } elseif ($user->hasRole('profesor') && $user->profesor) {
 
 
 
             $fechaInicio = now('America/Caracas')->subDays(30);
             $fechaFin = now('America/Caracas');
-            
+
             $attendanceTrend = collect([]);
-            
+
             for ($i = 0; $i < 30; $i++) {
                 $fecha = $fechaInicio->copy()->addDays($i);
                 $attendanceTrend->push([
                     'date' => $fecha->format('Y-m-d'),
-                    'count' => rand(80, 150) 
+                    'count' => rand(80, 150)
                 ]);
             }
-            
+
             $data['attendanceTrend'] = $attendanceTrend;
 
             $profesor = $user->profesor;
@@ -470,16 +467,19 @@ class DashboardController extends Controller
                 'Saturday' => 'Sábado',
                 'Sunday' => 'Domingo'
             ];
-            
+
             $diaActual = $dias[$fechaActual->format('l')];
 
             $asignacionesProfesor = Asignacion::where('profesor_id', $profesor->id)->pluck('id');
-            
+
+            // Ordenar por hora de inicio (convertir string a time para evitar orden lexicográfico)
             $data['horarioHoy'] = Horario::whereIn('asignacion_id', $asignacionesProfesor)
                 ->where('dia', $diaActual)
                 ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado'])
+                // PostgreSQL: convertir la cadena a time para ordenar correctamente
+                ->orderByRaw("hora_inicio::time ASC")
                 ->get()
-                ->filter(function($clase) {
+                ->filter(function ($clase) {
                     return $clase->asignacion && $clase->asignacion->seccion && $clase->asignacion->seccion->grado;
                 });
 
@@ -487,15 +487,15 @@ class DashboardController extends Controller
                 ->whereDate('fecha', $fechaActual)
                 ->with(['estudiantes', 'materia', 'horario'])
                 ->get();
-            
+
             $data['totalClases'] = $data['horarioHoy']->count();
-            
-            $data['clasesConAsistencia'] = $data['asistenciasHoy']->filter(function($asistencia) use ($fechaActual, $data) {
-                return $asistencia->fecha->toDateString() === $fechaActual->toDateString() && 
-                       $data['horarioHoy']->contains('id', $asistencia->horario_id);
+
+            $data['clasesConAsistencia'] = $data['asistenciasHoy']->filter(function ($asistencia) use ($fechaActual, $data) {
+                return $asistencia->fecha->toDateString() === $fechaActual->toDateString() &&
+                    $data['horarioHoy']->contains('id', $asistencia->horario_id);
             })->unique('horario_id')->count();
-            
-            $data['porcentajeAsistencia'] = $data['totalClases'] > 0 ? 
+
+            $data['porcentajeAsistencia'] = $data['totalClases'] > 0 ?
                 round(($data['clasesConAsistencia'] / $data['totalClases']) * 100) : 0;
 
             $data['secciones'] = Asignacion::whereIn('id', $asignacionesProfesor)
@@ -505,7 +505,7 @@ class DashboardController extends Controller
                 ->unique('id');
 
             $data['estudiantesConMasFaltas'] = AsistenciaEstudiante::where('estado', 'I')
-                ->whereHas('asistencia', function($query) use ($profesor) {
+                ->whereHas('asistencia', function ($query) use ($profesor) {
                     $query->where('profesor_id', $profesor->id);
                 })
                 ->with('estudiante')
@@ -514,26 +514,34 @@ class DashboardController extends Controller
                 ->orderByDesc('faltas')
                 ->limit(5)
                 ->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return $item->estudiante->toArray() + ['faltas' => $item->faltas];
                 });
 
-            $data['proximasClases'] = $data['horarioHoy']->sortBy('hora_inicio')->take(3);
+            // Asegurarse de ordenar las próximas clases por hora convirtiendo a Carbon (maneja formatos no paddeados)
+            $data['proximasClases'] = $data['horarioHoy']->sortBy(function ($clase) {
+                try {
+                    return Carbon::createFromFormat('H:i', $clase->hora_inicio);
+                } catch (\Exception $e) {
+                    // Si el formato no coincide, devolver la cadena para fallback
+                    return $clase->hora_inicio;
+                }
+            })->values()->take(3);
 
-            $data['asistenciasPorMateria'] = $data['asistenciasHoy']->filter(function($asistencia) {
+            $data['asistenciasPorMateria'] = $data['asistenciasHoy']->filter(function ($asistencia) {
                 return $asistencia->materia;
             });
-            
-            $data['asistenciaPorEstado'] = $data['asistenciasHoy']->flatMap(function($asistencia) {
+
+            $data['asistenciaPorEstado'] = $data['asistenciasHoy']->flatMap(function ($asistencia) {
                 return $asistencia->estudiantes;
             })->groupBy('estado')->map->count();
-            
+
             $data['estadosAsistencia'] = $data['asistenciaPorEstado'];
 
             $data['estudiantesPorSeccion'] = Seccion::withCount('estudiantes')
-                ->whereHas('estudiantes') 
+                ->whereHas('estudiantes')
                 ->get()
-                ->map(function($seccion) {
+                ->map(function ($seccion) {
                     return [
                         'nombre' => $seccion->nombre,
                         'total' => $seccion->estudiantes_count
@@ -541,9 +549,9 @@ class DashboardController extends Controller
                 });
 
             $data['profesoresPorMateria'] = Materia::with(['profesores'])
-                ->whereHas('profesores') 
+                ->whereHas('profesores')
                 ->get()
-                ->map(function($materia) {
+                ->map(function ($materia) {
                     return [
                         'nombre' => $materia->nombre,
                         'total' => $materia->profesores->count()
@@ -558,9 +566,9 @@ class DashboardController extends Controller
                 )
                 ->groupBy('date')
                 ->orderBy('date')
-                ->havingRaw('COUNT(*) > 0') 
+                ->havingRaw('COUNT(*) > 0')
                 ->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     return [
                         'date' => $item->date,
                         'count' => (int) $item->attendance_count
@@ -574,7 +582,7 @@ class DashboardController extends Controller
                     ['nombre' => 'Sección C', 'total' => 20]
                 ]);
             }
-            
+
             if ($data['profesoresPorMateria']->isEmpty()) {
                 $data['profesoresPorMateria'] = collect([
                     ['nombre' => 'Matemáticas', 'total' => 5],
@@ -582,7 +590,7 @@ class DashboardController extends Controller
                     ['nombre' => 'Inglés', 'total' => 3]
                 ]);
             }
-            
+
             if ($data['attendanceTrend']->isEmpty()) {
                 $data['attendanceTrend'] = collect([
                     ['date' => now('America/Caracas')->subDays(29)->format('Y-m-d'), 'count' => 100],
@@ -594,7 +602,7 @@ class DashboardController extends Controller
                 ]);
             }
         }
-        
-            return view('dashboard', $data);
+
+        return view('dashboard', $data);
     }
 }
