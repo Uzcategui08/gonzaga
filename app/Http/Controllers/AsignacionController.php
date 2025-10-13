@@ -19,7 +19,7 @@ class AsignacionController extends Controller
     {
         try {
             $user = auth()->user();
-            
+
             if ($user->hasRole('coordinador')) {
                 $seccionesCoordinador = $user->secciones->pluck('id');
                 $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
@@ -31,7 +31,7 @@ class AsignacionController extends Controller
                     ->orderBy('id')
                     ->get();
             }
-            
+
             return view('asignaciones.index', [
                 'asignaciones' => $asignaciones
             ]);
@@ -59,7 +59,7 @@ class AsignacionController extends Controller
     {
         try {
             \Log::info('Form data received:', $request->all());
-            
+
             $validated = $request->validate([
                 'profesor_id' => 'required|exists:profesores,id',
                 'materia_id' => 'required|exists:materias,id',
@@ -88,11 +88,10 @@ class AsignacionController extends Controller
 
             return redirect()->route('asignaciones.index')
                 ->with('success', 'Asignación creada exitosamente.');
-
         } catch (\Exception $e) {
             \Log::error('Error creating asignación: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
-            
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error al crear la asignación: ' . $e->getMessage());
@@ -186,8 +185,9 @@ class AsignacionController extends Controller
 
             $estudiantes = Estudiante::where('seccion_id', $request->seccion_id)
                 ->select('id', 'nombres', 'apellidos', 'codigo_estudiante', 'estado')
+                ->orderBy('apellidos', 'asc')
                 ->get()
-                ->map(function($estudiante) {
+                ->map(function ($estudiante) {
                     return [
                         'id' => $estudiante->id,
                         'nombre_completo' => $estudiante->nombres . ' ' . $estudiante->apellidos,
@@ -200,7 +200,6 @@ class AsignacionController extends Controller
                 'success' => true,
                 'estudiantes' => $estudiantes
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
