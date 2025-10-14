@@ -75,7 +75,15 @@
                             <thead class="bg-light">
                                 <tr>
                                     <th class="text-center">
-                                        <input type="checkbox" id="select-all-estudiantes" title="Seleccionar todos">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <div>
+                                                <input type="checkbox" id="select-all-estudiantes" title="Seleccionar todos">
+                                            </div>
+                                            <div class="mt-1 small text-muted">
+                                                <input type="checkbox" id="select-top-half" title="Seleccionar mitad superior"> <span class="ml-1">Top</span>
+                                                <input type="checkbox" id="select-bottom-half" title="Seleccionar mitad inferior" class="ml-2"> <span class="ml-1">Bottom</span>
+                                            </div>
+                                        </div>
                                     </th>
                                     <th>ID</th>
                                     <th>Nombre</th>
@@ -199,6 +207,30 @@ $(document).ready(function() {
     $('#select-all-estudiantes').on('change', function() {
         var checked = $(this).is(':checked');
         $('.estudiante-checkbox').prop('checked', checked);
+    });
+
+    // Seleccionar mitad superior
+    $('#select-top-half').on('change', function() {
+        var checked = $(this).is(':checked');
+        var all = $('.estudiante-checkbox');
+        var half = Math.ceil(all.length / 2);
+        all.prop('checked', false);
+        all.slice(0, half).prop('checked', checked);
+        // reset other half checkbox
+        $('#select-bottom-half').prop('checked', false);
+        updateSelectAllState();
+    });
+
+    // Seleccionar mitad inferior
+    $('#select-bottom-half').on('change', function() {
+        var checked = $(this).is(':checked');
+        var all = $('.estudiante-checkbox');
+        var half = Math.ceil(all.length / 2);
+        all.prop('checked', false);
+        all.slice(half).prop('checked', checked);
+        // reset top half checkbox
+        $('#select-top-half').prop('checked', false);
+        updateSelectAllState();
     });
 });
 </script>

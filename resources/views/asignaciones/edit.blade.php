@@ -75,7 +75,17 @@
                         <table class="table table-bordered table-hover" id="estudiantes-table">
                             <thead class="bg-light">
                                 <tr>
-                                    <th>Seleccionar</th>
+                                    <th class="text-center">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <div>
+                                                <input type="checkbox" id="select-all-estudiantes" title="Seleccionar todos">
+                                            </div>
+                                            <div class="mt-1 small text-muted">
+                                                <input type="checkbox" id="select-top-half" title="Seleccionar mitad superior"> <span class="ml-1">Top</span>
+                                                <input type="checkbox" id="select-bottom-half" title="Seleccionar mitad inferior" class="ml-2"> <span class="ml-1">Bottom</span>
+                                            </div>
+                                        </div>
+                                    </th>
                                     <th>ID</th>
                                     <th>Nombre</th>
                                     <th>Cédula</th>
@@ -185,6 +195,53 @@ $(document).ready(function() {
     if (seccionInicial) {
         cargarEstudiantes(seccionInicial, estudiantesSeleccionados);
     }
+
+    // Función para actualizar el estado del checkbox "select all"
+    function updateSelectAllState() {
+        var all = $('.estudiante-checkbox');
+        if (all.length === 0) {
+            $('#select-all-estudiantes').prop('checked', false).prop('indeterminate', false);
+            return;
+        }
+        var checkedCount = all.filter(':checked').length;
+        $('#select-all-estudiantes').prop('checked', checkedCount === all.length);
+        $('#select-all-estudiantes').prop('indeterminate', checkedCount > 0 && checkedCount < all.length);
+    }
+
+    // Delegated event: cuando cualquier checkbox individual cambie, actualizar encabezado
+    $(document).on('change', '.estudiante-checkbox', function() {
+        updateSelectAllState();
+    });
+
+    // Manejar el toggle de "select all"
+    $('#select-all-estudiantes').on('change', function() {
+        var checked = $(this).is(':checked');
+        $('.estudiante-checkbox').prop('checked', checked);
+    });
+
+    // Seleccionar mitad superior
+    $('#select-top-half').on('change', function() {
+        var checked = $(this).is(':checked');
+        var all = $('.estudiante-checkbox');
+        var half = Math.ceil(all.length / 2);
+        all.prop('checked', false);
+        all.slice(0, half).prop('checked', checked);
+        // reset other half checkbox
+        $('#select-bottom-half').prop('checked', false);
+        updateSelectAllState();
+    });
+
+    // Seleccionar mitad inferior
+    $('#select-bottom-half').on('change', function() {
+        var checked = $(this).is(':checked');
+        var all = $('.estudiante-checkbox');
+        var half = Math.ceil(all.length / 2);
+        all.prop('checked', false);
+        all.slice(half).prop('checked', checked);
+        // reset top half checkbox
+        $('#select-top-half').prop('checked', false);
+        updateSelectAllState();
+    });
 });
 </script>
 @endpush
