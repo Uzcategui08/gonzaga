@@ -74,7 +74,9 @@
                         <table class="table table-bordered table-hover" id="estudiantes-table">
                             <thead class="bg-light">
                                 <tr>
-                                    <th>Seleccionar</th>
+                                    <th class="text-center">
+                                        <input type="checkbox" id="select-all-estudiantes" title="Seleccionar todos">
+                                    </th>
                                     <th>ID</th>
                                     <th>Nombre</th>
                                     <th>Cédula</th>
@@ -160,6 +162,8 @@ $(document).ready(function() {
                             html += '</tr>';
                         });
                         tbody.html(html);
+                        // Actualizar estado del checkbox "select all" después de renderizar
+                        updateSelectAllState();
                     } else {
                         tbody.html('<tr><td colspan="5" class="text-center">No hay estudiantes en esta sección</td></tr>');
                     }
@@ -172,6 +176,29 @@ $(document).ready(function() {
         } else {
             tbody.html('<tr><td colspan="4" class="text-center">Seleccione una sección para ver los estudiantes</td></tr>');
         }
+    });
+
+    // Función para actualizar el estado del checkbox "select all"
+    function updateSelectAllState() {
+        var all = $('.estudiante-checkbox');
+        if (all.length === 0) {
+            $('#select-all-estudiantes').prop('checked', false).prop('indeterminate', false);
+            return;
+        }
+        var checkedCount = all.filter(':checked').length;
+        $('#select-all-estudiantes').prop('checked', checkedCount === all.length);
+        $('#select-all-estudiantes').prop('indeterminate', checkedCount > 0 && checkedCount < all.length);
+    }
+
+    // Delegated event: cuando cualquier checkbox individual cambie, actualizar encabezado
+    $(document).on('change', '.estudiante-checkbox', function() {
+        updateSelectAllState();
+    });
+
+    // Manejar el toggle de "select all"
+    $('#select-all-estudiantes').on('change', function() {
+        var checked = $(this).is(':checked');
+        $('.estudiante-checkbox').prop('checked', checked);
     });
 });
 </script>
