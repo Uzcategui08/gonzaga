@@ -187,7 +187,7 @@ class EstudianteController extends Controller
                 $query->where('seccion_id', $estudiante->seccion_id);
             })
             ->where('dia', $diaActualEsp)
-            ->with(['asignacion.materia', 'asignacion.seccion'])
+            ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.profesor.user'])
             ->get();
 
             $horariosArray = $horarios->map(function($horario) {
@@ -199,12 +199,16 @@ class EstudianteController extends Controller
                     'hora_fin' => $horario->hora_fin,
                     'aula' => $horario->aula,
                     'asignacion' => [
-                        'id' => $horario->asignacion->id,
-                        'materia' => [
-                            'id' => $horario->asignacion->materia->id,
-                            'nombre' => $horario->asignacion->materia->nombre
+                            'id' => $horario->asignacion->id,
+                            'materia' => [
+                                'id' => $horario->asignacion->materia->id,
+                                'nombre' => $horario->asignacion->materia->nombre
+                            ],
+                            'profesor' => [
+                                'id' => $horario->asignacion->profesor->id ?? null,
+                                'nombre' => $horario->asignacion->profesor->user->name ?? ($horario->asignacion->profesor->nombres ?? null)
+                            ]
                         ]
-                    ]
                 ];
             });
 

@@ -167,10 +167,11 @@
 
                             if (response.horarios && response.horarios.length > 0) {
                                 response.horarios.forEach(horario => {
+                                    const profesor = horario.asignacion.profesor && horario.asignacion.profesor.nombre ? ` (Profesor: ${horario.asignacion.profesor.nombre})` : '';
                                     $('#horario_id').append(
                                         $('<option></option>')
                                             .attr('value', horario.id)
-                                            .text(`${horario.asignacion.materia.nombre} - ${horario.hora_inicio} a ${horario.hora_fin}`)
+                                            .text(`${horario.asignacion.materia.nombre} - ${horario.hora_inicio} a ${horario.hora_fin}${profesor}`)
                                     );
                                 });
                                 $('#horario_id').show();
