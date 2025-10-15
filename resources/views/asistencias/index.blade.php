@@ -281,6 +281,39 @@
             container.style.display = checkbox.checked ? 'block' : 'none';
         }
     });
+
+    // Prevent double submission: disable submit buttons after first submit
+    (function() {
+        var forms = document.querySelectorAll('form');
+        forms.forEach(function(form) {
+            // Only apply to asistencia forms (store route contains 'asistencias.store')
+            if (!form.action || form.action.indexOf('/asistencias') === -1) return;
+
+            form.addEventListener('submit', function(e) {
+                if (form.dataset.submitted === 'true') {
+                    e.preventDefault();
+                    return false;
+                }
+                form.dataset.submitted = 'true';
+                // disable submit buttons
+                var buttons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+                buttons.forEach(function(btn) {
+                    try {
+                        btn.disabled = true;
+                        // add spinner if it's a button
+                        if (btn.tagName.toLowerCase() === 'button') {
+                            var icon = btn.querySelector('i');
+                            if (icon) {
+                                icon.classList.add('fa-spinner', 'fa-spin');
+                            } else {
+                                btn.textContent = btn.textContent + '...';
+                            }
+                        }
+                    } catch (err) {}
+                });
+            });
+        });
+    })();
 </script>
 @endsection
 @section('css')

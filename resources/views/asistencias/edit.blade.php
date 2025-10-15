@@ -310,6 +310,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Prevent double submission on edit form
+    (function() {
+        var form = document.querySelector('form[action*="/asistencias/"]');
+        if (!form) return;
+        form.addEventListener('submit', function(e) {
+            if (form.dataset.submitted === 'true') {
+                e.preventDefault();
+                return false;
+            }
+            form.dataset.submitted = 'true';
+            var btn = form.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                var icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.add('fa-spinner', 'fa-spin');
+                } else {
+                    btn.textContent = btn.textContent + '...';
+                }
+            }
+        });
+    })();
+
     document.addEventListener('DOMContentLoaded', function() {
         const checkProfesorObservacion = document.getElementById('tiene_observacion_profesor');
         const observacionProfesor = document.getElementById('profesor_observacion');
