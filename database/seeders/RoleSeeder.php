@@ -9,7 +9,7 @@ class RoleSeeder extends Seeder
 {
     public function run()
     {
-        $roles = ['admin', 'profesor', 'coordinador'];
+    $roles = ['admin', 'profesor', 'coordinador', 'secretaria'];
         foreach ($roles as $roleName) {
             if (!Role::where('name', $roleName)->exists()) {
                 Role::create(['name' => $roleName]);
@@ -26,6 +26,8 @@ class RoleSeeder extends Seeder
                 $user->assignRole('profesor');
             } elseif ($user->tipo === 'coordinador') {
                 $user->assignRole('coordinador');
+            } elseif ($user->tipo === 'secretaria') {
+                $user->assignRole('secretaria');
             }
         }
     }

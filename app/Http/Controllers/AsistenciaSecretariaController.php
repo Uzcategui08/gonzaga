@@ -1,0 +1,178 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Concerns\ResolvesAttendanceDateRange;
+use App\Models\AsistenciaEstudiante;
+use App\Models\Seccion;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
+use App\Exports\AsistenciaSecretariaExport;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+
+class AsistenciaSecretariaController extends Controller
+{
+  use ResolvesAttendanceDateRange;
+
+  public function index(Request $request)
+  {
+    $this->authorizeReportAccess();
+
+    [$startDate, $endDate, $sectionsCollection, $totals] = $this->buildReport($request);
+
+    return view('asistencias.secretaria-index', [
+      'sections' => $sectionsCollection,
+      'totals' => $totals,
+      'startDate' => $startDate,
+      'endDate' => $endDate,
+      'filters' => [
+        'start_date' => $startDate ? $startDate->toDateString() : null,
+        'end_date' => $endDate ? $endDate->toDateString() : null,
+      ],
+    ]);
+  }
+
+  public function exportPdf(Request $request)
+  {
+    $this->authorizeReportAccess();
+
+    [$startDate, $endDate, $sectionsCollection, $totals] = $this->buildReport($request);
+
+    $pdf = Pdf::loadView('asistencias.secretaria-pdf', [
+      'sections' => $sectionsCollection,
+      'totals' => $totals,
+      'startDate' => $startDate,
+      'endDate' => $endDate,
+      'generatedAt' => Carbon::now('America/Caracas'),
+      'usuario' => Auth::user(),
+    ])->setPaper('a4', 'portrait');
+
+    return $pdf->download('reporte-asistencia-genero-' . now()->format('Ymd_His') . '.pdf');
+  }
+
+  public function exportExcel(Request $request)
+  {
+    $this->authorizeReportAccess();
+
+    [$startDate, $endDate, $sectionsCollection, $totals] = $this->buildReport($request);
+
+    $filename = 'reporte-asistencia-genero-' . now()->format('Ymd_His') . '.xlsx';
+
+    return Excel::download(new AsistenciaSecretariaExport($sectionsCollection, $totals), $filename);
+  }
+
+  private function buildReport(Request $request): array
+  {
+    [$startDate, $endDate] = $this->resolveDateRange($request);
+
+    $secciones = Seccion::with(['grado:id,nombre'])
+      ->orderBy('nombre')
+      ->get();
+
+    $sectionsData = [];
+    foreach ($secciones as $seccion) {
+      $sectionsData[$seccion->id] = [
+        'seccion_id' => $seccion->id,
+        'grado' => optional($seccion->grado)->nombre ?? 'Sin grado',
+        'seccion' => $seccion->nombre,
+        'masculinos' => 0,
+        'femeninos' => 0,
+        'total' => 0,
+      ];
+    }
+
+    if (!empty($sectionsData)) {
+      $registros = AsistenciaEstudiante::select(
+        'secciones.id as seccion_id',
+        'secciones.nombre as seccion_nombre',
+        'grados.nombre as grado_nombre',
+        'estudiantes.id as estudiante_id',
+        'estudiantes.genero'
+      )
+        ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
+        ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+        ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+        ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+        ->leftJoin('grados', 'grados.id', '=', 'secciones.grado_id')
+        ->join('estudiantes', 'estudiantes.id', '=', 'asistencia_estudiante.estudiante_id')
+        ->where('asistencia_estudiante.estado', 'A')
+        ->whereIn('secciones.id', array_keys($sectionsData))
+        ->when($startDate, function ($query) use ($startDate) {
+          $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());
+        })
+        ->when($endDate, function ($query) use ($endDate) {
+          $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
+        })
+        ->groupBy(
+          'secciones.id',
+          'secciones.nombre',
+          'grados.nombre',
+          'estudiantes.id',
+          'estudiantes.genero'
+        )
+        ->orderBy('grados.nombre')
+        ->orderBy('secciones.nombre')
+        ->orderBy('estudiantes.genero')
+        ->get();
+
+      foreach ($registros as $registro) {
+        if (!isset($sectionsData[$registro->seccion_id])) {
+          $sectionsData[$registro->seccion_id] = [
+            'seccion_id' => $registro->seccion_id,
+            'grado' => $registro->grado_nombre ?? 'Sin grado',
+            'seccion' => $registro->seccion_nombre,
+            'masculinos' => 0,
+            'femeninos' => 0,
+            'total' => 0,
+          ];
+        }
+
+        $genero = strtoupper((string) $registro->genero);
+
+        if ($genero === 'M') {
+          $sectionsData[$registro->seccion_id]['masculinos']++;
+        } elseif ($genero === 'F') {
+          $sectionsData[$registro->seccion_id]['femeninos']++;
+        }
+
+        $sectionsData[$registro->seccion_id]['total'] =
+          $sectionsData[$registro->seccion_id]['masculinos'] +
+          $sectionsData[$registro->seccion_id]['femeninos'];
+      }
+    }
+
+    $sectionsCollection = collect($sectionsData)
+      ->filter(function ($section) {
+        return $section['total'] > 0;
+      })
+      ->sortBy(function ($section) {
+        return sprintf('%s_%s', $section['grado'], $section['seccion']);
+      }, SORT_NATURAL | SORT_FLAG_CASE)
+      ->values();
+
+    $totals = [
+      'masculinos' => $sectionsCollection->sum('masculinos'),
+      'femeninos' => $sectionsCollection->sum('femeninos'),
+    ];
+    $totals['total'] = $totals['masculinos'] + $totals['femeninos'];
+
+    return [$startDate, $endDate, $sectionsCollection, $totals];
+  }
+
+  private function authorizeReportAccess(): void
+  {
+    /** @var User|null $user */
+    $user = Auth::user();
+
+    $canSeeReport = $user
+      && method_exists($user, 'hasRole')
+      && ($user->hasRole('secretaria') || $user->hasRole('admin'));
+
+    if (!$canSeeReport) {
+      abort(403, 'Acceso no autorizado');
+    }
+  }
+}

@@ -13,6 +13,7 @@ use App\Http\Controllers\GradoMateriaController;
 use App\Http\Controllers\AsistenciaController;
 use App\Http\Controllers\JustificativoController;
 use App\Http\Controllers\AsistenciaReporteController;
+use App\Http\Controllers\AsistenciaSecretariaController;
 use App\Http\Controllers\PaseController;
 use App\Http\Controllers\LimpiezaController;
 use App\Http\Controllers\NotificationController;
@@ -66,11 +67,11 @@ Route::middleware(['auth'])->group(function () {
         'update' => 'grados.update',
         'destroy' => 'grados.destroy'
     ]);
-    
+
     Route::get('/grados/data', [GradoController::class, 'getData'])
         ->name('grados.data')
         ->middleware('auth');
-    
+
     Route::resource('secciones', SeccionController::class)->parameters(['secciones' => 'seccion']);
     Route::resource('estudiantes', EstudianteController::class);
     Route::resource('materias', MateriaController::class);
@@ -84,12 +85,23 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('asignaciones', AsignacionController::class)->parameters(['asignaciones' => 'asignacion']);
     Route::get('asignaciones/estudiantes/por-seccion', [AsignacionController::class, 'getEstudiantesBySeccion'])->name('asignaciones.estudiantes.por-seccion');
 
-    Route::get('/asistencias/reporte', [AsistenciaReporteController::class, 'index'])->name('asistencias.reporte');
+    Route::get('/asistencias/reporte', [AsistenciaReporteController::class, 'index'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':admin,profesor,coordinador,secretaria'])
+        ->name('asistencias.reporte');
     Route::get('/asistencias/reporte-pdf', [AsistenciaReporteController::class, 'generatePdf'])->name('asistencias.reporte-pdf');
     Route::get('/asistencias/inasistencias-coordinador', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'index'])
         ->name('asistencias.coordinador.index');
     Route::get('/asistencias/inasistencias-coordinador/pdf', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'exportPdf'])
         ->name('asistencias.coordinador.pdf');
+    Route::get('/asistencias/reporte-secretaria', [AsistenciaSecretariaController::class, 'index'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin'])
+        ->name('asistencias.secretaria.index');
+    Route::get('/asistencias/reporte-secretaria/pdf', [AsistenciaSecretariaController::class, 'exportPdf'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin'])
+        ->name('asistencias.secretaria.pdf');
+    Route::get('/asistencias/reporte-secretaria/excel', [AsistenciaSecretariaController::class, 'exportExcel'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin'])
+        ->name('asistencias.secretaria.excel');
     Route::get('materias/{materia}/asistencia', [AsistenciaController::class, 'index'])->name('asistencias.index');
     Route::post('materias/{materia}/asistencia', [AsistenciaController::class, 'store'])->name('asistencias.store');
     Route::get('asistencias/{asistencia}/pdf', [AsistenciaController::class, 'generatePdf'])->name('asistencias.generate-pdf');

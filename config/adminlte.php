@@ -62,7 +62,11 @@ return [
     'menu' => [
         'options' => [
             'can' => function ($permission) {
-                return auth()->user()->can($permission);
+                $user = \Illuminate\Support\Facades\Auth::user();
+
+                return $user && is_callable([$user, 'hasRole'])
+                    ? (bool) call_user_func([$user, 'hasRole'], $permission)
+                    : false;
             },
         ],
     ],
@@ -333,6 +337,15 @@ return [
             'icon' => 'fas fa-home',
         ],
         [
+            'type' => 'navbar-item',
+            'text' => 'Reporte Secretaría',
+            'url' => 'asistencias/reporte-secretaria',
+            'icon' => 'fas fa-venus-mars',
+            'topnav_right' => true,
+            'can' => 'admin',
+            'secretaria',
+        ],
+        [
             'text' => 'Estructura Académica',
             'icon' => 'fas fa-university',
             'can' => 'admin',
@@ -385,6 +398,23 @@ return [
             'can' => 'profesor'
         ],
         [
+            'text' => 'Asistencias',
+            'icon' => 'fas fa-clipboard-list',
+            'can' => 'secretaria',
+            'submenu' => [
+                [
+                    'text' => 'Registro de asistencia',
+                    'url' => 'asistencias/reporte',
+                    'icon' => 'fas fa-check-square'
+                ],
+                [
+                    'text' => 'Reporte por género',
+                    'url' => 'asistencias/reporte-secretaria',
+                    'icon' => 'fas fa-venus-mars'
+                ]
+            ]
+        ],
+        [
             'text' => 'Horarios y asistencias',
             'icon' => 'fas fa-calendar',
             'can' => 'coordinador',
@@ -415,6 +445,11 @@ return [
                     'text' => 'Resumen Inasistencias',
                     'url' => 'asistencias/inasistencias-coordinador',
                     'icon' => 'fas fa-user-times'
+                ],
+                [
+                    'text' => 'Reporte por género',
+                    'url' => 'asistencias/reporte-secretaria',
+                    'icon' => 'fas fa-venus-mars'
                 ]
             ]
         ],
