@@ -410,6 +410,11 @@ return [
                     'text' => 'Reporte Asistencia',
                     'url' => 'asistencias/reporte',
                     'icon' => 'fas fa-file-alt'
+                ],
+                [
+                    'text' => 'Resumen Inasistencias',
+                    'url' => 'asistencias/inasistencias-coordinador',
+                    'icon' => 'fas fa-user-times'
                 ]
             ]
         ],
@@ -437,6 +442,11 @@ return [
                     'text' => 'Reporte Asistencia',
                     'url' => 'asistencias/reporte',
                     'icon' => 'fas fa-file-alt'
+                ],
+                [
+                    'text' => 'Resumen Inasistencias',
+                    'url' => 'asistencias/inasistencias-coordinador',
+                    'icon' => 'fas fa-user-times'
                 ]
             ]
         ],

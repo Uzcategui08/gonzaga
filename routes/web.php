@@ -86,6 +86,10 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/asistencias/reporte', [AsistenciaReporteController::class, 'index'])->name('asistencias.reporte');
     Route::get('/asistencias/reporte-pdf', [AsistenciaReporteController::class, 'generatePdf'])->name('asistencias.reporte-pdf');
+    Route::get('/asistencias/inasistencias-coordinador', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'index'])
+        ->name('asistencias.coordinador.index');
+    Route::get('/asistencias/inasistencias-coordinador/pdf', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'exportPdf'])
+        ->name('asistencias.coordinador.pdf');
     Route::get('materias/{materia}/asistencia', [AsistenciaController::class, 'index'])->name('asistencias.index');
     Route::post('materias/{materia}/asistencia', [AsistenciaController::class, 'store'])->name('asistencias.store');
     Route::get('asistencias/{asistencia}/pdf', [AsistenciaController::class, 'generatePdf'])->name('asistencias.generate-pdf');
