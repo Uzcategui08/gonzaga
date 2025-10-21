@@ -47,6 +47,10 @@ class DashboardController extends Controller
 
         $user = auth()->user();
 
+        if ($user && method_exists($user, 'hasRole') && $user->hasRole('secretaria')) {
+            return redirect()->route('asistencias.secretaria.index');
+        }
+
         if ($user->profesor) {
             $data['notifications'] = $user->profesor->notifications()->latest()->get();
 
