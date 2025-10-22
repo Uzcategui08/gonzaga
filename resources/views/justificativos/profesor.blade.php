@@ -3,8 +3,19 @@
 @section('title', 'Justificativos de Estudiantes')
 
 @section('content_header')
-    <div class="d-flex justify-content-between align-items-center">
-        <h1>Justificativos de Estudiantes</h1>
+    <div class="d-flex flex-wrap justify-content-between align-items-center">
+        <h1 class="mb-2 mb-md-0">Justificativos de Estudiantes</h1>
+        <form method="GET" action="{{ route('justificativos.profesor') }}" class="form-inline mb-2 mb-md-0">
+            @php
+                $dateValue = optional($filterDate ?? null)->format('Y-m-d');
+            @endphp
+            <div class="form-group mr-2 mb-0">
+                <label for="date" class="mb-0 mr-2">Fecha</label>
+                <input type="date" name="date" id="date" class="form-control" value="{{ $dateValue }}">
+            </div>
+            <button type="submit" class="btn btn-primary mr-2">Filtrar</button>
+            <a href="{{ route('justificativos.profesor') }}" class="btn btn-outline-secondary">Hoy</a>
+        </form>
     </div>
 @endsection
 

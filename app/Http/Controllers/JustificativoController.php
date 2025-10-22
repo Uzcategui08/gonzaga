@@ -7,13 +7,17 @@ use App\Models\Justificativo;
 use App\Models\Estudiante;
 use Illuminate\Http\Request;
 use App\Models\Seccion;
+use Illuminate\Support\Carbon;
 
 class JustificativoController extends Controller
 {
 
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
+        $filterDate = $this->resolveFilterDate($request->input('date'));
+
+        $dateString = $filterDate->toDateString();
 
         if ($user->hasRole('coordinador')) {
             $secciones = $user->secciones;
@@ -22,15 +26,20 @@ class JustificativoController extends Controller
                 ->whereHas('estudiante', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
                 })
+                ->whereDate('fecha_inicio', $dateString)
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
         } else {
             $justificativos = Justificativo::with(['estudiante', 'usuario'])
+                ->whereDate('fecha_inicio', $dateString)
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
         }
 
-        return view('justificativos.index', compact('justificativos'));
+        return view('justificativos.index', [
+            'justificativos' => $justificativos,
+            'filterDate' => $filterDate,
+        ]);
     }
 
     public function create(Request $request)
@@ -146,7 +155,7 @@ class JustificativoController extends Controller
             ->with('success', 'Justificativo eliminado exitosamente');
     }
 
-    public function indexProfesor()
+    public function indexProfesor(Request $request)
     {
         if (!auth()->user()->profesor) {
             return redirect('/dashboard')->with('error', 'No tienes permisos para acceder a esta sección');
@@ -154,19 +163,35 @@ class JustificativoController extends Controller
 
         $profesor = auth()->user()->profesor;
 
-        if (!$profesor) {
-            return redirect('/dashboard')->with('error', 'No tienes permisos para acceder a esta sección');
-        }
+        $filterDate = $this->resolveFilterDate($request->input('date'));
+        $dateString = $filterDate->toDateString();
 
         $estudiantes = Estudiante::whereHas('seccion.asignaciones', function ($query) use ($profesor) {
             $query->where('profesor_id', $profesor->id);
         })->get();
 
         $justificativos = Justificativo::whereIn('estudiante_id', $estudiantes->pluck('id'))
+            ->whereDate('fecha_inicio', $dateString)
             ->with(['estudiante', 'usuario'])
             ->orderBy('fecha_inicio', 'desc')
             ->get();
 
-        return view('justificativos.profesor', compact('justificativos'));
+        return view('justificativos.profesor', [
+            'justificativos' => $justificativos,
+            'filterDate' => $filterDate,
+        ]);
+    }
+
+    private function resolveFilterDate(?string $date): Carbon
+    {
+        try {
+            if ($date) {
+                return Carbon::createFromFormat('Y-m-d', $date, 'America/Caracas')->startOfDay();
+            }
+        } catch (\Throwable $exception) {
+            // Ignore and fall back to today
+        }
+
+        return Carbon::now('America/Caracas')->startOfDay();
     }
 }
