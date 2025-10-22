@@ -14,12 +14,12 @@ class JustificativoController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('coordinador')) {
             $secciones = $user->secciones;
 
             $justificativos = Justificativo::with(['estudiante', 'usuario'])
-                ->whereHas('estudiante', function($query) use ($secciones) {
+                ->whereHas('estudiante', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
                 })
                 ->orderBy('fecha_inicio', 'desc')
@@ -36,7 +36,7 @@ class JustificativoController extends Controller
     public function create(Request $request)
     {
         $user = auth()->user();
-        
+
         if ($user->hasRole('coordinador')) {
             $secciones = $user->secciones;
             $estudiantes = Estudiante::whereIn('seccion_id', $secciones->pluck('id'))
@@ -90,14 +90,18 @@ class JustificativoController extends Controller
     {
         if (auth()->user()->hasRole('profesor')) {
             $profesor = auth()->user()->profesor;
-            $materias = $profesor->materias;
+
+            if (!$profesor) {
+                return redirect()->route('justificativos.profesor')
+                    ->with('error', 'No tienes permisos para ver este justificativo');
+            }
 
             $estudiante = Estudiante::where('id', $justificativo->estudiante_id)
-                ->whereHas('seccion.asignaciones.materia', function($query) use ($materias) {
-                    $query->whereIn('materias.id', $materias->pluck('id'));
+                ->whereHas('seccion.asignaciones', function ($query) use ($profesor) {
+                    $query->where('profesor_id', $profesor->id);
                 })
                 ->first();
-            
+
             if (!$estudiante) {
                 return redirect()->route('justificativos.profesor')
                     ->with('error', 'No tienes permisos para ver este justificativo');
@@ -149,10 +153,13 @@ class JustificativoController extends Controller
         }
 
         $profesor = auth()->user()->profesor;
-        $materias = $profesor->materias;
 
-        $estudiantes = Estudiante::whereHas('seccion.asignaciones.materia', function($query) use ($materias) {
-            $query->whereIn('materias.id', $materias->pluck('id'));
+        if (!$profesor) {
+            return redirect('/dashboard')->with('error', 'No tienes permisos para acceder a esta sección');
+        }
+
+        $estudiantes = Estudiante::whereHas('seccion.asignaciones', function ($query) use ($profesor) {
+            $query->where('profesor_id', $profesor->id);
         })->get();
 
         $justificativos = Justificativo::whereIn('estudiante_id', $estudiantes->pluck('id'))
@@ -162,5 +169,4 @@ class JustificativoController extends Controller
 
         return view('justificativos.profesor', compact('justificativos'));
     }
-
 }
