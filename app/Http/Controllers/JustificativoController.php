@@ -26,12 +26,14 @@ class JustificativoController extends Controller
                 ->whereHas('estudiante', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
                 })
-                ->whereDate('fecha_inicio', $dateString)
+                ->whereDate('fecha_inicio', '<=', $dateString)
+                ->whereDate('fecha_fin', '>=', $dateString)
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
         } else {
             $justificativos = Justificativo::with(['estudiante', 'usuario'])
-                ->whereDate('fecha_inicio', $dateString)
+                ->whereDate('fecha_inicio', '<=', $dateString)
+                ->whereDate('fecha_fin', '>=', $dateString)
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
         }
@@ -171,7 +173,8 @@ class JustificativoController extends Controller
         })->get();
 
         $justificativos = Justificativo::whereIn('estudiante_id', $estudiantes->pluck('id'))
-            ->whereDate('fecha_inicio', $dateString)
+            ->whereDate('fecha_inicio', '<=', $dateString)
+            ->whereDate('fecha_fin', '>=', $dateString)
             ->with(['estudiante', 'usuario'])
             ->orderBy('fecha_inicio', 'desc')
             ->get();
