@@ -98,7 +98,7 @@ class AsistenciaSecretariaController extends Controller
         ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
         ->leftJoin('grados', 'grados.id', '=', 'secciones.grado_id')
         ->join('estudiantes', 'estudiantes.id', '=', 'asistencia_estudiante.estudiante_id')
-        ->where('asistencia_estudiante.estado', 'A')
+        ->whereIn('asistencia_estudiante.estado', ['A', 'P'])
         ->whereIn('secciones.id', array_keys($sectionsData))
         ->when($startDate, function ($query) use ($startDate) {
           $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());

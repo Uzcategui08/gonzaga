@@ -80,16 +80,16 @@
                             <td class="text-center align-middle">
                                 @if($asistencia->estudiantes && $asistencia->estudiantes->count() > 0)
                                     @php
-                                        $asistentes = $asistencia->estudiantes->where('estado', 'A')->count();
+                                        $asistentes = $asistencia->estudiantes->whereIn('estado', ['A', 'P'])->count();
                                         $inasistentes = $asistencia->estudiantes->where('estado', 'I')->count();
                                         $pases = $asistencia->estudiantes->where('estado', 'P')->count();
                                     @endphp
                                     @php
                                         $masculinos = $asistencia->estudiantes->filter(function($ae) {
-                                            return $ae->estado === 'A' && optional($ae->estudiante)->genero === 'M';
+                                            return in_array($ae->estado, ['A', 'P']) && optional($ae->estudiante)->genero === 'M';
                                         })->count();
                                         $femeninos = $asistencia->estudiantes->filter(function($ae) {
-                                            return $ae->estado === 'A' && optional($ae->estudiante)->genero === 'F';
+                                            return in_array($ae->estado, ['A', 'P']) && optional($ae->estudiante)->genero === 'F';
                                         })->count();
                                     @endphp
                                     <div class="d-flex flex-column align-items-center">
