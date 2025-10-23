@@ -95,10 +95,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                                     $pasesActivos = collect([]);
                                                 }
                                             @endphp
-                                            @foreach($asistencia->estudiantes as $estudiante)
+                                            @foreach($asistencia->estudiantes as $index => $estudiante)
                                             <tr>
                                                 <td>
-                                                    <strong>{{ $estudiante->nombres }} {{ $estudiante->apellidos }}</strong>
+                                                    <strong>{{ $index + 1 }}. {{ $estudiante->nombres }} {{ $estudiante->apellidos }}</strong>
                                                     @if($pasesActivos->contains($estudiante->estudiante_id))
                                                         <div class="d-flex align-items-center mt-1">
                                                             <span class="badge badge-pill py-2 px-3 badge-warning mr-2">Pase Activo</span>
