@@ -151,6 +151,40 @@ class AsistenciaController extends Controller
         }
     }
 
+    private function obtenerHistorialDiario($estudiantes, string $fecha): array
+    {
+        $estudianteIds = collect($estudiantes)->pluck('id')->filter()->values();
+
+        if ($estudianteIds->isEmpty()) {
+            return [];
+        }
+
+        $registros = AsistenciaEstudiante::select(
+            'asistencia_estudiante.estudiante_id',
+            'asistencia_estudiante.estado',
+            'asistencias.hora_inicio'
+        )
+            ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
+            ->whereIn('asistencia_estudiante.estudiante_id', $estudianteIds)
+            ->whereDate('asistencias.fecha', $fecha)
+            ->orderBy('asistencias.hora_inicio')
+            ->get();
+
+        return $registros
+            ->groupBy('estudiante_id')
+            ->map(function ($items) {
+                $estados = $items->pluck('estado')->toArray();
+                $ultimo = $estados ? end($estados) : null;
+
+                return [
+                    'estados' => $estados,
+                    'cadena' => implode(' - ', $estados),
+                    'ultimo' => $ultimo,
+                ];
+            })
+            ->toArray();
+    }
+
     public function index($materiaId = null)
     {
         if ($materiaId) {
@@ -184,7 +218,11 @@ class AsistenciaController extends Controller
                 'total' => $pasesActivos->count()
             ];
 
-            return view('asistencias.index', compact('materia', 'profesor', 'estudiantes'))
+            $fecha = now('America/Caracas')->format('Y-m-d');
+            $historialAsistenciaDia = $this->obtenerHistorialDiario($estudiantes, $fecha);
+
+            return view('asistencias.index', compact('materia', 'profesor', 'estudiantes', 'fecha'))
+                ->with('historialAsistenciaDia', $historialAsistenciaDia)
                 ->with('pasesActivosParaVista', $pasesActivosParaVista);
         }
 
@@ -241,62 +279,65 @@ class AsistenciaController extends Controller
             if (!auth()->check()) {
                 return redirect()->route('login')->with('error', 'Por favor, inicie sesión primero');
             }
-    
+
             $profesor = auth()->user()->profesor;
             if (!$profesor) {
                 return redirect()->back()->with('error', 'No tienes un perfil de profesor asociado');
             }
-    
+
             $materia = Materia::findOrFail($materiaId);
             $horario = Horario::where('id', $horarioId)
                 ->whereHas('asignacion.materia', function ($query) use ($materia) {
                     $query->where('id', $materia->id);
                 })
-                ->with('asignacion') 
+                ->with('asignacion')
                 ->first();
-    
+
             if (!$horario) {
                 return redirect()->back()->with('error', 'Horario no encontrado o no válido');
             }
-    
+
             $estudiantesIds = json_decode($horario->asignacion->estudiantes_id, true) ?? [];
-            
+
             if (empty($estudiantesIds)) {
                 return redirect()->back()->with('error', 'No hay estudiantes asignados a esta materia en la sección seleccionada');
             }
-                            
+
             $estudiantes = Estudiante::whereIn('id', $estudiantesIds)
                 ->orderBy('apellidos')
                 ->get();
-    
+
             if ($estudiantes->isEmpty()) {
                 return redirect()->back()->with('error', 'No se encontraron estudiantes con los IDs especificados en la asignación');
             }
-    
+
             $fecha = now('America/Caracas')->format('Y-m-d');
-    
+
             $pasesActivos = Pase::where('horario_id', $horario->id)
                 ->where('fecha', $fecha)
                 ->where('aprobado', true)
                 ->with('estudiante')
                 ->get();
-    
+
             $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
-    
+
             $pasesConMotivos = $pasesActivos->map(function ($pase) {
                 return [
                     'estudiante_id' => $pase->estudiante_id,
                     'motivo' => $pase->motivo
                 ];
             })->keyBy('estudiante_id')->toArray();
-    
+
+            $historialAsistenciaDia = $this->obtenerHistorialDiario($estudiantes, $fecha);
+
             return view('asistencias.index', [
                 'materia' => $materia,
                 'horario' => $horario,
                 'estudiantes' => $estudiantes,
                 'fecha' => $fecha,
                 'estudiantesConPase' => $estudiantesConPase,
-                'pasesConMotivos' => $pasesConMotivos
+                'pasesConMotivos' => $pasesConMotivos,
+                'historialAsistenciaDia' => $historialAsistenciaDia
             ]);
         } catch (\Exception $e) {
             \Log::error('Error en AsistenciaController@registrar: ' . $e->getMessage());
@@ -350,12 +391,15 @@ class AsistenciaController extends Controller
                 ->get();
 
             $estudiantesConPase = $pasesActivos->pluck('estudiante_id')->toArray();
+            $historialAsistenciaDia = $this->obtenerHistorialDiario($estudiantes, $fecha);
 
             return view('asistencias.index', [
                 'materia' => $materia,
                 'estudiantes' => $estudiantes,
                 'horario' => $horario,
-                'estudiantesConPase' => $estudiantesConPase
+                'estudiantesConPase' => $estudiantesConPase,
+                'fecha' => $fecha,
+                'historialAsistenciaDia' => $historialAsistenciaDia
             ]);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al cargar la información de la clase. Por favor, contacte al administrador.');

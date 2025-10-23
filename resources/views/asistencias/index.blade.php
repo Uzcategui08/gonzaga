@@ -17,6 +17,9 @@
 
 @section('content')
 <div class="container-fluid">
+    @php
+        $historialAsistenciaDia = $historialAsistenciaDia ?? [];
+    @endphp
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -74,6 +77,49 @@
                                                     @endif
                                                     <br>
                                                     <small class="text-muted">ID: {{ $estudiante->id }}</small>
+                                                    @php
+                                                        $historialHoy = $historialAsistenciaDia[$estudiante->id] ?? null;
+                                                    @endphp
+                                                    @if($historialHoy && !empty($historialHoy['estados']))
+                                                        <div class="mt-1">
+                                                            <small class="text-muted d-block">
+                                                                Historial hoy:
+                                                                @foreach($historialHoy['estados'] as $index => $estado)
+                                                                    @php
+                                                                        $colorClase = '';
+                                                                        if ($estado === 'A') {
+                                                                            $colorClase = 'text-success font-weight-bold';
+                                                                        } elseif ($estado === 'I') {
+                                                                            $colorClase = 'text-danger font-weight-bold';
+                                                                        } elseif ($estado === 'P') {
+                                                                            $colorClase = 'text-warning font-weight-bold';
+                                                                        }
+                                                                    @endphp
+                                                                    <span class="{{ $colorClase }}">{{ $estado }}</span>
+                                                                    @if($index < count($historialHoy['estados']) - 1)
+                                                                        <span class="text-muted"> - </span>
+                                                                    @endif
+                                                                @endforeach
+                                                            </small>
+                                                            @if(!empty($historialHoy['ultimo']))
+                                                                @php
+                                                                    $ultimoEstado = $historialHoy['ultimo'];
+                                                                    $estadoColorClass = '';
+                                                                    if ($ultimoEstado === 'A') {
+                                                                        $estadoColorClass = 'text-success font-weight-bold';
+                                                                    } elseif ($ultimoEstado === 'I') {
+                                                                        $estadoColorClass = 'text-danger font-weight-bold';
+                                                                    } elseif ($ultimoEstado === 'P') {
+                                                                        $estadoColorClass = 'text-warning font-weight-bold';
+                                                                    }
+                                                                @endphp
+                                                                <small class="text-muted d-block mt-1">
+                                                                    Clase anterior:
+                                                                    <span class="{{ $estadoColorClass }}">{{ $ultimoEstado }}</span>
+                                                                </small>
+                                                            @endif
+                                                        </div>
+                                                    @endif
                                                 </td>
                                                 <td>
                                                     <select class="form-control form-control-sm" 
