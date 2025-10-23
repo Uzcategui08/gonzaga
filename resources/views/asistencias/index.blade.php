@@ -66,10 +66,10 @@
                                                     $pasesActivos = collect([]);
                                                 }
                                             @endphp
-                                            @foreach($estudiantes as $estudiante)
+                                            @foreach($estudiantes as $indice => $estudiante)
                                             <tr>
                                                 <td>
-                                                    <strong>{{ $estudiante->apellidos }} {{ $estudiante->nombres }}</strong>
+                                                    <strong>{{ $loop->iteration }}. {{ $estudiante->apellidos }} {{ $estudiante->nombres }}</strong>
                                                     @if($pasesActivos->contains($estudiante->id))
                                                         <div class="d-flex align-items-center mt-1">
                                                             <span class="badge badge-pill py-2 px-3 badge-warning mr-2">Pase Activo</span>
@@ -101,23 +101,6 @@
                                                                     @endif
                                                                 @endforeach
                                                             </small>
-                                                            @if(!empty($historialHoy['ultimo']))
-                                                                @php
-                                                                    $ultimoEstado = $historialHoy['ultimo'];
-                                                                    $estadoColorClass = '';
-                                                                    if ($ultimoEstado === 'A') {
-                                                                        $estadoColorClass = 'text-success font-weight-bold';
-                                                                    } elseif ($ultimoEstado === 'I') {
-                                                                        $estadoColorClass = 'text-danger font-weight-bold';
-                                                                    } elseif ($ultimoEstado === 'P') {
-                                                                        $estadoColorClass = 'text-warning font-weight-bold';
-                                                                    }
-                                                                @endphp
-                                                                <small class="text-muted d-block mt-1">
-                                                                    Clase anterior:
-                                                                    <span class="{{ $estadoColorClass }}">{{ $ultimoEstado }}</span>
-                                                                </small>
-                                                            @endif
                                                         </div>
                                                     @endif
                                                 </td>
