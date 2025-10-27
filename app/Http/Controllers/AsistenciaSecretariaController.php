@@ -86,12 +86,12 @@ class AsistenciaSecretariaController extends Controller
     }
 
     if (!empty($sectionsData)) {
-      $registros = AsistenciaEstudiante::select(
-        'secciones.id as seccion_id',
-        'secciones.nombre as seccion_nombre',
-        'grados.nombre as grado_nombre',
-        'estudiantes.id as estudiante_id',
-        'estudiantes.genero'
+      $registros = AsistenciaEstudiante::selectRaw(
+        'secciones.id as seccion_id, ' .
+          'secciones.nombre as seccion_nombre, ' .
+          'grados.nombre as grado_nombre, ' .
+          'estudiantes.genero, ' .
+          'COUNT(*) as total_registros'
       )
         ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
         ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
@@ -111,7 +111,6 @@ class AsistenciaSecretariaController extends Controller
           'secciones.id',
           'secciones.nombre',
           'grados.nombre',
-          'estudiantes.id',
           'estudiantes.genero'
         )
         ->orderBy('grados.nombre')
@@ -134,14 +133,13 @@ class AsistenciaSecretariaController extends Controller
         }
 
         $contadores = $registrosSeccion
-          ->unique('estudiante_id')
           ->reduce(function (array $carry, $registro) {
             $generoNormalizado = $this->normalizeGenero($registro->genero);
 
             if ($generoNormalizado === 'masculino') {
-              $carry['masculinos']++;
+              $carry['masculinos'] += (int) $registro->total_registros;
             } elseif ($generoNormalizado === 'femenino') {
-              $carry['femeninos']++;
+              $carry['femeninos'] += (int) $registro->total_registros;
             }
 
             return $carry;
@@ -178,7 +176,7 @@ class AsistenciaSecretariaController extends Controller
 
     $canSeeReport = $user
       && method_exists($user, 'hasRole')
-      && ($user->hasRole('secretaria') || $user->hasRole('admin'));
+      && ($user->hasRole('secretaria') || $user->hasRole('admin') || $user->hasRole('coordinador'));
 
     if (!$canSeeReport) {
       abort(403, 'Acceso no autorizado');
