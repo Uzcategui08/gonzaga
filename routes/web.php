@@ -95,13 +95,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/asistencias/inasistencias-coordinador/pdf', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'exportPdf'])
         ->name('asistencias.coordinador.pdf');
     Route::get('/asistencias/reporte-secretaria', [AsistenciaSecretariaController::class, 'index'])
-        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin,coordinador'])
         ->name('asistencias.secretaria.index');
     Route::get('/asistencias/reporte-secretaria/pdf', [AsistenciaSecretariaController::class, 'exportPdf'])
-        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin,coordinador'])
         ->name('asistencias.secretaria.pdf');
     Route::get('/asistencias/reporte-secretaria/excel', [AsistenciaSecretariaController::class, 'exportExcel'])
-        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin,coordinador'])
         ->name('asistencias.secretaria.excel');
     Route::get('materias/{materia}/asistencia', [AsistenciaController::class, 'index'])->name('asistencias.index');
     Route::post('materias/{materia}/asistencia', [AsistenciaController::class, 'store'])->name('asistencias.store');
