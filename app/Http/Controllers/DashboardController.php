@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Horario;
 use App\Models\Asistencia;
 use App\Models\Asignacion;
@@ -12,6 +11,8 @@ use App\Models\Seccion;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
@@ -45,13 +46,14 @@ class DashboardController extends Controller
             'inasistenciasProfesor' => 0
         ];
 
-        $user = auth()->user();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
 
         if ($user && method_exists($user, 'hasRole') && $user->hasRole('secretaria')) {
             return redirect()->route('asistencias.secretaria.index');
         }
 
-        if ($user->profesor) {
+        if ($user && $user->profesor) {
             $data['notifications'] = $user->profesor->notifications()->latest()->get();
 
             $fechaActual = now('America/Caracas');
@@ -75,35 +77,23 @@ class DashboardController extends Controller
                 ->count('estudiante_id');
         }
 
-        if ($user->hasRole('admin')) {
+        if ($user && $user->hasRole('admin')) {
             $data['totalEstudiantes'] = \App\Models\Estudiante::count();
             $data['totalProfesores'] = \App\Models\Profesor::count();
             $fechaActual = now('America/Caracas');
-            $diaActual = $fechaActual->format('l');
 
-            $asistenciasQuery = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'A')
-                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
-                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
-                ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                ->join('secciones', 'asignaciones.seccion_id', '=', 'secciones.id')
-                ->join('estudiantes', 'secciones.id', '=', 'estudiantes.seccion_id')
-                ->whereDate('asistencias.fecha', $fechaActual);
+            $latestAsistenciaIds = $this->latestAsistenciaIdsForDate($fechaActual);
+            $attendanceCounts = $this->countAttendanceStates($latestAsistenciaIds);
 
-            $data['asistenciasHoy'] = $asistenciasQuery->distinct('estudiante_id')->count('estudiante_id');
-
-            $data['inasistenciasHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'I')
-                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
-                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
-                ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                ->whereDate('asistencias.fecha', $fechaActual)
-                ->distinct('estudiante_id')
-                ->count('estudiante_id');
+            $data['asistenciasHoy'] = $attendanceCounts['A'] + $attendanceCounts['P'];
+            $data['tardiosHoy'] = $attendanceCounts['P'];
+            $data['inasistenciasHoy'] = $attendanceCounts['I'];
 
             $data['totalClasesHoy'] = \App\Models\Horario::whereHas('asistencia', function ($query) use ($fechaActual) {
                 $query->whereDate('fecha', $fechaActual);
             })->count();
 
-            $attendanceByDay = \DB::table('asistencia_estudiante')
+            $attendanceByDay = DB::table('asistencia_estudiante')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
                 ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
@@ -116,8 +106,8 @@ class DashboardController extends Controller
                 })
                 ->select(
                     'horarios.dia',
-                    \DB::raw('count(*) as total_asistencias'),
-                    \DB::raw('count(DISTINCT asistencia_estudiante.estudiante_id) as estudiantes_unicos')
+                    DB::raw('count(*) as total_asistencias'),
+                    DB::raw('count(DISTINCT asistencia_estudiante.estudiante_id) as estudiantes_unicos')
                 )
                 ->groupBy('horarios.dia')
                 ->get()
@@ -134,14 +124,6 @@ class DashboardController extends Controller
 
             $data['attendanceByDay'] = $attendanceByDay;
 
-            $data['tardiosHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'P')
-                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
-                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
-                ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                ->whereDate('asistencias.fecha', $fechaActual)
-                ->distinct('estudiante_id')
-                ->count('estudiante_id');
-
             $last30Days = Carbon::now('America/Caracas')->subDays(30);
             $totalStudents = \App\Models\Estudiante::count();
 
@@ -155,7 +137,7 @@ class DashboardController extends Controller
                 round(($totalAttendances / $totalStudents) * 100) : 0;
             $data['promedioAsistencia'] = $attendancePercentage;
 
-            $periods = \App\Models\Horario::select('dia', \DB::raw('count(*) as total'))
+            $periods = \App\Models\Horario::select('dia', DB::raw('count(*) as total'))
                 ->whereHas('asistencia', function ($query) use ($fechaActual) {
                     $query->whereDate('fecha', $fechaActual);
                 })
@@ -165,7 +147,7 @@ class DashboardController extends Controller
             $data['periodoMasActivo'] = $periods ? $periods->dia : 'N/A';
             $data['totalClasesPeriodo'] = $periods ? $periods->total : 0;
 
-            $topClass = \App\Models\AsistenciaEstudiante::select('secciones.nombre as clase', \DB::raw('count(*) as total'))
+            $topClass = \App\Models\AsistenciaEstudiante::select('secciones.nombre as clase', DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
                 ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
@@ -178,7 +160,7 @@ class DashboardController extends Controller
             $data['claseTop'] = $topClass ? $topClass->clase : 'N/A';
             $data['asistenciaClaseTop'] = $topClass ? $topClass->total : 0;
 
-            $topSubject = \App\Models\AsistenciaEstudiante::select('materias.nombre as materia', \DB::raw('count(*) as total'))
+            $topSubject = \App\Models\AsistenciaEstudiante::select('materias.nombre as materia', DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
                 ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
@@ -190,7 +172,7 @@ class DashboardController extends Controller
                 ->first();
             $data['materiaTop'] = $topSubject ? $topSubject->materia : 'N/A';
             $data['asistenciaMateriaTop'] = $topSubject ? $topSubject->total : 0;
-        } elseif ($user->hasRole('coordinador')) {
+        } elseif ($user && $user->hasRole('coordinador')) {
             $seccionesCoordinador = $user->secciones->pluck('id');
 
             $data['totalEstudiantes'] = \App\Models\Estudiante::whereIn('seccion_id', $seccionesCoordinador)->count();
@@ -201,34 +183,12 @@ class DashboardController extends Controller
             $fechaActual = now('America/Caracas');
             $diaActual = $fechaActual->format('l');
 
-            $asistenciasQuery = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'A')
-                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
-                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
-                ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                ->join('secciones', 'asignaciones.seccion_id', '=', 'secciones.id')
-                ->join('estudiantes', 'secciones.id', '=', 'estudiantes.seccion_id')
-                ->whereIn('secciones.id', $seccionesCoordinador)
-                ->whereDate('asistencias.fecha', $fechaActual);
+            $latestAsistenciaIds = $this->latestAsistenciaIdsForDate($fechaActual, $seccionesCoordinador);
+            $attendanceCounts = $this->countAttendanceStates($latestAsistenciaIds);
 
-            $data['asistenciasHoy'] = $asistenciasQuery->distinct('estudiante_id')->count('estudiante_id');
-
-            $data['inasistenciasHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'I')
-                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
-                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
-                ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                ->whereIn('asignaciones.seccion_id', $seccionesCoordinador)
-                ->whereDate('asistencias.fecha', $fechaActual)
-                ->distinct('estudiante_id')
-                ->count('estudiante_id');
-
-            $data['tardiosHoy'] = \App\Models\AsistenciaEstudiante::where('asistencia_estudiante.estado', 'P')
-                ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
-                ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
-                ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
-                ->whereIn('asignaciones.seccion_id', $seccionesCoordinador)
-                ->whereDate('asistencias.fecha', $fechaActual)
-                ->distinct('estudiante_id')
-                ->count('estudiante_id');
+            $data['asistenciasHoy'] = $attendanceCounts['A'] + $attendanceCounts['P'];
+            $data['tardiosHoy'] = $attendanceCounts['P'];
+            $data['inasistenciasHoy'] = $attendanceCounts['I'];
 
             $last30Days = Carbon::now('America/Caracas')->subDays(30);
 
@@ -277,7 +237,7 @@ class DashboardController extends Controller
                 ->count();
             $data['totalClasesHoy'] = $totalClasesHoy;
 
-            $topClass = \App\Models\AsistenciaEstudiante::select('secciones.nombre as clase', \DB::raw('count(*) as total'))
+            $topClass = \App\Models\AsistenciaEstudiante::select('secciones.nombre as clase', DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
                 ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
@@ -291,7 +251,7 @@ class DashboardController extends Controller
             $data['claseTop'] = $topClass ? $topClass->clase : 'N/A';
             $data['asistenciaClaseTop'] = $topClass ? round(($topClass->total / $totalStudents) * 100) : 0;
 
-            $topSubject = \App\Models\AsistenciaEstudiante::select('materias.nombre as materia', \DB::raw('count(*) as total'))
+            $topSubject = \App\Models\AsistenciaEstudiante::select('materias.nombre as materia', DB::raw('count(*) as total'))
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
                 ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
@@ -352,8 +312,8 @@ class DashboardController extends Controller
             Log::info('Attendance records count:', ['count' => $attendanceRecords->count()]);
 
             $attendanceCounts = \App\Models\AsistenciaEstudiante::select(
-                \DB::raw('"horarios"."dia" as dia'),
-                \DB::raw('count(*) as total_asistencias')
+                DB::raw('"horarios"."dia" as dia'),
+                DB::raw('count(*) as total_asistencias')
             )
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
@@ -405,7 +365,7 @@ class DashboardController extends Controller
                 ['dia' => 'Domingo', 'tasa' => 0]
             ]);
 
-            $attendanceData = \DB::table('asistencia_estudiante')
+            $attendanceData = DB::table('asistencia_estudiante')
                 ->join('asistencias', 'asistencia_estudiante.asistencia_id', '=', 'asistencias.id')
                 ->join('horarios', 'asistencias.horario_id', '=', 'horarios.id')
                 ->join('asignaciones', 'horarios.asignacion_id', '=', 'asignaciones.id')
@@ -418,7 +378,7 @@ class DashboardController extends Controller
                 })
                 ->select(
                     'horarios.dia',
-                    \DB::raw('count(DISTINCT asistencia_estudiante.estudiante_id) as estudiantes_unicos')
+                    DB::raw('count(DISTINCT asistencia_estudiante.estudiante_id) as estudiantes_unicos')
                 )
                 ->groupBy('horarios.dia')
                 ->get();
@@ -608,5 +568,58 @@ class DashboardController extends Controller
         }
 
         return view('dashboard', $data);
+    }
+
+    /**
+     * Retrieve the latest asistencia ids for each sección on a given date.
+     */
+    private function latestAsistenciaIdsForDate(Carbon $date, $seccionIds = null): Collection
+    {
+        $query = Asistencia::select('asistencias.id', 'secciones.id as seccion_id')
+            ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+            ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+            ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+            ->whereDate('asistencias.fecha', $date->toDateString())
+            ->orderBy('asistencias.fecha', 'desc')
+            ->orderBy('asistencias.hora_inicio', 'desc')
+            ->orderBy('asistencias.created_at', 'desc');
+
+        if ($seccionIds !== null) {
+            $ids = $seccionIds instanceof Collection ? $seccionIds : collect($seccionIds);
+            if ($ids->isNotEmpty()) {
+                $query->whereIn('secciones.id', $ids->all());
+            }
+        }
+
+        return $query->get()
+            ->groupBy('seccion_id')
+            ->map(function ($items) {
+                return optional($items->first())->id;
+            })
+            ->filter()
+            ->values();
+    }
+
+    /**
+     * Count unique students per attendance state for provided asistencias.
+     */
+    private function countAttendanceStates(Collection $asistenciaIds): array
+    {
+        if ($asistenciaIds->isEmpty()) {
+            return ['A' => 0, 'P' => 0, 'I' => 0];
+        }
+
+        $counts = AsistenciaEstudiante::select('estado', DB::raw('count(DISTINCT estudiante_id) as total'))
+            ->whereIn('asistencia_id', $asistenciaIds->all())
+            ->whereIn('estado', ['A', 'P', 'I'])
+            ->groupBy('estado')
+            ->get()
+            ->pluck('total', 'estado')
+            ->map(function ($value) {
+                return (int) $value;
+            })
+            ->toArray();
+
+        return array_merge(['A' => 0, 'P' => 0, 'I' => 0], $counts);
     }
 }
