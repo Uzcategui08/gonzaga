@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use App\Exports\AsistenciaSecretariaExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
@@ -118,30 +119,38 @@ class AsistenciaSecretariaController extends Controller
         ->orderBy('estudiantes.genero')
         ->get();
 
-      foreach ($registros as $registro) {
-        if (!isset($sectionsData[$registro->seccion_id])) {
-          $sectionsData[$registro->seccion_id] = [
-            'seccion_id' => $registro->seccion_id,
-            'grado' => $registro->grado_nombre ?? 'Sin grado',
-            'seccion' => $registro->seccion_nombre,
+      $registros->groupBy('seccion_id')->each(function ($registrosSeccion, $seccionId) use (&$sectionsData) {
+        $registroReferencia = $registrosSeccion->first();
+
+        if (!isset($sectionsData[$seccionId])) {
+          $sectionsData[$seccionId] = [
+            'seccion_id' => $seccionId,
+            'grado' => $registroReferencia->grado_nombre ?? 'Sin grado',
+            'seccion' => $registroReferencia->seccion_nombre,
             'masculinos' => 0,
             'femeninos' => 0,
             'total' => 0,
           ];
         }
 
-        $genero = strtoupper((string) $registro->genero);
+        $contadores = $registrosSeccion
+          ->unique('estudiante_id')
+          ->reduce(function (array $carry, $registro) {
+            $generoNormalizado = $this->normalizeGenero($registro->genero);
 
-        if ($genero === 'M') {
-          $sectionsData[$registro->seccion_id]['masculinos']++;
-        } elseif ($genero === 'F') {
-          $sectionsData[$registro->seccion_id]['femeninos']++;
-        }
+            if ($generoNormalizado === 'masculino') {
+              $carry['masculinos']++;
+            } elseif ($generoNormalizado === 'femenino') {
+              $carry['femeninos']++;
+            }
 
-        $sectionsData[$registro->seccion_id]['total'] =
-          $sectionsData[$registro->seccion_id]['masculinos'] +
-          $sectionsData[$registro->seccion_id]['femeninos'];
-      }
+            return $carry;
+          }, ['masculinos' => 0, 'femeninos' => 0]);
+
+        $sectionsData[$seccionId]['masculinos'] = $contadores['masculinos'];
+        $sectionsData[$seccionId]['femeninos'] = $contadores['femeninos'];
+        $sectionsData[$seccionId]['total'] = $contadores['masculinos'] + $contadores['femeninos'];
+      });
     }
 
     $sectionsCollection = collect($sectionsData)
@@ -174,5 +183,28 @@ class AsistenciaSecretariaController extends Controller
     if (!$canSeeReport) {
       abort(403, 'Acceso no autorizado');
     }
+  }
+
+  private function normalizeGenero($genero): ?string
+  {
+    if ($genero === null) {
+      return null;
+    }
+
+    $valor = Str::lower(trim((string) $genero));
+
+    $mapa = [
+      'm' => 'masculino',
+      'h' => 'masculino',
+      'masculino' => 'masculino',
+      'male' => 'masculino',
+      'hombre' => 'masculino',
+      'f' => 'femenino',
+      'femenino' => 'femenino',
+      'female' => 'femenino',
+      'mujer' => 'femenino',
+    ];
+
+    return $mapa[$valor] ?? null;
   }
 }
