@@ -3,785 +3,893 @@
 @section('title', 'Inicio')
 
 @section('content_header')
-<div class="d-flex justify-content-between align-items-center">
-    @php
-        $dias = [
-            'Sunday' => 'Domingo',
-            'Monday' => 'Lunes',
-            'Tuesday' => 'Martes',
-            'Wednesday' => 'Miércoles',
-            'Thursday' => 'Jueves',
-            'Friday' => 'Viernes',
-            'Saturday' => 'Sábado'
-        ];
-        
-        $meses = [
-            'January' => 'Enero',
-            'February' => 'Febrero',
-            'March' => 'Marzo',
-            'April' => 'Abril',
-            'May' => 'Mayo',
-            'June' => 'Junio',
-            'July' => 'Julio',
-            'August' => 'Agosto',
-            'September' => 'Septiembre',
-            'October' => 'Octubre',
-            'November' => 'Noviembre',
-            'December' => 'Diciembre'
-        ];
+@php
+	$diasHeader = [
+		'Sunday' => 'Domingo',
+		'Monday' => 'Lunes',
+		'Tuesday' => 'Martes',
+		'Wednesday' => 'Miércoles',
+		'Thursday' => 'Jueves',
+		'Friday' => 'Viernes',
+		'Saturday' => 'Sábado'
+	];
 
-        $fecha = now('America/Caracas');
-        $dia = $dias[$fecha->format('l')];
-        $mes = $meses[$fecha->format('F')];
-    @endphp
-    <h2 class="mb-0">Dashboard</h2>
-    <span class="text-muted">{{ $fecha->format('d') . ' de ' . $mes . ' de ' . $fecha->format('Y') }}</span>
+	$mesesHeader = [
+		'January' => 'Enero',
+		'February' => 'Febrero',
+		'March' => 'Marzo',
+		'April' => 'Abril',
+		'May' => 'Mayo',
+		'June' => 'Junio',
+		'July' => 'Julio',
+		'August' => 'Agosto',
+		'September' => 'Septiembre',
+		'October' => 'Octubre',
+		'November' => 'Noviembre',
+		'December' => 'Diciembre'
+	];
+
+	$fechaHeader = now('America/Caracas');
+	$diaHeader = $diasHeader[$fechaHeader->format('l')];
+	$mesHeader = $mesesHeader[$fechaHeader->format('F')];
+@endphp
+<div class="d-flex justify-content-between align-items-center">
+	<h2 class="mb-0">Dashboard</h2>
+	<span class="text-muted">{{ $fechaHeader->format('d') . ' de ' . $mesHeader . ' de ' . $fechaHeader->format('Y') }}</span>
 </div>
 <hr class="mt-2 mb-4">
 @endsection
 
 @section('content')
+@php
+	$usuario = auth()->user();
+	$dias = [
+		'Sunday' => 'Domingo',
+		'Monday' => 'Lunes',
+		'Tuesday' => 'Martes',
+		'Wednesday' => 'Miércoles',
+		'Thursday' => 'Jueves',
+		'Friday' => 'Viernes',
+		'Saturday' => 'Sábado'
+	];
+
+	$meses = [
+		'January' => 'Enero',
+		'February' => 'Febrero',
+		'March' => 'Marzo',
+		'April' => 'Abril',
+		'May' => 'Mayo',
+		'June' => 'Junio',
+		'July' => 'Julio',
+		'August' => 'Agosto',
+		'September' => 'Septiembre',
+		'October' => 'Octubre',
+		'November' => 'Noviembre',
+		'December' => 'Diciembre'
+	];
+
+	$fechaActual = now('America/Caracas');
+	$diaActual = $dias[$fechaActual->format('l')];
+	$mesActual = $meses[$fechaActual->format('F')];
+	$fechaLarga = $diaActual . ', ' . $fechaActual->format('d') . ' de ' . $mesActual . ' de ' . $fechaActual->format('Y');
+
+	$tituloUsuario = $usuario->name;
+	if ($usuario->hasRole('profesor')) {
+		$tituloUsuario = 'Profesor ' . $usuario->name;
+	} elseif ($usuario->hasRole('admin')) {
+		$tituloUsuario = 'Administrador ' . $usuario->name;
+	} elseif ($usuario->hasRole('coordinador')) {
+		$tituloUsuario = 'Coordinador ' . $usuario->name;
+	}
+
+	$totalClasesDia = $totalClases ?? 0;
+	$clasesRegistradas = $clasesConAsistencia ?? 0;
+	$clasesPendientes = max($totalClasesDia - $clasesRegistradas, 0);
+	$porcentajeRegistrado = $totalClasesDia ? round(($clasesRegistradas / max($totalClasesDia, 1)) * 100) : 0;
+	$porcentajePendiente = $totalClasesDia ? round(($clasesPendientes / max($totalClasesDia, 1)) * 100) : 0;
+	$totalEstudiantesProfesor = $totalEstudiantesProfesor ?? 0;
+	$inasistenciasProfesor = $inasistenciasProfesor ?? 0;
+	$porcentajeInasistencias = $totalEstudiantesProfesor ? round(min(100, ($inasistenciasProfesor / max($totalEstudiantesProfesor, 1)) * 100)) : 0;
+
+	$asistenciasContadas = is_numeric($asistenciasHoy ?? null) ? (int) $asistenciasHoy : 0;
+	$tardiosContados = is_numeric($tardiosHoy ?? null) ? (int) $tardiosHoy : 0;
+	$inasistenciasContadas = is_numeric($inasistenciasHoy ?? null) ? (int) $inasistenciasHoy : 0;
+	$totalProcesadas = max($asistenciasContadas + $tardiosContados + $inasistenciasContadas, 1);
+	$asistenciasPct = round(($asistenciasContadas / $totalProcesadas) * 100, 2);
+	$tardiosPct = round(($tardiosContados / $totalProcesadas) * 100, 2);
+	$inasistenciasPct = round(($inasistenciasContadas / $totalProcesadas) * 100, 2);
+
+	$asistenciasHoyCollection = ($usuario->hasRole('profesor') && isset($asistenciasHoy) && $asistenciasHoy instanceof \Illuminate\Support\Collection)
+		? $asistenciasHoy
+		: collect();
+	$fechaHoy = now('America/Caracas');
+@endphp
+
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-white border-0 py-3">
-                    <h3 class="card-title mb-0 d-flex align-items-center">
-                        <i class="fas fa-user text-primary mr-2"></i>
-                        Bienvenido
-                    </h3>
-                </div>
-                <div class="card-body py-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="mb-1 font-weight-bold">
-                                @if(auth()->user()->hasRole('profesor'))
-                                    Profesor {{ auth()->user()->name }}
-                                @elseif(auth()->user()->hasRole('admin'))
-                                    Administrador {{ auth()->user()->name }}
-                                @elseif(auth()->user()->hasRole('coordinador'))
-                                    Coordinador {{ auth()->user()->name }}
-                                @else
-                                    {{ auth()->user()->name }}
-                                @endif
-                            </h4>
-                            <p class="mb-0">Aquí puedes gestionar todas tus actividades</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+	<div class="row mb-4">
+		<div class="col-12">
+			<div class="hero-card">
+				<div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between w-100">
+					<div>
+						<p class="hero-subtitle mb-1">Bienvenido de vuelta</p>
+						<h3 class="hero-title mb-3">{{ $tituloUsuario }}</h3>
+						<p class="hero-date mb-4 mb-lg-3">{{ $fechaLarga }}</p>
+						<div class="hero-metrics">
+							@if($usuario->hasRole('profesor'))
+								<span class="hero-pill">
+									<i class="fas fa-calendar-day"></i>
+									{{ $totalClasesDia }} clases hoy
+								</span>
+								<span class="hero-pill hero-pill--success">
+									<i class="fas fa-clipboard-check"></i>
+									{{ $clasesRegistradas }} registradas
+								</span>
+								<span class="hero-pill hero-pill--warning">
+									<i class="fas fa-clock"></i>
+									{{ $clasesPendientes }} pendientes
+								</span>
+							@else
+								<span class="hero-pill">
+									<i class="fas fa-check-circle"></i>
+									{{ $asistenciasContadas }} asistencias
+								</span>
+								<span class="hero-pill hero-pill--warning">
+									<i class="fas fa-clock"></i>
+									{{ $tardiosContados }} pases
+								</span>
+								<span class="hero-pill hero-pill--danger">
+									<i class="fas fa-times-circle"></i>
+									{{ $inasistenciasContadas }} inasistencias
+								</span>
+							@endif
+						</div>
+					</div>
+					<div class="hero-illustration mt-4 mt-lg-0">
+						<div class="hero-graphic">
+							<i class="fas fa-chart-line"></i>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
-    @if(auth()->user()->hasRole('profesor'))
-        <div class="row">
-            <div class="col-md-3 col-sm-6 col-12 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-primary">
-                                <i class="fas fa-calendar-alt text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $totalClases ?? 0 }}</h2>
-                                <p class="mb-0 text-muted">Clases Programadas</p>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <div class="progress progress-xs">
-                                <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
-                            </div>
-                            <small class="text-muted">Total día actual</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+	@if($usuario->hasRole('profesor'))
+		<div class="row g-3 mb-4">
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--primary">
+					<div class="stat-card__icon">
+						<i class="fas fa-calendar-alt"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Clases programadas</span>
+						<span class="stat-card__value">{{ $totalClasesDia }}</span>
+						<span class="stat-card__meta">Total día actual</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--success">
+					<div class="stat-card__icon">
+						<i class="fas fa-check-circle"></i>
+					</div>
+					<div class="w-100">
+						<span class="stat-card__label">Clases con asistencia</span>
+						<span class="stat-card__value">{{ $clasesRegistradas }}</span>
+						<div class="stat-card__progress">
+							<div class="stat-card__progress-bar" style="width: {{ $porcentajeRegistrado }}%"></div>
+						</div>
+						<span class="stat-card__meta">{{ $porcentajeRegistrado }}% completado</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--warning">
+					<div class="stat-card__icon">
+						<i class="fas fa-bell"></i>
+					</div>
+					<div class="w-100">
+						<span class="stat-card__label">Clases pendientes</span>
+						<span class="stat-card__value">{{ $clasesPendientes }}</span>
+						<div class="stat-card__progress">
+							<div class="stat-card__progress-bar" style="width: {{ $porcentajePendiente }}%"></div>
+						</div>
+						<span class="stat-card__meta">Por registrar</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--danger">
+					<div class="stat-card__icon">
+						<i class="fas fa-user-times"></i>
+					</div>
+					<div class="w-100">
+						<span class="stat-card__label">Inasistencias estudiantes</span>
+						<span class="stat-card__value">{{ $inasistenciasProfesor }}</span>
+						<div class="stat-card__progress">
+							<div class="stat-card__progress-bar" style="width: {{ $porcentajeInasistencias }}%"></div>
+						</div>
+						<span class="stat-card__meta">{{ $porcentajeInasistencias }}% del grupo</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	@else
+		<div class="row g-3 mb-4">
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--primary">
+					<div class="stat-card__icon">
+						<i class="fas fa-user-graduate"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Estudiantes totales</span>
+						<span class="stat-card__value">{{ $totalEstudiantes }}</span>
+						<span class="stat-card__meta">Usuarios activos</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--indigo">
+					<div class="stat-card__icon">
+						<i class="fas fa-chalkboard-teacher"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Profesores totales</span>
+						<span class="stat-card__value">{{ $totalProfesores ?? 0 }}</span>
+						<span class="stat-card__meta">Equipo docente</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--teal">
+					<div class="stat-card__icon">
+						<i class="fas fa-book-open"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Clases hoy</span>
+						<span class="stat-card__value">{{ $totalClasesHoy ?? 0 }}</span>
+						<span class="stat-card__meta">Registradas en el sistema</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--success">
+					<div class="stat-card__icon">
+						<i class="fas fa-percent"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Promedio asistencia</span>
+						<span class="stat-card__value">{{ isset($promedioAsistencia) ? $promedioAsistencia : 0 }}%</span>
+						<span class="stat-card__meta">Últimos 30 días</span>
+					</div>
+				</div>
+			</div>
+		</div>
 
-            <div class="col-md-3 col-sm-6 col-12 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-success">
-                                <i class="fas fa-check-circle text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $clasesConAsistencia ?? 0 }}</h2>
-                                <p class="mb-0 text-muted">Clases con Asistencia</p>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <div class="progress progress-xs">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ $porcentajeAsistencia ?? 0 }}%"></div>
-                            </div>
-                            <small class="text-muted">{{ $porcentajeAsistencia ?? 0 }}% completado</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+		<div class="row g-3 mb-4">
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--emerald">
+					<div class="stat-card__icon">
+						<i class="fas fa-user-check"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Asistencias hoy</span>
+						<span class="stat-card__value">{{ $asistenciasContadas }}</span>
+						<span class="stat-card__meta">Incluye pases</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--warning">
+					<div class="stat-card__icon">
+						<i class="fas fa-clock"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Pases registrados</span>
+						<span class="stat-card__value">{{ $tardiosContados }}</span>
+						<span class="stat-card__meta">Reportados hoy</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--danger">
+					<div class="stat-card__icon">
+						<i class="fas fa-user-times"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Inasistencias hoy</span>
+						<span class="stat-card__value">{{ $inasistenciasContadas }}</span>
+						<span class="stat-card__meta">Acumuladas en el día</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--purple">
+					<div class="stat-card__icon">
+						<i class="fas fa-star"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Clase destacada</span>
+						<span class="stat-card__value">{{ $claseTop ?? 'N/A' }}</span>
+						<span class="stat-card__meta">{{ $asistenciaClaseTop ?? 0 }} asistencias</span>
+					</div>
+				</div>
+			</div>
+			<div class="col-xl-3 col-md-6">
+				<div class="stat-card stat-card--info">
+					<div class="stat-card__icon">
+						<i class="fas fa-book"></i>
+					</div>
+					<div>
+						<span class="stat-card__label">Materia destacada</span>
+						<span class="stat-card__value">{{ $materiaTop ?? 'N/A' }}</span>
+						<span class="stat-card__meta">{{ $asistenciaMateriaTop ?? 0 }} asistencias</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	@endif
 
-            <div class="col-md-3 col-sm-6 col-12 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-warning">
-                                <i class="fas fa-clock text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ ($totalClases ?? 0) - ($clasesConAsistencia ?? 0) }}</h2>
-                                <p class="mb-0 text-muted">Clases Pendientes</p>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <div class="progress progress-xs">
-                                <div class="progress-bar bg-warning" role="progressbar" style="width: {{ ($totalClases ? ($totalClases - ($clasesConAsistencia ?? 0)) / $totalClases * 100 : 0) }}%"></div>
-                            </div>
-                            <small class="text-muted">Por registrar</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+	@if(!$usuario->hasRole('profesor'))
+		<div class="row g-4 mb-4">
+			<div class="col-lg-6">
+				<div class="card chart-card h-100">
+					<div class="card-header">
+						<h3 class="card-title mb-0"><i class="fas fa-chart-bar mr-2 text-primary"></i>Asistencia por día (últimos 30 días)</h3>
+					</div>
+					<div class="card-body">
+						<canvas id="attendanceByDayChart" class="chart-canvas"></canvas>
+					</div>
+				</div>
+			</div>
+			<div class="col-lg-6">
+				<div class="card chart-card h-100">
+					<div class="card-header">
+						<h3 class="card-title mb-0"><i class="fas fa-clipboard-check mr-2 text-primary"></i>Resumen de asistencia de hoy</h3>
+					</div>
+					<div class="card-body">
+						@if(($usuario->hasRole('coordinador') || $usuario->hasRole('admin')) && ($asistenciasContadas > 0 || $tardiosContados > 0 || $inasistenciasContadas > 0))
+							<div class="d-flex justify-content-center mb-4">
+								<div class="summary-chart">
+									<canvas id="attendanceSummaryChart"></canvas>
+								</div>
+							</div>
+							<div class="row text-center mb-3">
+								<div class="col-4">
+									<div class="summary-chip summary-chip--success">
+										<i class="fas fa-check-circle"></i>
+										<span class="summary-chip__value">{{ $asistenciasContadas }}</span>
+										<span class="summary-chip__label">Asistentes</span>
+									</div>
+								</div>
+								<div class="col-4">
+									<div class="summary-chip summary-chip--warning">
+										<i class="fas fa-clock"></i>
+										<span class="summary-chip__value">{{ $tardiosContados }}</span>
+										<span class="summary-chip__label">Pases</span>
+									</div>
+								</div>
+								<div class="col-4">
+									<div class="summary-chip summary-chip--danger">
+										<i class="fas fa-times-circle"></i>
+										<span class="summary-chip__value">{{ $inasistenciasContadas }}</span>
+										<span class="summary-chip__label">Inasistentes</span>
+									</div>
+								</div>
+							</div>
+							<div class="progress progress-slim">
+								<div class="progress-bar bg-success" role="progressbar" style="width: {{ $asistenciasPct }}%"></div>
+								<div class="progress-bar bg-warning" role="progressbar" style="width: {{ $tardiosPct }}%"></div>
+								<div class="progress-bar bg-danger" role="progressbar" style="width: {{ $inasistenciasPct }}%"></div>
+							</div>
+						@else
+							<div class="text-center py-4 text-muted">
+								<i class="fas fa-info-circle fa-2x mb-3"></i>
+								<p class="mb-0">No hay registros de asistencia para hoy</p>
+							</div>
+						@endif
+					</div>
+				</div>
+			</div>
+		</div>
+	@endif
 
-            <div class="col-md-3 col-sm-6 col-12 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-danger">
-                                <i class="fas fa-exclamation-circle text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $inasistenciasProfesor ?? 0 }}</h2>
-                                <p class="mb-0 text-muted">Inasistencias</p>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <div class="progress progress-xs">
-                                <div class="progress-bar bg-danger" role="progressbar" style="width: {{ ($totalEstudiantesProfesor ? ($inasistenciasProfesor / $totalEstudiantesProfesor * 100) : 0) }}%"></div>
-                            </div>
-                            <small class="text-muted">Estudiante(s) hoy</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @else
-
-        <div class="row mb-4">
-            <div class="col-md-6 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-primary">
-                                <i class="fas fa-chart-pie text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $totalEstudiantes }}</h2>
-                                <p class="mb-0 text-muted">Estudiantes Totales</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-success">
-                                <i class="fas fa-percentage text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ isset($promedioAsistencia) ? $promedioAsistencia : 0 }}%</h2>
-                                <p class="mb-0 text-muted">Promedio Asistencia</p>
-                                <small class="text-muted">Últimos 30 días</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-info">
-                                <i class="fas fa-chalkboard-teacher text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $totalClasesHoy }}</h2>
-                                <p class="mb-0 text-muted">Clases Hoy</p>
-                                <small class="text-muted">Total del día</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-success">
-                                <i class="fas fa-check-circle text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $asistenciasHoy }}</h2>
-                                <p class="mb-0 text-muted">Asistencias Hoy</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-danger">
-                                <i class="fas fa-times-circle text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $inasistenciasHoy }}</h2>
-                                <p class="mb-0 text-muted">Inasistencias Hoy</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-warning">
-                                <i class="fas fa-star text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $claseTop }}</h2>
-                                <p class="mb-0 text-muted">Top Clase</p>
-                                <small class="text-muted">{{ $asistenciaClaseTop }} asistencias</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-3 col-sm-6 mb-4">
-                <div class="card card-statistic">
-                    <div class="card-body">
-                        <div class="d-flex align-items-center">
-                            <div class="card-icon bg-info">
-                                <i class="fas fa-book text-white"></i>
-                            </div>
-                            <div class="ml-3">
-                                <h2 class="mb-0">{{ $materiaTop }}</h2>
-                                <p class="mb-0 text-muted">Materia Top</p>
-                                <small class="text-muted">{{ $asistenciaMateriaTop }} asistencias</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center">
-                            <i class="fas fa-chart-bar text-primary mr-2"></i>
-                            Asistencia por Día de la Semana (últimos 30 días)
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <canvas id="attendanceByDayChart" style="height: 300px;"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-6 mb-4">
-                <div class="card">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0 d-flex align-items-center">
-                            <i class="fas fa-clipboard-check text-primary mr-2"></i>
-                            Resumen de Asistencia
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        @if((auth()->user()->hasRole('coordinador') || auth()->user()->hasRole('admin')) && ($asistenciasHoy > 0 || $inasistenciasHoy > 0 || $tardiosHoy > 0))
-                            <div class="d-flex justify-content-center mb-3">
-                                <canvas id="attendanceSummaryChart" style="height: 200px;"></canvas>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-4">
-                                    <div class="text-center">
-                                        <i class="fas fa-check-circle text-success mb-1" style="font-size: 24px;"></i>
-                                        <h4 class="font-weight-bold mb-0">{{ $asistenciasHoy }}</h4>
-                                        <p class="text-muted mb-0">Asistentes</p>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="text-center">
-                                        <i class="fas fa-clock text-warning mb-1" style="font-size: 24px;"></i>
-                                        <h4 class="font-weight-bold mb-0">{{ $tardiosHoy }}</h4>
-                                        <p class="text-muted mb-0">Pases</p>
-                                    </div>
-                                </div>
-                                <div class="col-4">
-                                    <div class="text-center">
-                                        <i class="fas fa-times-circle text-danger mb-1" style="font-size: 24px;"></i>
-                                        <h4 class="font-weight-bold mb-0">{{ $inasistenciasHoy }}</h4>
-                                        <p class="text-muted mb-0">Inasistentes</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-3">
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ ($asistenciasHoy / ($asistenciasHoy + $tardiosHoy + $inasistenciasHoy)) * 100 }}%"></div>
-                                    <div class="progress-bar bg-warning" role="progressbar" style="width: {{ ($tardiosHoy / ($asistenciasHoy + $tardiosHoy + $inasistenciasHoy)) * 100 }}%"></div>
-                                    <div class="progress-bar bg-danger" role="progressbar" style="width: {{ ($inasistenciasHoy / ($asistenciasHoy + $tardiosHoy + $inasistenciasHoy)) * 100 }}%"></div>
-                                </div>
-                            </div>
-                        @else
-                            <div class="text-center py-4">
-                                <p class="text-muted">No hay registros de asistencia para hoy</p>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.4"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const canvas = document.getElementById('attendanceByDayChart');
-            if (!canvas) {
-                console.log('Canvas element not found');
-                return;
-            }
-
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                console.log('Could not get canvas context');
-                return;
-            }
-
-            const attendanceData = @json($attendanceByDay);
-
-            const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-            const chartData = daysOfWeek.map(day => {
-                const dayData = attendanceData.find(item => item.dia === day);
-                return {
-                    dia: day,
-                    tasa: dayData ? dayData.tasa : 0
-                };
-            });
-
-            const chartLabels = chartData.map(item => item.dia);
-            const chartValues = chartData.map(item => item.tasa);
-
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{
-                        label: 'Tasa de Asistencia (%)',
-                        data: chartValues,
-                        backgroundColor: '#4361ee',
-                        borderColor: '#4361ee',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    legend: {
-                        position: 'top',
-                    },
-                    scales: {
-                        yAxes: [{
-                            ticks: {
-                                beginAtZero: true,
-                                stepSize: 10,
-                                max: 100
-                            }
-                        }],
-                        xAxes: [{
-                            ticks: {
-                                autoSkip: false
-                            }
-                        }]
-                    },
-                    plugins: {
-                        datalabels: {
-                            display: true,
-                            color: 'white',
-                            anchor: 'end',
-                            align: 'top',
-                            formatter: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    }
-                }
-            });
-        });
-    </script>
-
-    @endif
-
-    @if(auth()->user()->hasRole('profesor') && isset($horarioHoy))
-
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="table-responsive-md rounded-lg" style="margin: 0.5rem;">
-                    <h3 class="card-title mb-0 d-flex align-items-center">
-                        <i class="fas fa-calendar-day text-primary mr-2"></i>
-                        <span>Horario de Hoy</span>
-                    </h3>
-                </div>
-                <div class="card-body p-3">
-                    <div class="table-responsive">
-                        <table id="horarioHoyTable" class="table datatable table-hover mb-0">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th class="text-nowrap">#</th>
-                                    <th class="text-nowrap">Hora</th>
-                                    <th>Asignatura</th>
-                                    <th>Sección</th>
-                                    <th>Aula</th>
-                                    <th>Año</th>
-                                    <th>Estado</th>
-                                    <th class="text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($horarioHoy as $index => $clase)
-                                    @php
-                                        $fechaActual = now('America/Caracas');
-                                        $asistencia = $asistenciasHoy->filter(function($a) use ($clase, $fechaActual) {
-                                            return $a->fecha->toDateString() === $fechaActual->toDateString() && 
-                                                $a->horario_id === $clase->id;
-                                        })->first();
-                                    @endphp
-                                    <tr class="{{ $asistencia ? 'asistencia-tomada' : '' }}">
-                                        <td> </td>
-                                        <td class="text-nowrap">
-                                            <span class="badge bg-light rounded-pill px-4 py-2 text-dark">
-                                                {{ $clase->hora_inicio }} - {{ $clase->hora_fin }}
-                                            </span>
-                                        </td>
-                                        <td>{{ $clase->asignacion->materia->nombre }}</td>
-                                        <td>
-                                            <span class="badge bg-primary rounded-pill px-4 py-2">
-                                                {{ $clase->asignacion->seccion->nombre }}
-                                            </span>
-                                        </td>
-                                        <td>{{ $clase->aula ?? 'Aula por asignar' }}</td>
-                                        <td>{{ $clase->asignacion->seccion->grado->nombre }}</td>
-                                        <td>
-                                            @if($asistencia)
-                                                <span class="badge bg-success rounded-pill px-4 py-2">
-                                                    <i class="fas fa-check-circle mr-1"></i> Tomada
-                                                </span>
-                                            @else
-                                                <span class="badge bg-warning rounded-pill px-4 py-2">
-                                                    <i class="fas fa-clock mr-1"></i> Pendiente
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="d-flex justify-content-center">
-                                                @if($asistencia)
-                                                    <a href="{{ route('asistencias.edit', $asistencia->id) }}" 
-                                                    class="btn btn-sm btn-light border mx-1"
-                                                    data-toggle="tooltip" 
-                                                    title="Editar asistencia">
-                                                        <i class="fas fa-edit text-warning"></i>
-                                                    </a>
-                                                @else
-                                                    <a href="{{ route('asistencias.registrar', [$clase->asignacion->materia->id, $clase->id]) }}" 
-                                                    class="btn btn-sm btn-light border mx-1"
-                                                    data-toggle="tooltip" 
-                                                    title="Registrar asistencia">
-                                                        <i class="fas fa-plus text-primary"></i>
-                                                    </a>
-                                                @endif
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="8" class="text-center py-4 text-muted">
-                                            <i class="fas fa-calendar-times fa-2x mb-2"></i>
-                                            <p class="mb-0">No hay clases programadas para hoy</p>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
+	@if($usuario->hasRole('profesor') && isset($horarioHoy))
+		<div class="row mb-4">
+			<div class="col-12">
+				<div class="card table-card">
+					<div class="card-header d-flex align-items-center justify-content-between flex-wrap">
+						<h3 class="card-title mb-0 d-flex align-items-center">
+							<i class="fas fa-calendar-day text-primary mr-2"></i>
+							Horario de hoy
+						</h3>
+					</div>
+					<div class="card-body p-0">
+						<div class="table-responsive">
+							<table id="horarioHoyTable" class="table table-modern mb-0">
+								<thead>
+									<tr>
+										<th>#</th>
+										<th>Hora</th>
+										<th>Asignatura</th>
+										<th>Sección</th>
+										<th>Aula</th>
+										<th>Año</th>
+										<th>Estado</th>
+										<th class="text-center">Acciones</th>
+									</tr>
+								</thead>
+								<tbody>
+									@forelse($horarioHoy as $index => $clase)
+										@php
+											$asistencia = $asistenciasHoyCollection->first(function ($registro) use ($clase, $fechaHoy) {
+												return $registro->fecha->toDateString() === $fechaHoy->toDateString() && $registro->horario_id === $clase->id;
+											});
+										@endphp
+										<tr class="{{ $asistencia ? 'asistencia-tomada' : '' }}">
+											<td>{{ $loop->iteration }}</td>
+											<td>
+												<span class="badge badge-soft">{{ $clase->hora_inicio }} - {{ $clase->hora_fin }}</span>
+											</td>
+											<td>{{ $clase->asignacion->materia->nombre }}</td>
+											<td>
+												<span class="badge badge-primary">{{ $clase->asignacion->seccion->nombre }}</span>
+											</td>
+											<td>{{ $clase->aula ?? 'Aula por asignar' }}</td>
+											<td>{{ $clase->asignacion->seccion->grado->nombre }}</td>
+											<td>
+												@if($asistencia)
+													<span class="status-chip status-chip--success">
+														<i class="fas fa-check"></i> Tomada
+													</span>
+												@else
+													<span class="status-chip status-chip--warning">
+														<i class="fas fa-clock"></i> Pendiente
+													</span>
+												@endif
+											</td>
+											<td class="text-center">
+												<div class="action-buttons">
+													@if($asistencia)
+														<a href="{{ route('asistencias.edit', $asistencia->id) }}" class="btn btn-icon btn-light" data-toggle="tooltip" title="Editar asistencia">
+															<i class="fas fa-edit text-warning"></i>
+														</a>
+													@else
+														<a href="{{ route('asistencias.registrar', [$clase->asignacion->materia->id, $clase->id]) }}" class="btn btn-icon btn-light" data-toggle="tooltip" title="Registrar asistencia">
+															<i class="fas fa-plus text-primary"></i>
+														</a>
+													@endif
+												</div>
+											</td>
+										</tr>
+									@empty
+										<tr>
+											<td colspan="8" class="text-center py-4 text-muted">
+												<i class="fas fa-calendar-times fa-2x mb-2"></i>
+												<p class="mb-0">No hay clases programadas para hoy</p>
+											</td>
+										</tr>
+									@endforelse
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	@endif
 </div>
 @endsection
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('/build/assets/admin/admin.css') }}">
 <style>
-    .card-statistic {
-        border-left: 4px solid;
-        height: 100%;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-    }
-    
-    .card-statistic .card-body {
-        padding: 1rem;
-    }
-    
-    .card-icon {
-        width: 45px;
-        height: 45px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.3rem;
-        background: rgba(0,0,0,0.05);
-        border-radius: 0.375rem;
-    }
-    
-    .list-group-item {
-        transition: all 0.2s ease;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        padding: 0.75rem 1rem;
-    }
-    
-    .list-group-item:hover {
-        background-color: #f8f9fa;
-        border-left: 3px solid #6c757d;
-    }
-    
-    .list-group-item-action {
-        color: #495057;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-    }
-    
-    .list-group-item-action:hover {
-        color: #212529;
-    }
-    
-    .list-group-item-action i {
-        margin-right: 0.5rem;
-        width: 1.5rem;
-        text-align: center;
-    }
-    
-    .chart-container {
-        background-color: white;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-    }
-    
-    .chartjs-render-monitor {
-        animation: fadeIn 0.5s ease-in-out;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    .section-card {
-        transition: all 0.2s ease;
-        border-radius: 0.5rem;
-        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-    }
-    
-    .section-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
-    }
-    
+	.hero-card {
+		position: relative;
+		border-radius: 22px;
+		padding: 2.5rem;
+		background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+		color: #fff;
+		box-shadow: 0 28px 60px -35px rgba(79, 70, 229, 0.65);
+		overflow: hidden;
+	}
 
+	.hero-card::after {
+		content: '';
+		position: absolute;
+		top: -40px;
+		right: -60px;
+		width: 220px;
+		height: 220px;
+		background: rgba(255, 255, 255, 0.07);
+		border-radius: 50%;
+	}
 
-    .asistencia-tomada {
-        background-color: rgba(40, 167, 69, 0.1); 
-        border-left: 4px solid #28a745; 
-        transition: all 0.3s ease;
-    }
-    
-    .asistencia-tomada:hover {
-        background-color: rgba(40, 167, 69, 0.15);
-        border-left: 4px solid #218838;
-    }
+	.hero-subtitle {
+		text-transform: uppercase;
+		letter-spacing: 0.15rem;
+		font-size: 0.85rem;
+		opacity: 0.8;
+	}
 
-    .card {
-        border: none;
-        border-radius: 0.5rem;
-        overflow: hidden;
-        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-    }
-    
-    .card-header {
-        background-color: white;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-    
-    .card-title {
-        font-weight: 600;
-        color: #212529;
-    }
-    
-    .badge {
-        padding: 0.5rem 1rem;
-        border-radius: 0.375rem;
-    }    
-    
-    .card:hover {
-        box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
-        transform: translateY(-2px);
-    }
-    
-    .card-header {
-        padding: 1rem 1.25rem;
-        background-color: white;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-    
-    .card-header .card-title i {
-        font-size: 1.2rem;
-        margin-right: 8px;
-    }
+	.hero-title {
+		font-size: 2rem;
+		font-weight: 700;
+	}
+
+	.hero-date {
+		font-size: 0.95rem;
+		opacity: 0.85;
+	}
+
+	.hero-metrics {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+
+	.hero-pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5rem;
+		background: rgba(255, 255, 255, 0.18);
+		border-radius: 999px;
+		padding: 0.5rem 1rem;
+		font-size: 0.85rem;
+	}
+
+	.hero-pill--success { background: rgba(52, 211, 153, 0.25); }
+	.hero-pill--warning { background: rgba(251, 191, 36, 0.25); }
+	.hero-pill--danger { background: rgba(248, 113, 113, 0.25); }
+
+	.hero-illustration {
+		min-width: 160px;
+	}
+
+	.hero-graphic {
+		width: 140px;
+		height: 140px;
+		border-radius: 50%;
+		background: rgba(255, 255, 255, 0.12);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 3rem;
+	}
+
+	.stat-card {
+		display: flex;
+		align-items: flex-start;
+		gap: 1rem;
+		padding: 1.5rem;
+		background: #fff;
+		border-radius: 18px;
+		box-shadow: 0 18px 35px -25px rgba(15, 23, 42, 0.45);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+		height: 100%;
+	}
+
+	.stat-card:hover {
+		transform: translateY(-4px);
+		box-shadow: 0 22px 45px -28px rgba(15, 23, 42, 0.55);
+	}
+
+	.stat-card__icon {
+		width: 52px;
+		height: 52px;
+		border-radius: 15px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 1.3rem;
+		color: #fff;
+	}
+
+	.stat-card__label {
+		font-size: 0.87rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08rem;
+		color: #6B7280;
+	}
+
+	.stat-card__value {
+		font-size: 1.8rem;
+		font-weight: 700;
+		color: #111827;
+		display: block;
+	}
+
+	.stat-card__meta {
+		font-size: 0.85rem;
+		color: #9CA3AF;
+	}
+
+	.stat-card__progress {
+		margin: 0.5rem 0;
+		width: 100%;
+		height: 6px;
+		background: #E5E7EB;
+		border-radius: 999px;
+		overflow: hidden;
+	}
+
+	.stat-card__progress-bar {
+		height: 100%;
+		background: linear-gradient(90deg, #4F46E5, #6366F1);
+	}
+
+	.stat-card--primary .stat-card__icon { background: linear-gradient(120deg, #4F46E5, #5B21B6); }
+	.stat-card--success .stat-card__icon { background: linear-gradient(120deg, #059669, #10B981); }
+	.stat-card--warning .stat-card__icon { background: linear-gradient(120deg, #D97706, #FBBF24); }
+	.stat-card--danger .stat-card__icon { background: linear-gradient(120deg, #B91C1C, #EF4444); }
+	.stat-card--indigo .stat-card__icon { background: linear-gradient(120deg, #4338CA, #6366F1); }
+	.stat-card--teal .stat-card__icon { background: linear-gradient(120deg, #0E7490, #14B8A6); }
+	.stat-card--emerald .stat-card__icon { background: linear-gradient(120deg, #047857, #34D399); }
+	.stat-card--purple .stat-card__icon { background: linear-gradient(120deg, #6D28D9, #8B5CF6); }
+	.stat-card--info .stat-card__icon { background: linear-gradient(120deg, #0369A1, #0EA5E9); }
+
+	.chart-card {
+		border-radius: 18px;
+		box-shadow: 0 20px 48px -32px rgba(15, 23, 42, 0.45);
+	}
+
+	.chart-card .card-header {
+		background: transparent;
+		border-bottom: 0;
+		padding: 1.25rem 1.5rem;
+	}
+
+	.chart-card .card-title {
+		font-size: 1.05rem;
+		font-weight: 600;
+		color: #111827;
+	}
+
+	.chart-canvas {
+		width: 100% !important;
+		height: 320px !important;
+	}
+
+	.summary-chart {
+		width: 220px;
+		height: 220px;
+		position: relative;
+	}
+
+	.summary-chip {
+		background: #F3F4F6;
+		border-radius: 12px;
+		padding: 1rem 0.75rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.85rem;
+	}
+
+	.summary-chip i {
+		font-size: 1.4rem;
+	}
+
+	.summary-chip__value {
+		font-size: 1.3rem;
+		font-weight: 700;
+	}
+
+	.summary-chip__label {
+		text-transform: uppercase;
+		letter-spacing: 0.08rem;
+		color: #6B7280;
+	}
+
+	.summary-chip--success { color: #047857; }
+	.summary-chip--warning { color: #B45309; }
+	.summary-chip--danger { color: #B91C1C; }
+
+	.progress-slim {
+		height: 8px;
+		background: #E5E7EB;
+		border-radius: 999px;
+		overflow: hidden;
+	}
+
+	.table-card {
+		border-radius: 18px;
+		box-shadow: 0 18px 40px -30px rgba(15, 23, 42, 0.55);
+	}
+
+	.table-modern thead th {
+		border-top: none;
+		border-bottom: 1px solid #E5E7EB;
+		text-transform: uppercase;
+		font-size: 0.75rem;
+		letter-spacing: 0.08rem;
+		color: #6B7280;
+	}
+
+	.table-modern tbody td {
+		vertical-align: middle;
+		font-size: 0.95rem;
+	}
+
+	.badge-soft {
+		background: #EEF2FF;
+		color: #4F46E5;
+		border-radius: 999px;
+		padding: 0.35rem 0.75rem;
+		font-weight: 500;
+	}
+
+	.status-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.45rem 0.75rem;
+		border-radius: 999px;
+		font-size: 0.85rem;
+		font-weight: 600;
+	}
+
+	.status-chip--success {
+		background: rgba(16, 185, 129, 0.15);
+		color: #047857;
+	}
+
+	.status-chip--warning {
+		background: rgba(251, 191, 36, 0.20);
+		color: #92400E;
+	}
+
+	.action-buttons .btn-icon {
+		border-radius: 12px;
+		box-shadow: inset 0 0 0 1px #E5E7EB;
+		padding: 0.4rem 0.6rem;
+		transition: transform 0.15s ease;
+	}
+
+	.action-buttons .btn-icon:hover {
+		transform: translateY(-2px);
+	}
+
+	@media (max-width: 992px) {
+		.hero-card {
+			padding: 2rem;
+		}
+
+		.hero-title {
+			font-size: 1.7rem;
+		}
+
+		.chart-canvas {
+			height: 260px !important;
+		}
+	}
+
+	@media (max-width: 576px) {
+		.hero-metrics {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.hero-graphic {
+			width: 100px;
+			height: 100px;
+			font-size: 2.2rem;
+		}
+
+		.stat-card {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+
+		.summary-chart {
+			width: 180px;
+			height: 180px;
+		}
+	}
 </style>
 @endsection
 
 @section('js')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-$(document).ready(function() {
-    const summaryCtx = document.getElementById('attendanceSummaryChart');
-    if (summaryCtx) {
-        new Chart(summaryCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Presentes', 'Tardíos', 'Ausentes'],
-                datasets: [{
-                    data: [@json($asistenciasHoy), @json($tardiosHoy), @json($inasistenciasHoy)],
-                    backgroundColor: [
-                        'rgba(40, 167, 69, 0.9)',
-                        'rgba(255, 193, 7, 0.9)',
-                        'rgba(220, 53, 69, 0.9)'
-                    ],
-                    hoverBackgroundColor: [
-                        'rgba(40, 167, 69, 1)',
-                        'rgba(255, 193, 7, 1)',
-                        'rgba(220, 53, 69, 1)'
-                    ],
-                    borderWidth: 0,
-                    borderRadius: 8
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            padding: 20,
-                            boxWidth: 12,
-                            font: {
-                                size: 12
-                            }
-                        }
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const value = context.raw;
-                                const percentage = Math.round((value / total) * 100);
-                                return `${context.label}: ${value} (${percentage}%)`;
-                            }
-                        },
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleColor: '#fff',
-                        bodyColor: '#fff',
-                        borderColor: '#fff',
-                        borderWidth: 1,
-                        padding: 12
-                    }
-                },
-                cutout: '70%',
-                animation: {
-                    animateRotate: true,
-                    animateScale: true
-                }
-            }
-        });
-    }
+	document.addEventListener('DOMContentLoaded', function () {
+		const attendanceByDayElement = document.getElementById('attendanceByDayChart');
+		const attendanceSummaryElement = document.getElementById('attendanceSummaryChart');
 
-    const sectionCtx = document.getElementById('attendanceBySectionChart');
-    if (sectionCtx) {
-        const secciones = ['Sección A', 'Sección B', 'Sección C'];
-        const presentes = [25, 30, 20];
-        const tardios = [3, 5, 2];
-        const ausentes = [2, 5, 3];
+		const attendanceByDayData = @json(isset($attendanceByDay) ? $attendanceByDay : collect());
+		if (attendanceByDayElement && Array.isArray(attendanceByDayData) && attendanceByDayData.length) {
+			const dayLabels = attendanceByDayData.map(item => item.dia);
+			const dayRates = attendanceByDayData.map(item => item.tasa);
 
-        new Chart(sectionCtx, {
-            type: 'bar',
-            data: {
-                labels: secciones,
-                datasets: [
-                    {
-                        label: 'Asistentes',
-                        data: presentes,
-                        backgroundColor: 'rgba(40, 167, 69, 0.7)'
-                    },
-                    {
-                        label: 'Pases',
-                        data: tardios,
-                        backgroundColor: 'rgba(255, 193, 7, 0.7)'
-                    },
-                    {
-                        label: 'Inasistentes',
-                        data: ausentes,
-                        backgroundColor: 'rgba(220, 53, 69, 0.7)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: {
-                        stacked: true,
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Asistencia por Sección'
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
-                    }
-                }
-            }
-        });
-    }
-});
+			new Chart(attendanceByDayElement, {
+				type: 'bar',
+				data: {
+					labels: dayLabels,
+					datasets: [{
+						label: 'Tasa de asistencia %',
+						data: dayRates,
+						backgroundColor: dayRates.map(() => 'rgba(99, 102, 241, 0.55)'),
+						borderRadius: 12,
+						maxBarThickness: 38
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					scales: {
+						y: {
+							beginAtZero: true,
+							max: 100,
+							ticks: {
+								callback: value => value + '%'
+							},
+							grid: { color: 'rgba(156, 163, 175, 0.15)' }
+						},
+						x: {
+							grid: { display: false }
+						}
+					},
+					plugins: {
+						legend: { display: false }
+					}
+				}
+			});
+		}
+
+		if (attendanceSummaryElement) {
+			const asistencias = {{ $asistenciasContadas }};
+			const tardios = {{ $tardiosContados }};
+			const inasistencias = {{ $inasistenciasContadas }};
+
+			if (asistencias + tardios + inasistencias > 0) {
+				new Chart(attendanceSummaryElement, {
+					type: 'doughnut',
+					data: {
+						labels: ['Asistencias', 'Pases', 'Inasistencias'],
+						datasets: [{
+							data: [asistencias, tardios, inasistencias],
+							backgroundColor: [
+								'rgba(16, 185, 129, 0.75)',
+								'rgba(245, 158, 11, 0.75)',
+								'rgba(239, 68, 68, 0.75)'
+							],
+							borderWidth: 0,
+							hoverOffset: 6
+						}]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						cutout: '68%',
+						plugins: {
+							legend: {
+								display: true,
+								position: 'bottom',
+								labels: {
+									usePointStyle: true,
+									padding: 20
+								}
+							}
+						}
+					}
+				});
+			}
+		}
+
+		if (window.jQuery && $('#horarioHoyTable').length) {
+			$('#horarioHoyTable').DataTable({
+				language: {
+					url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+				},
+				responsive: true,
+				pageLength: 5,
+				lengthMenu: [5, 10, 20],
+				order: [[1, 'asc']]
+			});
+		}
+
+		$('[data-toggle="tooltip"]').tooltip();
+	});
 </script>
 @endsection
