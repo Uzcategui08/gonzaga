@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesAttendanceDateRange;
+use App\Models\Asistencia;
 use App\Models\AsistenciaEstudiante;
 use App\Models\Seccion;
 use App\Models\User;
@@ -86,20 +87,16 @@ class AsistenciaSecretariaController extends Controller
     }
 
     if (!empty($sectionsData)) {
-      $registros = AsistenciaEstudiante::selectRaw(
-        'secciones.id as seccion_id, ' .
-          'secciones.nombre as seccion_nombre, ' .
-          'grados.nombre as grado_nombre, ' .
-          'estudiantes.genero, ' .
-          'COUNT(*) as total_registros'
+      $latestAsistenciasPorSeccion = Asistencia::select(
+        'asistencias.id',
+        'asistencias.fecha',
+        'asistencias.hora_inicio',
+        'asistencias.created_at',
+        'secciones.id as seccion_id'
       )
-        ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
         ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
         ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
         ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
-        ->leftJoin('grados', 'grados.id', '=', 'secciones.grado_id')
-        ->join('estudiantes', 'estudiantes.id', '=', 'asistencia_estudiante.estudiante_id')
-        ->whereIn('asistencia_estudiante.estado', ['A', 'P'])
         ->whereIn('secciones.id', array_keys($sectionsData))
         ->when($startDate, function ($query) use ($startDate) {
           $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());
@@ -107,48 +104,84 @@ class AsistenciaSecretariaController extends Controller
         ->when($endDate, function ($query) use ($endDate) {
           $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
         })
-        ->groupBy(
-          'secciones.id',
-          'secciones.nombre',
-          'grados.nombre',
-          'estudiantes.genero'
+        ->orderBy('asistencias.fecha', 'desc')
+        ->orderBy('asistencias.hora_inicio', 'desc')
+        ->orderBy('asistencias.created_at', 'desc')
+        ->get()
+        ->groupBy('seccion_id')
+        ->map(function ($items) {
+          return optional($items->first())->id;
+        })
+        ->filter();
+
+      $asistenciaIds = $latestAsistenciasPorSeccion->values();
+
+      if ($asistenciaIds->isNotEmpty()) {
+        $registros = AsistenciaEstudiante::selectRaw(
+          'secciones.id as seccion_id, ' .
+            'secciones.nombre as seccion_nombre, ' .
+            'grados.nombre as grado_nombre, ' .
+            'estudiantes.genero, ' .
+            'COUNT(*) as total_registros'
         )
-        ->orderBy('grados.nombre')
-        ->orderBy('secciones.nombre')
-        ->orderBy('estudiantes.genero')
-        ->get();
+          ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
+          ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+          ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+          ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+          ->leftJoin('grados', 'grados.id', '=', 'secciones.grado_id')
+          ->join('estudiantes', 'estudiantes.id', '=', 'asistencia_estudiante.estudiante_id')
+          ->whereIn('asistencia_estudiante.estado', ['A', 'P'])
+          ->whereIn('secciones.id', array_keys($sectionsData))
+          ->whereIn('asistencia_estudiante.asistencia_id', $asistenciaIds)
+          ->when($startDate, function ($query) use ($startDate) {
+            $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());
+          })
+          ->when($endDate, function ($query) use ($endDate) {
+            $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
+          })
+          ->groupBy(
+            'secciones.id',
+            'secciones.nombre',
+            'grados.nombre',
+            'estudiantes.genero'
+          )
+          ->orderBy('grados.nombre')
+          ->orderBy('secciones.nombre')
+          ->orderBy('estudiantes.genero')
+          ->get();
 
-      $registros->groupBy('seccion_id')->each(function ($registrosSeccion, $seccionId) use (&$sectionsData) {
-        $registroReferencia = $registrosSeccion->first();
+        $registros->groupBy('seccion_id')->each(function ($registrosSeccion, $seccionId) use (&$sectionsData) {
+          $registroReferencia = $registrosSeccion->first();
 
-        if (!isset($sectionsData[$seccionId])) {
-          $sectionsData[$seccionId] = [
-            'seccion_id' => $seccionId,
-            'grado' => $registroReferencia->grado_nombre ?? 'Sin grado',
-            'seccion' => $registroReferencia->seccion_nombre,
-            'masculinos' => 0,
-            'femeninos' => 0,
-            'total' => 0,
-          ];
-        }
+          if (!isset($sectionsData[$seccionId])) {
+            $sectionsData[$seccionId] = [
+              'seccion_id' => $seccionId,
+              'grado' => $registroReferencia->grado_nombre ?? 'Sin grado',
+              'seccion' => $registroReferencia->seccion_nombre,
+              'masculinos' => 0,
+              'femeninos' => 0,
+              'total' => 0,
+            ];
+          }
 
-        $contadores = $registrosSeccion
-          ->reduce(function (array $carry, $registro) {
-            $generoNormalizado = $this->normalizeGenero($registro->genero);
+          $contadores = $registrosSeccion
+            ->reduce(function (array $carry, $registro) {
+              $generoNormalizado = $this->normalizeGenero($registro->genero);
 
-            if ($generoNormalizado === 'masculino') {
-              $carry['masculinos'] += (int) $registro->total_registros;
-            } elseif ($generoNormalizado === 'femenino') {
-              $carry['femeninos'] += (int) $registro->total_registros;
-            }
+              if ($generoNormalizado === 'masculino') {
+                $carry['masculinos'] += (int) $registro->total_registros;
+              } elseif ($generoNormalizado === 'femenino') {
+                $carry['femeninos'] += (int) $registro->total_registros;
+              }
 
-            return $carry;
-          }, ['masculinos' => 0, 'femeninos' => 0]);
+              return $carry;
+            }, ['masculinos' => 0, 'femeninos' => 0]);
 
-        $sectionsData[$seccionId]['masculinos'] = $contadores['masculinos'];
-        $sectionsData[$seccionId]['femeninos'] = $contadores['femeninos'];
-        $sectionsData[$seccionId]['total'] = $contadores['masculinos'] + $contadores['femeninos'];
-      });
+          $sectionsData[$seccionId]['masculinos'] = $contadores['masculinos'];
+          $sectionsData[$seccionId]['femeninos'] = $contadores['femeninos'];
+          $sectionsData[$seccionId]['total'] = $contadores['masculinos'] + $contadores['femeninos'];
+        });
+      }
     }
 
     $sectionsCollection = collect($sectionsData)
