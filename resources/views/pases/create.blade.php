@@ -33,6 +33,7 @@
                                     </option>
                                 @endforeach
                             </select>
+                            <small id="resumen-pases" class="form-text text-muted mt-2" style="display:none;"></small>
                         </div>
                     </div>
 
@@ -153,12 +154,13 @@
 
             $('#hora_llegada').attr('min', '07:35');
 
-            $('#fecha').attr('max', new Date().toISOString().split('T')[0]);
+            $('#fecha').attr('max', obtenerFechaActual());
             
             $('#estudiante_id').on('change', function() {
                 const estudianteId = $(this).val();
                 
                 if (estudianteId) {
+                    actualizarResumenPases(estudianteId);
                     $.ajax({
                         url: `/estudiantes/${estudianteId}/horarios`,
                         method: 'GET',
@@ -196,6 +198,7 @@
                 } else {
                     $('#horario_id').empty().append('<option value="">Seleccionar horario...</option>');
                     $('#horario_id').hide();
+                    $('#resumen-pases').hide().text('');
                 }
             });
 
@@ -203,9 +206,45 @@
 
             });
 
+            $('#fecha').on('change', function() {
+                const estudianteId = $('#estudiante_id').val();
+                if (estudianteId) {
+                    actualizarResumenPases(estudianteId);
+                }
+            });
+
             const estudianteSeleccionado = $('#estudiante_id').val();
             if (estudianteSeleccionado) {
                 $('#estudiante_id').trigger('change');
+            }
+
+            function actualizarResumenPases(estudianteId) {
+                const fechaSeleccionada = $('#fecha').val();
+                const fechaReferencia = fechaSeleccionada ? fechaSeleccionada : obtenerFechaActual();
+
+                $.ajax({
+                    url: `/estudiantes/${estudianteId}/pases-por-mes`,
+                    method: 'GET',
+                    data: { fecha: fechaReferencia },
+                    success: function(response) {
+                        if (response && typeof response.totalMes === 'number') {
+                            const resumen = `Pases en ${response.mesNombre} ${response.anio}: ${response.totalMes}`;
+                            $('#resumen-pases').text(resumen).show();
+                        } else {
+                            $('#resumen-pases').text('No fue posible obtener el resumen de pases.').show();
+                        }
+                    },
+                    error: function() {
+                        $('#resumen-pases').text('Error al consultar los pases del mes.').show();
+                    }
+                });
+            }
+
+            function obtenerFechaActual() {
+                const hoy = new Date();
+                const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+                const dia = String(hoy.getDate()).padStart(2, '0');
+                return `${hoy.getFullYear()}-${mes}-${dia}`;
             }
         });
     </script>

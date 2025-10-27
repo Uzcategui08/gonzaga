@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class PaseController extends Controller
 {
@@ -16,7 +17,8 @@ class PaseController extends Controller
 
     public function index()
     {
-        $user = auth()->user();
+        /** @var User $user */
+        $user = Auth::user();
         $fecha = request('fecha', now()->format('Y-m-d'));
 
         if ($user->hasRole('coordinador')) {
@@ -40,7 +42,8 @@ class PaseController extends Controller
 
     public function create()
     {
-        $user = auth()->user();
+        /** @var User $user */
+        $user = Auth::user();
 
         if ($user->hasRole('coordinador')) {
             $secciones = $user->secciones;
@@ -166,5 +169,36 @@ class PaseController extends Controller
         $pase->delete();
         return redirect()->route('pases.index')
             ->with('success', 'Pase eliminado exitosamente');
+    }
+
+    public function pasesPorMes(Request $request, Estudiante $estudiante)
+    {
+        /** @var User $usuario */
+        $usuario = Auth::user();
+
+        if ($usuario && $usuario->hasRole('coordinador')) {
+            $secciones = $usuario->secciones->pluck('id');
+
+            if (!$secciones->contains($estudiante->seccion_id)) {
+                abort(403, 'No tiene permisos para ver los pases de este estudiante.');
+            }
+        }
+
+        $fechaReferencia = $request->filled('fecha')
+            ? Carbon::parse($request->input('fecha'))->startOfDay()
+            : now();
+
+        $inicioMes = (clone $fechaReferencia)->startOfMonth();
+        $finMes = (clone $fechaReferencia)->endOfMonth();
+
+        $totalMes = Pase::where('estudiante_id', $estudiante->id)
+            ->whereBetween('fecha', [$inicioMes->toDateString(), $finMes->toDateString()])
+            ->count();
+
+        return response()->json([
+            'totalMes' => $totalMes,
+            'mesNombre' => ucfirst($fechaReferencia->translatedFormat('F')),
+            'anio' => $fechaReferencia->year,
+        ]);
     }
 }

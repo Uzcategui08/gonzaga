@@ -50,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/notifications/{notification}/mark-as-read', ['App\Http\Controllers\NotificationController', 'markAsRead'])->name('notifications.markAsRead');
     Route::post('/notifications/mark-all-as-read', ['App\Http\Controllers\NotificationController', 'markAllAsRead'])->name('notifications.markAllAsRead');
     Route::get('/estudiantes/{estudiante}/horarios', [EstudianteController::class, 'getHorarios'])->name('estudiantes.horarios');
+    Route::get('/estudiantes/{estudiante}/pases-por-mes', [PaseController::class, 'pasesPorMes'])->name('estudiantes.pases-por-mes');
     Route::get('/notifications/update', ['App\Http\Controllers\NotificationController', 'update'])->name('notifications.update');
 });
 
