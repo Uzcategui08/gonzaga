@@ -429,7 +429,7 @@
 										<tr class="{{ $asistencia ? 'asistencia-tomada' : '' }}">
 											<td>{{ $loop->iteration }}</td>
 											<td>
-												<span class="badge badge-soft">{{ $clase->hora_inicio }} - {{ $clase->hora_fin }}</span>
+												<span class="badge badge-primary">{{ $clase->hora_inicio }} - {{ $clase->hora_fin }}</span>
 											</td>
 											<td>{{ $clase->asignacion->materia->nombre }}</td>
 											<td>
