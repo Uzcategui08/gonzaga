@@ -87,18 +87,21 @@ class AsistenciaSecretariaController extends Controller
     }
 
     if (!empty($sectionsData)) {
-      $bestAsistenciasPorSeccion = AsistenciaEstudiante::selectRaw(
-        'asistencia_estudiante.asistencia_id, ' .
-          'secciones.id as seccion_id, ' .
-          'COUNT(*) as total_presentes, ' .
-          'MAX(asistencias.fecha) as asistencia_fecha, ' .
-          'MAX(asistencias.hora_inicio) as asistencia_hora, ' .
-          'MAX(asistencias.created_at) as asistencia_created_at'
+      $attendanceRecords = AsistenciaEstudiante::select(
+        'asistencia_estudiante.estudiante_id',
+        'estudiantes.genero',
+        'secciones.id as seccion_id',
+        'secciones.nombre as seccion_nombre',
+        'grados.nombre as grado_nombre',
+        'asistencias.fecha',
+        'asistencias.hora_inicio'
       )
         ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
         ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
         ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
         ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+        ->leftJoin('grados', 'grados.id', '=', 'secciones.grado_id')
+        ->join('estudiantes', 'estudiantes.id', '=', 'asistencia_estudiante.estudiante_id')
         ->whereIn('asistencia_estudiante.estado', ['A', 'P'])
         ->whereIn('secciones.id', array_keys($sectionsData))
         ->when($startDate, function ($query) use ($startDate) {
@@ -107,85 +110,106 @@ class AsistenciaSecretariaController extends Controller
         ->when($endDate, function ($query) use ($endDate) {
           $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
         })
-        ->groupBy('asistencia_estudiante.asistencia_id', 'secciones.id')
-        ->orderByDesc('total_presentes')
-        ->orderByDesc('asistencia_fecha')
-        ->orderByDesc('asistencia_hora')
-        ->orderByDesc('asistencia_created_at')
-        ->get()
-        ->groupBy('seccion_id')
-        ->map(function ($items) {
-          return optional($items->first())->asistencia_id;
-        })
-        ->filter();
+        ->get();
 
-      $asistenciaIds = $bestAsistenciasPorSeccion->values();
+      $sessionsBySection = [];
 
-      if ($asistenciaIds->isNotEmpty()) {
-        $registros = AsistenciaEstudiante::selectRaw(
-          'secciones.id as seccion_id, ' .
-            'secciones.nombre as seccion_nombre, ' .
-            'grados.nombre as grado_nombre, ' .
-            'estudiantes.genero, ' .
-            'COUNT(*) as total_registros'
-        )
-          ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
-          ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
-          ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
-          ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
-          ->leftJoin('grados', 'grados.id', '=', 'secciones.grado_id')
-          ->join('estudiantes', 'estudiantes.id', '=', 'asistencia_estudiante.estudiante_id')
-          ->whereIn('asistencia_estudiante.estado', ['A', 'P'])
-          ->whereIn('secciones.id', array_keys($sectionsData))
-          ->whereIn('asistencia_estudiante.asistencia_id', $asistenciaIds)
-          ->when($startDate, function ($query) use ($startDate) {
-            $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());
-          })
-          ->when($endDate, function ($query) use ($endDate) {
-            $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
-          })
-          ->groupBy(
-            'secciones.id',
-            'secciones.nombre',
-            'grados.nombre',
-            'estudiantes.genero'
-          )
-          ->orderBy('grados.nombre')
-          ->orderBy('secciones.nombre')
-          ->orderBy('estudiantes.genero')
-          ->get();
+      foreach ($attendanceRecords as $record) {
+        $sectionId = (int) $record->seccion_id;
 
-        $registros->groupBy('seccion_id')->each(function ($registrosSeccion, $seccionId) use (&$sectionsData) {
-          $registroReferencia = $registrosSeccion->first();
+        if (!isset($sectionsData[$sectionId])) {
+          $sectionsData[$sectionId] = [
+            'seccion_id' => $sectionId,
+            'grado' => $record->grado_nombre ?? 'Sin grado',
+            'seccion' => $record->seccion_nombre,
+            'masculinos' => 0,
+            'femeninos' => 0,
+            'total' => 0,
+          ];
+        }
 
-          if (!isset($sectionsData[$seccionId])) {
-            $sectionsData[$seccionId] = [
-              'seccion_id' => $seccionId,
-              'grado' => $registroReferencia->grado_nombre ?? 'Sin grado',
-              'seccion' => $registroReferencia->seccion_nombre,
-              'masculinos' => 0,
-              'femeninos' => 0,
-              'total' => 0,
-            ];
+        $fechaValue = $record->fecha instanceof Carbon
+          ? $record->fecha->toDateString()
+          : (string) $record->fecha;
+
+        $horaValue = $record->hora_inicio ? (string) $record->hora_inicio : '00:00:00';
+        $sessionKey = $fechaValue . '|' . $horaValue;
+        $studentId = (int) $record->estudiante_id;
+        $normalizedGender = $this->normalizeGenero($record->genero);
+
+        if (!isset($sessionsBySection[$sectionId])) {
+          $sessionsBySection[$sectionId] = [];
+        }
+
+        if (!isset($sessionsBySection[$sectionId][$sessionKey])) {
+          $sessionsBySection[$sectionId][$sessionKey] = [
+            'fecha' => $fechaValue,
+            'hora' => $horaValue,
+            'students' => [],
+          ];
+        }
+
+        if (!isset($sessionsBySection[$sectionId][$sessionKey]['students'][$studentId])) {
+          $sessionsBySection[$sectionId][$sessionKey]['students'][$studentId] = $normalizedGender;
+        }
+      }
+
+      foreach ($sessionsBySection as $sectionId => $sessions) {
+        $bestSession = null;
+        $bestTotal = 0;
+
+        foreach ($sessions as $sessionData) {
+          $masculinos = 0;
+          $femeninos = 0;
+
+          foreach ($sessionData['students'] as $gender) {
+            if ($gender === 'masculino') {
+              $masculinos++;
+            } elseif ($gender === 'femenino') {
+              $femeninos++;
+            }
           }
 
-          $contadores = $registrosSeccion
-            ->reduce(function (array $carry, $registro) {
-              $generoNormalizado = $this->normalizeGenero($registro->genero);
+          $total = $masculinos + $femeninos;
 
-              if ($generoNormalizado === 'masculino') {
-                $carry['masculinos'] += (int) $registro->total_registros;
-              } elseif ($generoNormalizado === 'femenino') {
-                $carry['femeninos'] += (int) $registro->total_registros;
-              }
+          if ($total > $bestTotal) {
+            $bestTotal = $total;
+            $bestSession = [
+              'masculinos' => $masculinos,
+              'femeninos' => $femeninos,
+              'total' => $total,
+              'fecha' => $sessionData['fecha'],
+              'hora' => $sessionData['hora'],
+            ];
+          } elseif ($total === $bestTotal && $bestSession !== null) {
+            $currentDateTime = $this->makeSessionDateTime($sessionData['fecha'], $sessionData['hora']);
+            $bestDateTime = $this->makeSessionDateTime($bestSession['fecha'], $bestSession['hora']);
 
-              return $carry;
-            }, ['masculinos' => 0, 'femeninos' => 0]);
+            $shouldReplace = false;
 
-          $sectionsData[$seccionId]['masculinos'] = $contadores['masculinos'];
-          $sectionsData[$seccionId]['femeninos'] = $contadores['femeninos'];
-          $sectionsData[$seccionId]['total'] = $contadores['masculinos'] + $contadores['femeninos'];
-        });
+            if ($currentDateTime && $bestDateTime) {
+              $shouldReplace = $currentDateTime->greaterThan($bestDateTime);
+            } elseif ($currentDateTime && !$bestDateTime) {
+              $shouldReplace = true;
+            }
+
+            if ($shouldReplace) {
+              $bestSession = [
+                'masculinos' => $masculinos,
+                'femeninos' => $femeninos,
+                'total' => $total,
+                'fecha' => $sessionData['fecha'],
+                'hora' => $sessionData['hora'],
+              ];
+            }
+          }
+        }
+
+        if ($bestSession !== null && isset($sectionsData[$sectionId])) {
+          $sectionsData[$sectionId]['masculinos'] = $bestSession['masculinos'];
+          $sectionsData[$sectionId]['femeninos'] = $bestSession['femeninos'];
+          $sectionsData[$sectionId]['total'] = $bestSession['total'];
+        }
       }
     }
 
@@ -242,5 +266,20 @@ class AsistenciaSecretariaController extends Controller
     ];
 
     return $mapa[$valor] ?? null;
+  }
+
+  private function makeSessionDateTime(?string $date, ?string $time): ?Carbon
+  {
+    if (empty($date)) {
+      return null;
+    }
+
+    $timeValue = $time ?: '00:00:00';
+
+    try {
+      return Carbon::parse(trim($date . ' ' . $timeValue));
+    } catch (\Exception $ex) {
+      return null;
+    }
   }
 }
