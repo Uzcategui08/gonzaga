@@ -30,8 +30,8 @@
         </div>
 
         <div class="card-body p-3">
-            <div style="margin: 0.5rem;">
-                <table class="table table-hover table-striped datatable" style="width:100%" id="asistencias-table">
+            <div class="table-responsive table-responsive-lg" style="margin: 0.5rem;">
+                <table class="table table-hover table-striped datatable" id="asistencias-table">
                     <thead class="bg-light">
                         <tr>
                             <th>#</th>

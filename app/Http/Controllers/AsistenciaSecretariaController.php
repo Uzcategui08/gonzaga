@@ -87,16 +87,19 @@ class AsistenciaSecretariaController extends Controller
     }
 
     if (!empty($sectionsData)) {
-      $latestAsistenciasPorSeccion = Asistencia::select(
-        'asistencias.id',
-        'asistencias.fecha',
-        'asistencias.hora_inicio',
-        'asistencias.created_at',
-        'secciones.id as seccion_id'
+      $bestAsistenciasPorSeccion = AsistenciaEstudiante::selectRaw(
+        'asistencia_estudiante.asistencia_id, ' .
+          'secciones.id as seccion_id, ' .
+          'COUNT(*) as total_presentes, ' .
+          'MAX(asistencias.fecha) as asistencia_fecha, ' .
+          'MAX(asistencias.hora_inicio) as asistencia_hora, ' .
+          'MAX(asistencias.created_at) as asistencia_created_at'
       )
+        ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
         ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
         ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
         ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+        ->whereIn('asistencia_estudiante.estado', ['A', 'P'])
         ->whereIn('secciones.id', array_keys($sectionsData))
         ->when($startDate, function ($query) use ($startDate) {
           $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());
@@ -104,17 +107,19 @@ class AsistenciaSecretariaController extends Controller
         ->when($endDate, function ($query) use ($endDate) {
           $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
         })
-        ->orderBy('asistencias.fecha', 'desc')
-        ->orderBy('asistencias.hora_inicio', 'desc')
-        ->orderBy('asistencias.created_at', 'desc')
+        ->groupBy('asistencia_estudiante.asistencia_id', 'secciones.id')
+        ->orderByDesc('total_presentes')
+        ->orderByDesc('asistencia_fecha')
+        ->orderByDesc('asistencia_hora')
+        ->orderByDesc('asistencia_created_at')
         ->get()
         ->groupBy('seccion_id')
         ->map(function ($items) {
-          return optional($items->first())->id;
+          return optional($items->first())->asistencia_id;
         })
         ->filter();
 
-      $asistenciaIds = $latestAsistenciasPorSeccion->values();
+      $asistenciaIds = $bestAsistenciasPorSeccion->values();
 
       if ($asistenciaIds->isNotEmpty()) {
         $registros = AsistenciaEstudiante::selectRaw(
