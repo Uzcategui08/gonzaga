@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AsistenciaEstudiante;
+use App\Models\Estudiante;
 use App\Models\Seccion;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -103,6 +104,133 @@ class AsistenciaCoordinadorController extends Controller
     return $pdf->stream('resumen_inasistencias_' . now()->format('Y-m-d_His') . '.pdf');
   }
 
+  public function exportStudentDetailPdf(Request $request, int $seccionId, int $estudianteId)
+  {
+    /** @var User|null $user */
+    $user = Auth::user();
+
+    if (!$user || !method_exists($user, 'hasRole')) {
+      abort(403, 'Acceso no autorizado');
+    }
+
+    $isAdmin = $user->hasRole('admin');
+    $isCoordinador = $user->hasRole('coordinador');
+
+    if (!$isAdmin && !$isCoordinador) {
+      abort(403, 'Acceso no autorizado');
+    }
+
+    [$startDate, $endDate] = $this->resolveDateRange($request);
+
+    $weekValue = $request->input('week');
+    $referenceDateValue = $request->input('reference_date');
+
+    if (!$referenceDateValue && $startDate) {
+      $referenceDateValue = $startDate->toDateString();
+    }
+
+    if (!$weekValue && $startDate) {
+      $weekValue = sprintf('%s-W%02d', $startDate->format('o'), (int) $startDate->format('W'));
+    }
+
+    $seccion = Seccion::with('grado')->findOrFail($seccionId);
+
+    if (!$isAdmin) {
+      $userSeccionesIds = collect($user->secciones ?? [])->pluck('id')->all();
+
+      if (!in_array($seccionId, $userSeccionesIds, true)) {
+        abort(403, 'Acceso no autorizado');
+      }
+    }
+
+    $estudiante = Estudiante::findOrFail($estudianteId);
+
+    $detalles = AsistenciaEstudiante::select(
+      'asistencias.id as asistencia_id',
+      'asistencias.fecha',
+      'horarios.hora_inicio',
+      'horarios.hora_fin',
+      'materias.nombre as materia_nombre',
+      'asistencia_estudiante.estado'
+    )
+      ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
+      ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+      ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+      ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+      ->leftJoin('materias', 'materias.id', '=', 'asignaciones.materia_id')
+      ->where('secciones.id', $seccionId)
+      ->where('asistencia_estudiante.estudiante_id', $estudianteId)
+      ->when($startDate, function ($query) use ($startDate) {
+        $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());
+      })
+      ->when($endDate, function ($query) use ($endDate) {
+        $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
+      })
+      ->orderBy('asistencias.fecha')
+      ->orderBy('horarios.hora_inicio')
+      ->get()
+      ->map(function ($row) {
+        $fecha = $row->fecha instanceof Carbon ? $row->fecha->copy() : Carbon::parse($row->fecha);
+        $horaInicio = $row->hora_inicio ? substr($row->hora_inicio, 0, 5) : null;
+        $horaFin = $row->hora_fin ? substr($row->hora_fin, 0, 5) : null;
+
+        $estado = $row->estado ?? 'A';
+        $horasInasistencia = $estado === 'I' ? 2 : 0;
+
+        return [
+          'asistencia_id' => $row->asistencia_id,
+          'fecha' => $fecha,
+          'hora_inicio' => $horaInicio,
+          'hora_fin' => $horaFin,
+          'materia' => $row->materia_nombre ?? 'Sin materia',
+          'estado' => $estado,
+          'horas_inasistencia' => $horasInasistencia,
+        ];
+      });
+
+    $totales = [
+      'P' => 0,
+      'A' => 0,
+      'I' => 0,
+    ];
+
+    $totalHoras = 0;
+
+    foreach ($detalles as $detalle) {
+      $estado = $detalle['estado'];
+      if (array_key_exists($estado, $totales)) {
+        $totales[$estado]++;
+      }
+      $totalHoras += $detalle['horas_inasistencia'];
+    }
+
+    $pdf = Pdf::loadView('asistencias.coordinador-estudiante-pdf', [
+      'usuario' => $user,
+      'generatedAt' => now(),
+      'seccion' => $seccion,
+      'estudiante' => $estudiante,
+      'detalles' => $detalles,
+      'totales' => $totales,
+      'totalHoras' => $totalHoras,
+      'startDate' => $startDate,
+      'endDate' => $endDate,
+      'filters' => [
+        'start_date' => $startDate ? $startDate->toDateString() : null,
+        'end_date' => $endDate ? $endDate->toDateString() : null,
+        'week' => $weekValue,
+        'reference_date' => $referenceDateValue,
+      ],
+    ])->setPaper('a4', 'portrait');
+
+    $fileName = sprintf(
+      'detalle_inasistencias_%s_%s.pdf',
+      $estudiante->id,
+      now()->format('Y-m-d_His')
+    );
+
+    return $pdf->stream($fileName);
+  }
+
   private function buildSummary(User $user, bool $isAdmin, ?Carbon $startDate = null, ?Carbon $endDate = null): array
   {
     if ($isAdmin) {
@@ -127,8 +255,6 @@ class AsistenciaCoordinadorController extends Controller
       'wednesday',
       'thursday',
       'friday',
-      'saturday',
-      'sunday',
     ];
 
     $dayLabels = [
@@ -137,8 +263,6 @@ class AsistenciaCoordinadorController extends Controller
       'wednesday' => 'Mié',
       'thursday' => 'Jue',
       'friday' => 'Vie',
-      'saturday' => 'Sáb',
-      'sunday' => 'Dom',
     ];
 
     $sectionsData = [];

@@ -52,6 +52,9 @@
         .text-right {
             text-align: right;
         }
+        .text-center {
+            text-align: center;
+        }
         .mb-2 {
             margin-bottom: 10px;
         }

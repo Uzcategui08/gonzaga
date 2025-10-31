@@ -176,6 +176,7 @@
                                                         <th>Estudiante</th>
                                                         <th class="text-center">Inasistencias</th>
                                                         <th class="text-center">Horas</th>
+                                                        <th class="text-center">Detalle</th>
                                                         @foreach($dayLabels as $dayKey => $label)
                                                             <th class="text-center" title="{{ $label }}">{{ $label }}</th>
                                                         @endforeach
@@ -194,6 +195,14 @@
                                                                 <span class="badge badge-pill {{ $estudiante['valor_doble'] > 0 ? 'badge-warning' : 'badge-secondary' }} px-3 py-2">
                                                                     {{ $estudiante['valor_doble'] }}
                                                                 </span>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <a href="{{ route('asistencias.coordinador.estudiante.pdf', array_merge(['seccion' => $section['seccion_id'], 'estudiante' => $estudiante['estudiante_id']], $pdfParams)) }}"
+                                                                   class="btn btn-outline-primary btn-sm"
+                                                                   target="_blank"
+                                                                   title="Ver detalle semanal">
+                                                                    <i class="fas fa-file-pdf"></i>
+                                                                </a>
                                                             </td>
                                                             @foreach($dayLabels as $dayKey => $label)
                                                                 @php
