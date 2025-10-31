@@ -17,9 +17,13 @@
     @php
         $startValue = $filters['start_date'] ?? '';
         $endValue = $filters['end_date'] ?? '';
+        $referenceValue = $filters['reference_date'] ?? ($startDate ? $startDate->toDateString() : '');
+        $weekValue = $filters['week'] ?? ($startDate ? sprintf('%s-W%02d', $startDate->format('o'), (int) $startDate->format('W')) : '');
         $pdfParams = array_filter([
             'start_date' => $startValue,
             'end_date' => $endValue,
+            'week' => $weekValue,
+            'reference_date' => $referenceValue,
         ]);
     @endphp
 
@@ -28,12 +32,8 @@
             <form method="GET" action="{{ route('asistencias.coordinador.index') }}">
                 <div class="form-row align-items-end">
                     <div class="col-md-4 col-sm-6 mb-3">
-                        <label for="start_date" class="font-weight-semibold">Desde</label>
-                        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ $startValue }}">
-                    </div>
-                    <div class="col-md-4 col-sm-6 mb-3">
-                        <label for="end_date" class="font-weight-semibold">Hasta</label>
-                        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ $endValue }}">
+                        <label for="reference_date" class="font-weight-semibold">Fecha</label>
+                        <input type="date" name="reference_date" id="reference_date" class="form-control" value="{{ $referenceValue }}">
                     </div>
                     <div class="col-md-4 col-sm-12 mb-3 d-flex">
                         <button type="submit" class="btn btn-primary mr-2 flex-fill">
@@ -46,17 +46,18 @@
                 </div>
                 @if($startDate || $endDate)
                     <div class="text-muted small">
-                        Mostrando registros
+                        Mostrando registros de la semana
                         @if($startDate)
-                            desde <strong>{{ $startDate->format('d/m/Y') }}</strong>
+                            <strong>{{ $startDate->format('d/m/Y') }}</strong>
                         @endif
                         @if($startDate && $endDate)
-                            hasta
-                        @elseif(!$startDate && $endDate)
-                            hasta
+                            al
                         @endif
                         @if($endDate)
                             <strong>{{ $endDate->format('d/m/Y') }}</strong>
+                        @endif
+                        @if($weekValue)
+                            <span class="ml-1">(Semana {{ ltrim($startDate ? $startDate->format('W') : substr($weekValue, -2), '0') }} / {{ $startDate ? $startDate->format('o') : substr($weekValue, 0, 4) }})</span>
                         @endif
                     </div>
                 @else
@@ -175,6 +176,9 @@
                                                         <th>Estudiante</th>
                                                         <th class="text-center">Inasistencias</th>
                                                         <th class="text-center">Horas</th>
+                                                        @foreach($dayLabels as $dayKey => $label)
+                                                            <th class="text-center" title="{{ $label }}">{{ $label }}</th>
+                                                        @endforeach
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -191,6 +195,18 @@
                                                                     {{ $estudiante['valor_doble'] }}
                                                                 </span>
                                                             </td>
+                                                            @foreach($dayLabels as $dayKey => $label)
+                                                                @php
+                                                                    $faltóDia = $estudiante['dias_inasistencia'][$dayKey] ?? false;
+                                                                @endphp
+                                                                <td class="text-center">
+                                                                    @if($faltóDia)
+                                                                        <span class="badge badge-danger" aria-label="Inasistencia el {{ $label }}">F</span>
+                                                                    @else
+                                                                        <span class="text-muted">—</span>
+                                                                    @endif
+                                                                </td>
+                                                            @endforeach
                                                         </tr>
                                                     @endforeach
                                                 </tbody>

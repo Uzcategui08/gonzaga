@@ -34,6 +34,17 @@ class AsistenciaCoordinadorController extends Controller
 
     [$startDate, $endDate] = $this->resolveDateRange($request);
 
+    $weekValue = $request->input('week');
+    $referenceDateValue = $request->input('reference_date');
+
+    if (!$referenceDateValue && $startDate) {
+      $referenceDateValue = $startDate->toDateString();
+    }
+
+    if (!$weekValue && $startDate) {
+      $weekValue = sprintf('%s-W%02d', $startDate->format('o'), (int) $startDate->format('W'));
+    }
+
     $summary = $this->buildSummary($user, $isAdmin, $startDate, $endDate);
 
     return view('asistencias.coordinador-index', array_merge($summary, [
@@ -41,6 +52,8 @@ class AsistenciaCoordinadorController extends Controller
       'filters' => [
         'start_date' => $startDate ? $startDate->toDateString() : null,
         'end_date' => $endDate ? $endDate->toDateString() : null,
+        'week' => $weekValue,
+        'reference_date' => $referenceDateValue,
       ],
     ]));
   }
@@ -63,6 +76,17 @@ class AsistenciaCoordinadorController extends Controller
 
     [$startDate, $endDate] = $this->resolveDateRange($request);
 
+    $weekValue = $request->input('week');
+    $referenceDateValue = $request->input('reference_date');
+
+    if (!$referenceDateValue && $startDate) {
+      $referenceDateValue = $startDate->toDateString();
+    }
+
+    if (!$weekValue && $startDate) {
+      $weekValue = sprintf('%s-W%02d', $startDate->format('o'), (int) $startDate->format('W'));
+    }
+
     $summary = $this->buildSummary($user, $isAdmin, $startDate, $endDate);
 
     $pdf = Pdf::loadView('asistencias.coordinador-pdf', $summary + [
@@ -71,6 +95,8 @@ class AsistenciaCoordinadorController extends Controller
       'filters' => [
         'start_date' => $startDate ? $startDate->toDateString() : null,
         'end_date' => $endDate ? $endDate->toDateString() : null,
+        'week' => $weekValue,
+        'reference_date' => $referenceDateValue,
       ],
     ])->setPaper('a4', 'portrait');
 
@@ -94,6 +120,26 @@ class AsistenciaCoordinadorController extends Controller
     }
 
     $seccionIds = $secciones->pluck('id');
+
+    $dayKeys = [
+      'monday',
+      'tuesday',
+      'wednesday',
+      'thursday',
+      'friday',
+      'saturday',
+      'sunday',
+    ];
+
+    $dayLabels = [
+      'monday' => 'Lun',
+      'tuesday' => 'Mar',
+      'wednesday' => 'Mié',
+      'thursday' => 'Jue',
+      'friday' => 'Vie',
+      'saturday' => 'Sáb',
+      'sunday' => 'Dom',
+    ];
 
     $sectionsData = [];
 
@@ -150,12 +196,51 @@ class AsistenciaCoordinadorController extends Controller
         ->orderBy('estudiantes.nombres')
         ->get();
 
+      $inasistenciasPorDia = AsistenciaEstudiante::select(
+        'secciones.id as seccion_id',
+        'estudiantes.id as estudiante_id',
+        'asistencias.fecha'
+      )
+        ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
+        ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+        ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+        ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+        ->join('estudiantes', 'estudiantes.id', '=', 'asistencia_estudiante.estudiante_id')
+        ->where('asistencia_estudiante.estado', 'I')
+        ->whereIn('secciones.id', $seccionIds)
+        ->when($startDate, function ($query) use ($startDate) {
+          $query->whereDate('asistencias.fecha', '>=', $startDate->toDateString());
+        })
+        ->when($endDate, function ($query) use ($endDate) {
+          $query->whereDate('asistencias.fecha', '<=', $endDate->toDateString());
+        })
+        ->get()
+        ->groupBy(function ($row) {
+          return $row->seccion_id . '|' . $row->estudiante_id;
+        })
+        ->map(function ($rows) use ($dayKeys) {
+          $flags = array_fill_keys($dayKeys, false);
+
+          foreach ($rows as $row) {
+            $fecha = $row->fecha instanceof Carbon ? $row->fecha : Carbon::parse($row->fecha);
+            $dayKey = strtolower($fecha->format('l'));
+
+            if (array_key_exists($dayKey, $flags)) {
+              $flags[$dayKey] = true;
+            }
+          }
+
+          return $flags;
+        });
+
       $totalEstudiantes = $registros->count();
 
       foreach ($registros as $registro) {
         $count = (int) $registro->total_inasistencias;
         $valorDoble = $count * 2;
         $nombreEstudiante = trim($registro->nombres . ' ' . $registro->apellidos);
+        $mapKey = $registro->seccion_id . '|' . $registro->estudiante_id;
+        $diasInasistencia = $inasistenciasPorDia[$mapKey] ?? array_fill_keys($dayKeys, false);
 
         if (!isset($sectionsData[$registro->seccion_id])) {
           $sectionsData[$registro->seccion_id] = [
@@ -175,6 +260,7 @@ class AsistenciaCoordinadorController extends Controller
           'estudiante' => $nombreEstudiante,
           'inasistencias' => $count,
           'valor_doble' => $valorDoble,
+          'dias_inasistencia' => $diasInasistencia,
         ];
 
         $sectionsData[$registro->seccion_id]['total_inasistencias'] += $count;
@@ -204,6 +290,7 @@ class AsistenciaCoordinadorController extends Controller
       'totalSeccionesConInasistencias' => $seccionesConInasistencias,
       'startDate' => $startDate,
       'endDate' => $endDate,
+      'dayLabels' => $dayLabels,
     ];
   }
 
@@ -211,12 +298,35 @@ class AsistenciaCoordinadorController extends Controller
   {
     $startDateInput = $request->input('start_date');
     $endDateInput = $request->input('end_date');
+    $weekInput = $request->input('week');
+    $referenceDateInput = $request->input('reference_date');
 
     $startDate = null;
     $endDate = null;
 
+    if ($referenceDateInput) {
+      try {
+        $reference = Carbon::createFromFormat('Y-m-d', $referenceDateInput);
+        $startDate = $reference->copy()->startOfWeek(Carbon::MONDAY);
+        $endDate = $reference->copy()->endOfWeek(Carbon::SUNDAY);
+      } catch (\Throwable $exception) {
+        $startDate = null;
+        $endDate = null;
+      }
+    }
+
+    if (!$startDate && !$endDate && $weekInput && preg_match('/^(\d{4})-W(\d{2})$/', $weekInput, $matches)) {
+      try {
+        $startDate = Carbon::now()->setISODate((int) $matches[1], (int) $matches[2])->startOfWeek(Carbon::MONDAY);
+        $endDate = $startDate->copy()->endOfWeek(Carbon::SUNDAY);
+      } catch (\Throwable $exception) {
+        $startDate = null;
+        $endDate = null;
+      }
+    }
+
     try {
-      if ($startDateInput) {
+      if (!$startDate && $startDateInput) {
         $startDate = Carbon::createFromFormat('Y-m-d', $startDateInput)->startOfDay();
       }
     } catch (\Throwable $exception) {
@@ -224,7 +334,7 @@ class AsistenciaCoordinadorController extends Controller
     }
 
     try {
-      if ($endDateInput) {
+      if (!$endDate && $endDateInput) {
         $endDate = Carbon::createFromFormat('Y-m-d', $endDateInput)->endOfDay();
       }
     } catch (\Throwable $exception) {
@@ -240,16 +350,16 @@ class AsistenciaCoordinadorController extends Controller
 
     if (!$startDate && !$endDate) {
       $now = Carbon::now();
-      $startDate = $now->copy()->startOfMonth();
-      $endDate = $now->copy()->endOfMonth();
+      $startDate = $now->copy()->startOfWeek(Carbon::MONDAY);
+      $endDate = $now->copy()->endOfWeek(Carbon::SUNDAY);
     }
 
     if ($startDate && !$endDate) {
-      $endDate = $startDate->copy()->endOfMonth();
+      $endDate = $startDate->copy()->endOfWeek(Carbon::SUNDAY);
     }
 
     if (!$startDate && $endDate) {
-      $startDate = $endDate->copy()->startOfMonth();
+      $startDate = $endDate->copy()->startOfWeek(Carbon::MONDAY);
     }
 
     return [$startDate, $endDate];
