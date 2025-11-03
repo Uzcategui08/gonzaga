@@ -53,6 +53,20 @@ class AsistenciaReporteController extends Controller
     {
         $fecha = request('fecha', now()->format('Y-m-d'));
         $user = auth()->user();
+        $flagOptions = [
+            'falta_justificada' => 'Falta justificada',
+            'tarea_pendiente' => 'Tarea pendiente',
+            'conducta' => 'Problema de conducta',
+            'pase_salida' => 'Pase de salida',
+            'retraso' => 'Retraso',
+            's_o' => 'S/O',
+        ];
+
+        $selectedFlag = request('flag');
+
+        if (!array_key_exists($selectedFlag, $flagOptions)) {
+            $selectedFlag = null;
+        }
 
         if ($user->hasRole('coordinador')) {
             $seccionesCoordinador = $user->secciones->pluck('id');
@@ -77,6 +91,12 @@ class AsistenciaReporteController extends Controller
                     $query->whereIn('seccion_id', $seccionesCoordinador);
                 })
                 ->whereDate('fecha', $fecha)
+                ->when($selectedFlag, function ($query) use ($selectedFlag) {
+                    $query->where($selectedFlag, true);
+                })
+                ->when($selectedFlag, function ($query) use ($selectedFlag) {
+                    $query->where($selectedFlag, true);
+                })
                 ->orderBy('fecha', 'desc')
                 ->get();
 
@@ -105,6 +125,9 @@ class AsistenciaReporteController extends Controller
                 }
             ])
                 ->whereDate('fecha', $fecha)
+                ->when($selectedFlag, function ($query) use ($selectedFlag) {
+                    $query->where($selectedFlag, true);
+                })
                 ->orderBy('fecha', 'desc')
                 ->get();
 
@@ -125,7 +148,10 @@ class AsistenciaReporteController extends Controller
         }
 
         return view('asistencias.reporte', [
-            'asistencias' => $asistencias
+            'asistencias' => $asistencias,
+            'flagOptions' => $flagOptions,
+            'selectedFlag' => $selectedFlag,
+            'selectedDate' => $fecha,
         ]);
     }
 

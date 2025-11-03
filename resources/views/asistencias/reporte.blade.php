@@ -8,12 +8,23 @@
             Reporte de Asistencias
         </h1>
         <form method="GET" action="" class="mb-0">
-            <div class="d-flex align-items-end">
-                <div class="mr-2">
+            <div class="d-flex align-items-end flex-wrap">
+                <div class="mr-2 mb-2">
                     <label for="fecha" class="font-weight-bold mb-0">Fecha</label>
-                    <input type="date" name="fecha" id="fecha" class="form-control" value="{{ request('fecha', now()->format('Y-m-d')) }}">
+                    <input type="date" name="fecha" id="fecha" class="form-control" value="{{ $selectedDate }}">
                 </div>
-                <button type="submit" class="btn btn-primary">Filtrar</button>
+                <div class="mr-2 mb-2">
+                    <label for="flag" class="font-weight-bold mb-0">Marca</label>
+                    <select name="flag" id="flag" class="form-control">
+                        <option value="">Todas</option>
+                        @foreach($flagOptions as $value => $label)
+                            <option value="{{ $value }}" {{ ($selectedFlag ?? null) === $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-2">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                </div>
             </div>
         </form>
     </div>
@@ -22,6 +33,11 @@
 
 @section('content')
 <div class="container-fluid px-0">
+    @php
+        $flagOptions = $flagOptions ?? [];
+        $selectedFlag = $selectedFlag ?? null;
+        $selectedDate = $selectedDate ?? request('fecha', now()->format('Y-m-d'));
+    @endphp
     <div class="card shadow-sm">
         <div class="card-header bg-white border-bottom-0">
             <h3 class="card-title mb-0">
