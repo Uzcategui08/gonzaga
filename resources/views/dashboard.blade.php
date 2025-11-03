@@ -106,6 +106,29 @@
 @endphp
 
 <div class="container-fluid">
+@if(!$usuario->hasRole('profesor'))
+	<div class="row justify-content-center">
+		<div class="col-lg-7 col-md-9">
+			<div class="card shadow-lg border-0 maintenance-card">
+				<div class="card-body text-center p-4 p-md-5">
+					<div class="maintenance-icon mb-4">
+						<i class="fas fa-tools"></i>
+					</div>
+					<h3 class="font-weight-bold mb-3">Dashboard en mantenimiento</h3>
+					<p class="text-muted mb-4">
+						Estamos renovando esta sección para ofrecerte una experiencia más clara y útil. Mientras tanto, todas las demás áreas del sistema siguen disponibles con normalidad.
+					</p>
+					<a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('dashboard') }}" class="btn btn-outline-primary btn-sm px-4">
+						<i class="fas fa-arrow-left mr-2"></i>Volver a navegar
+					</a>
+					<a href="{{ route('asistencias.reporte') }}" class="btn btn-primary btn-sm px-4 ml-2">
+						<i class="fas fa-external-link-alt mr-2"></i>Ir al módulo de asistencias
+					</a>
+				</div>
+			</div>
+		</div>
+	</div>
+@else
 	<div class="row mb-4">
 		<div class="col-12">
 			<div class="hero-card">
@@ -478,12 +501,30 @@
 			</div>
 		</div>
 	@endif
+@endif
 </div>
 @endsection
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('/build/assets/admin/admin.css') }}">
 <style>
+	.maintenance-card {
+		border-radius: 1.5rem;
+		background: linear-gradient(145deg, #ffffff 0%, #f5f7ff 100%);
+	}
+
+	.maintenance-icon {
+		font-size: 3rem;
+		color: #6366f1;
+		background: rgba(99, 102, 241, 0.12);
+		width: 80px;
+		height: 80px;
+		border-radius: 50%;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
 	.hero-card {
 		position: relative;
 		border-radius: 22px;
