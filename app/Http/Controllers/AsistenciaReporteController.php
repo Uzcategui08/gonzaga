@@ -10,6 +10,8 @@ use App\Models\Profesor;
 use App\Models\Materia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 
@@ -49,10 +51,17 @@ class AsistenciaReporteController extends Controller
         return $pdf->stream('reporte_asistencias_' . date('Y-m-d') . '.pdf');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $fecha = request('fecha', now()->format('Y-m-d'));
-        $user = auth()->user();
+        [$startDate, $endDate] = $this->resolveDateRange(
+            $request->input('fecha_desde', $request->input('fecha')),
+            $request->input('fecha_hasta', $request->input('fecha')),
+        );
+
+        $startString = $startDate->toDateString();
+        $endString = $endDate->toDateString();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
         $flagOptions = [
             'falta_justificada' => 'Falta justificada',
             'tarea_pendiente' => 'Tarea pendiente',
@@ -68,7 +77,7 @@ class AsistenciaReporteController extends Controller
             $selectedFlag = null;
         }
 
-        if ($user->hasRole('coordinador')) {
+        if ($user && $user->hasRole('coordinador')) {
             $seccionesCoordinador = $user->secciones->pluck('id');
             $asistencias = Asistencia::with([
                 'profesor' => function ($query) {
@@ -90,10 +99,7 @@ class AsistenciaReporteController extends Controller
                 ->whereHas('horario.asignacion', function ($query) use ($seccionesCoordinador) {
                     $query->whereIn('seccion_id', $seccionesCoordinador);
                 })
-                ->whereDate('fecha', $fecha)
-                ->when($selectedFlag, function ($query) use ($selectedFlag) {
-                    $query->where($selectedFlag, true);
-                })
+                ->whereBetween('fecha', [$startString, $endString])
                 ->when($selectedFlag, function ($query) use ($selectedFlag) {
                     $query->where($selectedFlag, true);
                 })
@@ -124,7 +130,7 @@ class AsistenciaReporteController extends Controller
                     $query->select('id', 'nombre');
                 }
             ])
-                ->whereDate('fecha', $fecha)
+                ->whereBetween('fecha', [$startString, $endString])
                 ->when($selectedFlag, function ($query) use ($selectedFlag) {
                     $query->where($selectedFlag, true);
                 })
@@ -151,7 +157,8 @@ class AsistenciaReporteController extends Controller
             'asistencias' => $asistencias,
             'flagOptions' => $flagOptions,
             'selectedFlag' => $selectedFlag,
-            'selectedDate' => $fecha,
+            'selectedStartDate' => $startString,
+            'selectedEndDate' => $endString,
         ]);
     }
 
@@ -195,5 +202,48 @@ class AsistenciaReporteController extends Controller
 
         $pdf = Pdf::loadView('asistencias.registro-pdf', compact('asistenciaData'));
         return $pdf->stream('registro_asistencia_' . date('Y-m-d') . '.pdf');
+    }
+
+    private function resolveDateRange(?string $startDate, ?string $endDate): array
+    {
+        $timezone = 'America/Caracas';
+
+        $start = null;
+        $end = null;
+
+        try {
+            if ($startDate) {
+                $start = Carbon::createFromFormat('Y-m-d', $startDate, $timezone)->startOfDay();
+            }
+        } catch (\Throwable $exception) {
+            $start = null;
+        }
+
+        try {
+            if ($endDate) {
+                $end = Carbon::createFromFormat('Y-m-d', $endDate, $timezone)->endOfDay();
+            }
+        } catch (\Throwable $exception) {
+            $end = null;
+        }
+
+        if (!$start && !$end) {
+            $now = Carbon::now($timezone);
+            return [$now->copy()->startOfDay(), $now->copy()->endOfDay()];
+        }
+
+        if (!$start) {
+            $start = $end?->copy()->startOfDay();
+        }
+
+        if (!$end) {
+            $end = $start?->copy()->endOfDay();
+        }
+
+        if ($start->greaterThan($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
+
+        return [$start->startOfDay(), $end->endOfDay()];
     }
 }

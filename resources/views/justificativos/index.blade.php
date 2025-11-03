@@ -7,11 +7,16 @@
         <h1 class="mb-2 mb-md-0">Justificativos</h1>
         <form method="GET" action="{{ route('justificativos.index') }}" class="form-inline mb-2 mb-md-0">
             @php
-                $dateValue = optional($filterDate ?? null)->format('Y-m-d');
+                $startValue = optional($filterStartDate ?? null)->format('Y-m-d');
+                $endValue = optional($filterEndDate ?? null)->format('Y-m-d');
             @endphp
             <div class="form-group mr-2 mb-0">
-                <label for="date" class="mb-0 mr-2">Fecha</label>
-                <input type="date" name="date" id="date" class="form-control" value="{{ $dateValue }}">
+                <label for="start_date" class="mb-0 mr-2">Desde</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ $startValue }}">
+            </div>
+            <div class="form-group mr-2 mb-0">
+                <label for="end_date" class="mb-0 mr-2">Hasta</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ $endValue }}">
             </div>
             <button type="submit" class="btn btn-primary mr-2">Filtrar</button>
             <a href="{{ route('justificativos.index') }}" class="btn btn-outline-secondary">Hoy</a>

@@ -8,47 +8,55 @@ use App\Models\Estudiante;
 use Illuminate\Http\Request;
 use App\Models\Seccion;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class JustificativoController extends Controller
 {
 
     public function index(Request $request)
     {
-        $user = auth()->user();
-        $filterDate = $this->resolveFilterDate($request->input('date'));
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        [$startDate, $endDate] = $this->resolveDateRange(
+            $request->input('start_date', $request->input('date')),
+            $request->input('end_date', $request->input('date')),
+        );
 
-        $dateString = $filterDate->toDateString();
+        $startString = $startDate->toDateString();
+        $endString = $endDate->toDateString();
 
-        if ($user->hasRole('coordinador')) {
+        if ($user && $user->hasRole('coordinador')) {
             $secciones = $user->secciones;
 
             $justificativos = Justificativo::with(['estudiante', 'usuario'])
                 ->whereHas('estudiante', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
                 })
-                ->whereDate('fecha_inicio', '<=', $dateString)
-                ->whereDate('fecha_fin', '>=', $dateString)
+                ->whereDate('fecha_inicio', '<=', $endString)
+                ->whereDate('fecha_fin', '>=', $startString)
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
         } else {
             $justificativos = Justificativo::with(['estudiante', 'usuario'])
-                ->whereDate('fecha_inicio', '<=', $dateString)
-                ->whereDate('fecha_fin', '>=', $dateString)
+                ->whereDate('fecha_inicio', '<=', $endString)
+                ->whereDate('fecha_fin', '>=', $startString)
                 ->orderBy('fecha_inicio', 'desc')
                 ->get();
         }
 
         return view('justificativos.index', [
             'justificativos' => $justificativos,
-            'filterDate' => $filterDate,
+            'filterStartDate' => $startDate,
+            'filterEndDate' => $endDate,
         ]);
     }
 
     public function create(Request $request)
     {
-        $user = auth()->user();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
 
-        if ($user->hasRole('coordinador')) {
+        if ($user && $user->hasRole('coordinador')) {
             $secciones = $user->secciones;
             $estudiantes = Estudiante::whereIn('seccion_id', $secciones->pluck('id'))
                 ->get();
@@ -84,7 +92,7 @@ class JustificativoController extends Controller
 
         $justificativo = Justificativo::create([
             'estudiante_id' => $validated['estudiante_id'],
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'fecha_inicio' => $validated['fecha_inicio'],
             'fecha_fin' => $validated['fecha_fin'],
             'motivo' => $validated['motivo'],
@@ -99,8 +107,11 @@ class JustificativoController extends Controller
 
     public function show(Justificativo $justificativo)
     {
-        if (auth()->user()->hasRole('profesor')) {
-            $profesor = auth()->user()->profesor;
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if ($user && $user->hasRole('profesor')) {
+            $profesor = $user->profesor;
 
             if (!$profesor) {
                 return redirect()->route('justificativos.profesor')
@@ -159,42 +170,81 @@ class JustificativoController extends Controller
 
     public function indexProfesor(Request $request)
     {
-        if (!auth()->user()->profesor) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->profesor) {
             return redirect('/dashboard')->with('error', 'No tienes permisos para acceder a esta sección');
         }
 
-        $profesor = auth()->user()->profesor;
+        $profesor = $user->profesor;
 
-        $filterDate = $this->resolveFilterDate($request->input('date'));
-        $dateString = $filterDate->toDateString();
+        [$startDate, $endDate] = $this->resolveDateRange(
+            $request->input('start_date', $request->input('date')),
+            $request->input('end_date', $request->input('date')),
+        );
+
+        $startString = $startDate->toDateString();
+        $endString = $endDate->toDateString();
 
         $estudiantes = Estudiante::whereHas('seccion.asignaciones', function ($query) use ($profesor) {
             $query->where('profesor_id', $profesor->id);
         })->get();
 
         $justificativos = Justificativo::whereIn('estudiante_id', $estudiantes->pluck('id'))
-            ->whereDate('fecha_inicio', '<=', $dateString)
-            ->whereDate('fecha_fin', '>=', $dateString)
+            ->whereDate('fecha_inicio', '<=', $endString)
+            ->whereDate('fecha_fin', '>=', $startString)
             ->with(['estudiante', 'usuario'])
             ->orderBy('fecha_inicio', 'desc')
             ->get();
 
         return view('justificativos.profesor', [
             'justificativos' => $justificativos,
-            'filterDate' => $filterDate,
+            'filterStartDate' => $startDate,
+            'filterEndDate' => $endDate,
         ]);
     }
 
-    private function resolveFilterDate(?string $date): Carbon
+    private function resolveDateRange(?string $startDate, ?string $endDate): array
     {
+        $timezone = 'America/Caracas';
+
+        $start = null;
+        $end = null;
+
         try {
-            if ($date) {
-                return Carbon::createFromFormat('Y-m-d', $date, 'America/Caracas')->startOfDay();
+            if ($startDate) {
+                $start = Carbon::createFromFormat('Y-m-d', $startDate, $timezone)->startOfDay();
             }
         } catch (\Throwable $exception) {
-            // Ignore and fall back to today
+            $start = null;
         }
 
-        return Carbon::now('America/Caracas')->startOfDay();
+        try {
+            if ($endDate) {
+                $end = Carbon::createFromFormat('Y-m-d', $endDate, $timezone)->endOfDay();
+            }
+        } catch (\Throwable $exception) {
+            $end = null;
+        }
+
+        if (!$start && !$end) {
+            $now = Carbon::now($timezone);
+            return [$now->copy()->startOfDay(), $now->copy()->endOfDay()];
+        }
+
+        if (!$start) {
+            $start = $end?->copy()->startOfDay();
+        }
+
+        if (!$end) {
+            $end = $start?->copy()->endOfDay();
+        }
+
+        if ($start->greaterThan($end)) {
+            [$start, $end] = [$end->copy()->startOfDay(), $start->copy()->endOfDay()];
+        }
+
+        return [$start->startOfDay(), $end->endOfDay()];
     }
 }

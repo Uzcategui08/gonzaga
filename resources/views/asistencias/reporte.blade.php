@@ -10,8 +10,12 @@
         <form method="GET" action="" class="mb-0">
             <div class="d-flex align-items-end flex-wrap">
                 <div class="mr-2 mb-2">
-                    <label for="fecha" class="font-weight-bold mb-0">Fecha</label>
-                    <input type="date" name="fecha" id="fecha" class="form-control" value="{{ $selectedDate }}">
+                    <label for="fecha_desde" class="font-weight-bold mb-0">Desde</label>
+                    <input type="date" name="fecha_desde" id="fecha_desde" class="form-control" value="{{ $selectedStartDate }}">
+                </div>
+                <div class="mr-2 mb-2">
+                    <label for="fecha_hasta" class="font-weight-bold mb-0">Hasta</label>
+                    <input type="date" name="fecha_hasta" id="fecha_hasta" class="form-control" value="{{ $selectedEndDate }}">
                 </div>
                 <div class="mr-2 mb-2">
                     <label for="flag" class="font-weight-bold mb-0">Marca</label>
@@ -36,7 +40,8 @@
     @php
         $flagOptions = $flagOptions ?? [];
         $selectedFlag = $selectedFlag ?? null;
-        $selectedDate = $selectedDate ?? request('fecha', now()->format('Y-m-d'));
+    $selectedStartDate = $selectedStartDate ?? request('fecha_desde', request('fecha', now()->format('Y-m-d')));
+    $selectedEndDate = $selectedEndDate ?? request('fecha_hasta', request('fecha', now()->format('Y-m-d')));
     @endphp
     <div class="card shadow-sm">
         <div class="card-header bg-white border-bottom-0">
