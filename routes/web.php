@@ -96,6 +96,12 @@ Route::middleware(['auth'])->group(function () {
         ->name('asistencias.coordinador.pdf');
     Route::get('/asistencias/inasistencias-coordinador/secciones/{seccion}/estudiantes/{estudiante}/pdf', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'exportStudentDetailPdf'])
         ->name('asistencias.coordinador.estudiante.pdf');
+    Route::get('/asistencias/inasistencias-coordinador/admin/custom-list', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'customListForm'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':admin'])
+        ->name('asistencias.coordinador.custom-list.form');
+    Route::post('/asistencias/inasistencias-coordinador/admin/custom-list/pdf', [\App\Http\Controllers\AsistenciaCoordinadorController::class, 'exportCustomListPdf'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':admin'])
+        ->name('asistencias.coordinador.custom-list.pdf');
     Route::get('/asistencias/reporte-secretaria', [AsistenciaSecretariaController::class, 'index'])
         ->middleware([\App\Http\Middleware\CheckUserType::class . ':secretaria,admin,coordinador'])
         ->name('asistencias.secretaria.index');

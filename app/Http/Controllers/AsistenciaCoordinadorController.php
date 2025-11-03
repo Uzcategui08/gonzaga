@@ -10,6 +10,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class AsistenciaCoordinadorController extends Controller
 {
@@ -150,6 +151,7 @@ class AsistenciaCoordinadorController extends Controller
       'asistencias.fecha',
       'horarios.hora_inicio',
       'horarios.hora_fin',
+      'horarios.asignacion_id',
       'materias.nombre as materia_nombre',
       'asistencia_estudiante.estado'
     )
@@ -169,6 +171,12 @@ class AsistenciaCoordinadorController extends Controller
       ->orderBy('asistencias.fecha')
       ->orderBy('horarios.hora_inicio')
       ->get()
+      ->unique(function ($row) {
+        $fecha = $row->fecha instanceof Carbon ? $row->fecha->format('Y-m-d') : Carbon::parse($row->fecha)->format('Y-m-d');
+        $asignacionId = $row->asignacion_id ?? $row->asistencia_id;
+
+        return $fecha . '|' . $asignacionId;
+      })
       ->map(function ($row) {
         $fecha = $row->fecha instanceof Carbon ? $row->fecha->copy() : Carbon::parse($row->fecha);
         $horaInicio = $row->hora_inicio ? substr($row->hora_inicio, 0, 5) : null;
@@ -186,7 +194,8 @@ class AsistenciaCoordinadorController extends Controller
           'estado' => $estado,
           'horas_inasistencia' => $horasInasistencia,
         ];
-      });
+      })
+      ->values();
 
     $totales = [
       'P' => 0,
@@ -229,6 +238,141 @@ class AsistenciaCoordinadorController extends Controller
     );
 
     return $pdf->stream($fileName);
+  }
+
+  public function customListForm(Request $request)
+  {
+    /** @var User|null $user */
+    $user = Auth::user();
+
+    if (!$user || !$user->hasRole('admin')) {
+      abort(403, 'Acceso no autorizado');
+    }
+
+    $sections = Seccion::with('grado')
+      ->orderBy('nombre')
+      ->get();
+
+    $layoutDefaults = [
+      'name_column_width' => 60,
+      'extra_field_width' => 30,
+      'custom_column_width' => 30,
+      'row_height' => 12,
+    ];
+
+    return view('asistencias.coordinador-custom-list', [
+      'sections' => $sections,
+      'availableFields' => $this->availableStudentFields(),
+      'defaults' => $layoutDefaults,
+      'old' => [
+        'seccion_id' => $request->old('seccion_id'),
+        'extra_field' => $request->old('extra_field'),
+        'custom_columns' => $request->old('custom_columns', []),
+        'name_column_width' => $request->old('name_column_width'),
+        'extra_field_width' => $request->old('extra_field_width'),
+        'custom_column_width' => $request->old('custom_column_width'),
+        'row_height' => $request->old('row_height'),
+      ],
+    ]);
+  }
+
+  public function exportCustomListPdf(Request $request)
+  {
+    /** @var User|null $user */
+    $user = Auth::user();
+
+    if (!$user || !$user->hasRole('admin')) {
+      abort(403, 'Acceso no autorizado');
+    }
+
+    $availableFields = $this->availableStudentFields();
+
+    $validated = $request->validate([
+      'seccion_id' => ['required', 'integer', 'exists:secciones,id'],
+      'extra_field' => ['nullable', Rule::in(array_keys($availableFields))],
+      'custom_columns' => ['nullable', 'array'],
+      'custom_columns.*' => ['nullable', 'string', 'max:60'],
+      'name_column_width' => ['nullable', 'numeric', 'min:10', 'max:200'],
+      'extra_field_width' => ['nullable', 'numeric', 'min:10', 'max:200'],
+      'custom_column_width' => ['nullable', 'numeric', 'min:10', 'max:200'],
+      'row_height' => ['nullable', 'numeric', 'min:5', 'max:80'],
+    ]);
+
+    $seccion = Seccion::with('grado')->findOrFail($validated['seccion_id']);
+
+    $students = Estudiante::where('seccion_id', $seccion->id)
+      ->orderBy('apellidos')
+      ->orderBy('nombres')
+      ->get();
+
+    $extraFieldKey = $validated['extra_field'] ?? null;
+    $extraFieldLabel = $extraFieldKey ? $availableFields[$extraFieldKey] : null;
+
+    $customColumns = collect($validated['custom_columns'] ?? [])
+      ->filter(function ($value) {
+        return filled($value);
+      })
+      ->values()
+      ->all();
+
+    $nameColumnWidth = $validated['name_column_width'] ?? null;
+    $extraFieldWidth = $validated['extra_field_width'] ?? null;
+    $customColumnWidth = $validated['custom_column_width'] ?? null;
+    $rowHeight = $validated['row_height'] ?? null;
+
+    if ($nameColumnWidth === null) {
+      $nameColumnWidth = 60;
+    }
+
+    if ($customColumnWidth === null) {
+      $customColumnWidth = 30;
+    }
+
+    if ($rowHeight === null) {
+      $rowHeight = 12;
+    }
+
+    if ($extraFieldWidth === null && $extraFieldKey) {
+      $extraFieldWidth = 30;
+    }
+
+    $pdf = Pdf::loadView('asistencias.coordinador-custom-list-pdf', [
+      'usuario' => $user,
+      'generatedAt' => now(),
+      'seccion' => $seccion,
+      'students' => $students,
+      'extraFieldKey' => $extraFieldKey,
+      'extraFieldLabel' => $extraFieldLabel,
+      'customColumns' => $customColumns,
+      'nameColumnWidth' => $nameColumnWidth,
+      'extraFieldWidth' => $extraFieldWidth,
+      'customColumnWidth' => $customColumnWidth,
+      'rowHeight' => $rowHeight,
+    ])->setPaper('a4', 'portrait');
+
+    $fileName = sprintf(
+      'lista_personalizada_seccion_%s_%s.pdf',
+      $seccion->id,
+      now()->format('Y-m-d_His')
+    );
+
+    return $pdf->stream($fileName);
+  }
+
+  private function availableStudentFields(): array
+  {
+    return [
+      'codigo_estudiante' => 'C.I.',
+      'fecha_nacimiento' => 'Fecha de nacimiento',
+      'genero' => 'Género',
+      'direccion' => 'Dirección',
+      'contacto_emergencia_nombre' => 'Contacto emergencia',
+      'contacto_emergencia_parentesco' => 'Parentesco contacto',
+      'contacto_emergencia_telefono' => 'Teléfono contacto',
+      'estado' => 'Estado',
+      'fecha_ingreso' => 'Fecha de ingreso',
+      'observaciones' => 'Observaciones',
+    ];
   }
 
   private function buildSummary(User $user, bool $isAdmin, ?Carbon $startDate = null, ?Carbon $endDate = null): array
@@ -291,7 +435,7 @@ class AsistenciaCoordinadorController extends Controller
         'estudiantes.nombres',
         'estudiantes.apellidos'
       )
-        ->selectRaw('COUNT(*) as total_inasistencias')
+        ->selectRaw('COUNT(DISTINCT CONCAT(asistencias.fecha, "-", horarios.asignacion_id)) as total_inasistencias')
         ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
         ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
         ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')

@@ -527,6 +527,12 @@ return [
             'icon' => 'fas fa-broom',
             'can' => 'admin'
         ],
+        [
+            'text' => 'Lista personalizada',
+            'url' => 'asistencias/inasistencias-coordinador/admin/custom-list',
+            'icon' => 'fas fa-file-export',
+            'can' => 'admin',
+        ],
         ['header' => 'CONFIGURACIÓN'],
         [
             'text' => 'Perfil',
