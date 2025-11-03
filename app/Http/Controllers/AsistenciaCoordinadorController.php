@@ -435,7 +435,7 @@ class AsistenciaCoordinadorController extends Controller
         'estudiantes.nombres',
         'estudiantes.apellidos'
       )
-        ->selectRaw('COUNT(DISTINCT CONCAT(asistencias.fecha, "-", horarios.asignacion_id)) as total_inasistencias')
+        ->selectRaw("COUNT(DISTINCT CONCAT(asistencias.fecha::text, '-', horarios.asignacion_id)) as total_inasistencias")
         ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
         ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
         ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
