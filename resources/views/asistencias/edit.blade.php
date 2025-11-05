@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             @foreach($asistencia->estudiantes as $index => $estudiante)
                                             <tr>
                                                 <td>
-                                                    <strong>{{ $index + 1 }}. {{ $estudiante->nombres }} {{ $estudiante->apellidos }}</strong>
+                                                    <strong>{{ $index + 1 }}.  {{ $estudiante->apellidos }} {{ $estudiante->nombres }}</strong>
                                                     @if($pasesActivos->contains($estudiante->estudiante_id))
                                                         <div class="d-flex align-items-center mt-1">
                                                             <span class="badge badge-pill py-2 px-3 badge-warning mr-2">Pase Activo</span>
