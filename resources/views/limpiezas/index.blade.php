@@ -94,7 +94,7 @@
                                             </span>
                                         </td>
                                         <td>
-                                            {{ $clase->asignacion->usuario->name ?? 'Sin profesor' }}
+                                            {{ optional(optional($clase->asignacion->profesor)->usuario)->name ?? 'Sin profesor' }}
                                         </td>
                                         <td class="text-truncate" style="max-width: 200px;" title="{{ $clase->asignacion->materia->nombre ?? 'Sin materia' }}">
                                             {{ $clase->asignacion->materia->nombre ?? 'Sin materia' }}

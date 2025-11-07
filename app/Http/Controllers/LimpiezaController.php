@@ -111,35 +111,65 @@ class LimpiezaController extends Controller
         // Construir resumen por sección para admin: estudiantes asignados hoy
         $limpiezasSecciones = collect();
         if ($esAdmin) {
-            $limpiezasSecciones = Limpieza::whereDate('fecha', $fechaActual)
+            $horariosDia = Horario::where('dia', $diaActual)
                 ->with([
-                    'horario.asignacion.seccion.grado',
-                    'horario.asignacion.seccion',
-                    'profesor.usuario'
-                ])
-                ->get()
-                ->map(function ($limpieza) {
-                    $tareas = collect(json_decode($limpieza->estudiantes_tareas ?? '[]', true));
-                    $seccion = optional(optional(optional($limpieza->horario)->asignacion)->seccion);
-                    return [
-                        'seccion_id' => $seccion?->id,
-                        'seccion_nombre' => $seccion ? ($seccion->grado->nombre . ' - ' . $seccion->nombre) : 'Sin sección',
-                        'profesor' => optional($limpieza->profesor->usuario)->name,
-                        'hora' => ($limpieza->hora_inicio?->format('H:i') ?? $limpieza->hora_inicio) . ' - ' . ($limpieza->hora_fin?->format('H:i') ?? $limpieza->hora_fin),
-                        'realizada' => $limpieza->realizada,
-                        'estudiantes' => $tareas->map(function ($t) {
-                            $est = Estudiante::find($t['id']);
-                            return [
-                                'id' => $t['id'],
-                                'nombre' => $est ? $est->apellidos_nombres : 'Estudiante ' . $t['id'],
-                                'tarea' => $t['tarea'] ?? 'Limpieza',
-                                'realizada' => $t['realizada'] ?? false,
-                                'observaciones' => $t['observaciones'] ?? null,
-                            ];
-                        })
-                    ];
+                    'asignacion.seccion.grado',
+                    'asignacion.seccion.estudiantes',
+                    'asignacion.profesor.usuario'
+                ])->get();
+
+            // Tomar el último horario del día por sección
+            $ultimoHorarioPorSeccion = $horariosDia
+                ->filter(function ($h) {
+                    return optional($h->asignacion)->seccion;
                 })
-                ->groupBy('seccion_id');
+                ->groupBy(function ($h) {
+                    return $h->asignacion->seccion->id;
+                })
+                ->map(function ($lista) {
+                    return $lista->sortBy(function ($h) {
+                        return Carbon::parse($h->hora_fin);
+                    })->last();
+                });
+
+            $limpiezasSecciones = $ultimoHorarioPorSeccion->map(function ($horario) {
+                $seccion = $horario->asignacion->seccion;
+                $estudiantes = $seccion->estudiantes->sortBy(['apellidos', 'nombres'])->values();
+                $total = $estudiantes->count();
+
+                // offset por número de limpiezas realizadas históricas de esa sección
+                $completadas = Limpieza::where('realizada', true)
+                    ->whereHas('horario.asignacion', function ($q) use ($seccion) {
+                        $q->where('seccion_id', $seccion->id);
+                    })
+                    ->count();
+                $offset = $total > 0 ? ($completadas % $total) : 0;
+
+                $seleccion = collect();
+                for ($i = 0; $i < min(3, $total); $i++) {
+                    $idx = ($offset + $i) % $total;
+                    $alumno = $estudiantes[$idx];
+                    $seleccion->push([
+                        'id' => $alumno->id,
+                        'nombre' => $alumno->apellidos_nombres,
+                        'tarea' => 'Limpieza',
+                        'realizada' => false,
+                        'observaciones' => null,
+                    ]);
+                }
+
+                $profesor = optional($horario->asignacion->profesor)->usuario;
+                $item = [
+                    'seccion_id' => $seccion->id,
+                    'seccion_nombre' => $seccion->grado->nombre . ' - ' . $seccion->nombre,
+                    'profesor' => $profesor ? $profesor->name : 'Sin profesor',
+                    'hora' => Carbon::parse($horario->hora_inicio)->format('H:i') . ' - ' . Carbon::parse($horario->hora_fin)->format('H:i'),
+                    'realizada' => false,
+                    'estudiantes' => $seleccion,
+                ];
+                // Devolver como colección con un único elemento para que el blade pueda iterar
+                return collect([$item]);
+            });
         }
 
         return view('limpiezas.index', compact('clasesHoy', 'limpiezas', 'esCoordinador', 'esProfesor', 'esAdmin', 'limpiezasSecciones'));
