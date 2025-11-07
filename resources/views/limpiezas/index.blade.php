@@ -16,6 +16,53 @@
 <div class="container-fluid px-0">
     <div class="card shadow-sm">
         <div class="card-body p-3">
+            @if(isset($esAdmin) && $esAdmin)
+                <div class="mb-4">
+                    <h3 class="mb-3 text-muted">Asignados por Sección (Hoy)</h3>
+                    <div class="table-responsive-md rounded-lg">
+                        <table class="table table-hover mb-0 datatable" id="limpiezasSeccionTable">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th class="text-nowrap">#</th>
+                                    <th class="py-3">Sección</th>
+                                    <th class="py-3">Profesor</th>
+                                    <th class="py-3">Horario</th>
+                                    <th class="py-3">Estudiante</th>
+                                    <th class="py-3">Tarea</th>
+                                    <th class="text-center py-3">Realizada</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $row = 1; @endphp
+                                @foreach(($limpiezasSecciones ?? collect()) as $seccionId => $items)
+                                    @foreach($items as $item)
+                                        @foreach(($item['estudiantes'] ?? collect()) as $est)
+                                            <tr>
+                                                <td>{{ $row++ }}</td>
+                                                <td>
+                                                    <span class="font-weight-semibold text-dark">{{ $item['seccion_nombre'] }}</span>
+                                                </td>
+                                                <td>{{ $item['profesor'] ?? 'Sin profesor' }}</td>
+                                                <td>
+                                                    <span class="badge badge-pill py-2 px-3 badge-dark">{{ $item['hora'] }}</span>
+                                                </td>
+                                                <td>{{ $est['nombre'] }}</td>
+                                                <td>{{ $est['tarea'] }}</td>
+                                                <td class="text-center">
+                                                    <span class="badge badge-pill py-2 px-3 {{ ($est['realizada'] ?? false) ? 'badge-success' : 'badge-warning' }}">
+                                                        {{ ($est['realizada'] ?? false) ? 'Sí' : 'Pendiente' }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @endforeach
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
             @if($esCoordinador)
                 <div class="mb-4">
                     <h3 class="mb-3 text-muted">Últimas clases del día</h3>

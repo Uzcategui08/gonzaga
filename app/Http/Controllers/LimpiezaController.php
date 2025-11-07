@@ -9,6 +9,7 @@ use App\Models\Aula;
 use App\Models\Estudiante;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -31,25 +32,52 @@ class LimpiezaController extends Controller
 
         $diaActual = $diasTraduccion[$diaIngles] ?? 'Lunes';
 
-        $esCoordinador = auth()->user()->hasRole('coordinador');
-        $esProfesor = auth()->user()->hasRole('profesor');
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        $esCoordinador = $user && $user->hasRole('coordinador');
+        $esProfesor = $user && $user->hasRole('profesor');
+        $esAdmin = $user && $user->hasRole('admin');
 
         if ($esCoordinador) {
-            $secciones = auth()->user()->secciones;
+            $secciones = $user->secciones;
 
             $clasesHoy = Horario::where('dia', $diaActual)
-                ->whereHas('asignacion', function($query) use ($secciones) {
+                ->whereHas('asignacion', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
                 })
                 ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
                 ->get();
         } else if ($esProfesor) {
-            $clasesHoy = Horario::where('dia', $diaActual)
-                ->whereHas('asignacion', function($query) {
-                    $query->where('profesor_id', auth()->id());
-                })
-                ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
-                ->get();
+            $profesor = $user->profesor;
+            if ($profesor) {
+                $clasesHoy = Horario::where('dia', $diaActual)
+                    ->whereHas('asignacion', function ($query) use ($profesor) {
+                        $query->where('profesor_id', $profesor->id);
+                    })
+                    ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
+                    ->get();
+
+                // Crear automáticamente limpieza para la última clase del día del profesor si no existe
+                if ($clasesHoy->isNotEmpty()) {
+                    $ultimaClase = $clasesHoy->sortBy(function ($h) {
+                        return Carbon::parse($h->hora_fin);
+                    })->last();
+
+                    if ($ultimaClase) {
+                        $limpiezaExistente = Limpieza::whereDate('fecha', $fechaActual)
+                            ->where('horario_id', $ultimaClase->id)
+                            ->where('profesor_id', $profesor->id)
+                            ->first();
+
+                        if (!$limpiezaExistente) {
+                            $this->crearLimpiezaRotativa($profesor->id, $ultimaClase, $fechaActual);
+                        }
+                    }
+                }
+            } else {
+                // Profesor con rol pero sin perfil asociado
+                $clasesHoy = collect();
+            }
         } else {
             $clasesHoy = Horario::where('dia', $diaActual)
                 ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.seccion.grado', 'asignacion.profesor'])
@@ -58,54 +86,95 @@ class LimpiezaController extends Controller
 
         if ($esCoordinador) {
 
-            $secciones = auth()->user()->secciones;
+            $secciones = $user->secciones;
 
             $limpiezas = Limpieza::whereDate('fecha', $fechaActual)
-                ->whereHas('profesor.asignaciones', function($query) use ($secciones) {
+                ->whereHas('profesor.asignaciones', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
                 })
                 ->with(['profesor.usuario'])
                 ->orderBy('fecha', 'desc')
                 ->get();
         } else {
-            $limpiezas = Limpieza::where('profesor_id', auth()->id())
-                ->whereDate('fecha', $fechaActual)
-                ->with(['profesor.usuario'])
-                ->orderBy('fecha', 'desc')
-                ->get();
+            $profesor = $user->profesor;
+            if ($esProfesor && $profesor) {
+                $limpiezas = Limpieza::where('profesor_id', $profesor->id)
+                    ->whereDate('fecha', $fechaActual)
+                    ->with(['profesor.usuario'])
+                    ->orderBy('fecha', 'desc')
+                    ->get();
+            } else {
+                $limpiezas = collect();
+            }
         }
 
-        return view('limpiezas.index', compact('clasesHoy', 'limpiezas', 'esCoordinador', 'esProfesor'));
+        // Construir resumen por sección para admin: estudiantes asignados hoy
+        $limpiezasSecciones = collect();
+        if ($esAdmin) {
+            $limpiezasSecciones = Limpieza::whereDate('fecha', $fechaActual)
+                ->with([
+                    'horario.asignacion.seccion.grado',
+                    'horario.asignacion.seccion',
+                    'profesor.usuario'
+                ])
+                ->get()
+                ->map(function ($limpieza) {
+                    $tareas = collect(json_decode($limpieza->estudiantes_tareas ?? '[]', true));
+                    $seccion = optional(optional(optional($limpieza->horario)->asignacion)->seccion);
+                    return [
+                        'seccion_id' => $seccion?->id,
+                        'seccion_nombre' => $seccion ? ($seccion->grado->nombre . ' - ' . $seccion->nombre) : 'Sin sección',
+                        'profesor' => optional($limpieza->profesor->usuario)->name,
+                        'hora' => ($limpieza->hora_inicio?->format('H:i') ?? $limpieza->hora_inicio) . ' - ' . ($limpieza->hora_fin?->format('H:i') ?? $limpieza->hora_fin),
+                        'realizada' => $limpieza->realizada,
+                        'estudiantes' => $tareas->map(function ($t) {
+                            $est = Estudiante::find($t['id']);
+                            return [
+                                'id' => $t['id'],
+                                'nombre' => $est ? $est->apellidos_nombres : 'Estudiante ' . $t['id'],
+                                'tarea' => $t['tarea'] ?? 'Limpieza',
+                                'realizada' => $t['realizada'] ?? false,
+                                'observaciones' => $t['observaciones'] ?? null,
+                            ];
+                        })
+                    ];
+                })
+                ->groupBy('seccion_id');
+        }
+
+        return view('limpiezas.index', compact('clasesHoy', 'limpiezas', 'esCoordinador', 'esProfesor', 'esAdmin', 'limpiezasSecciones'));
     }
 
     public function create(Request $request, $id = null)
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect()->route('login')->with('error', 'Por favor, inicie sesión primero');
         }
 
         try {
-            $esCoordinador = auth()->user()->hasRole('coordinador');
-            $esProfesor = auth()->user()->hasRole('profesor');
+            /** @var \App\Models\User|null $user */
+            $user = Auth::user();
+            $esCoordinador = $user && $user->hasRole('coordinador');
+            $esProfesor = $user && $user->hasRole('profesor');
 
             if ($esProfesor) {
-                $profesor = auth()->user()->profesor;
+                $profesor = $user->profesor;
                 if (!$profesor) {
                     return redirect()->back()->with('error', 'No tienes un perfil de profesor asociado');
                 }
 
                 $diaActual = Carbon::now('America/Caracas')->format('l');
-                $clasesProfesor = Horario::whereHas('asignacion', function($query) use ($profesor) {
+                $clasesProfesor = Horario::whereHas('asignacion', function ($query) use ($profesor) {
                     $query->where('profesor_id', $profesor->id);
                 })
-                ->where('dia', $diaActual)
-                ->with([
-                    'asignacion.profesor',
-                    'asignacion.usuario',
-                    'asignacion.seccion.estudiantes',
-                    'asignacion.materia'
-                ])
-                ->get();
+                    ->where('dia', $diaActual)
+                    ->with([
+                        'asignacion.profesor',
+                        'asignacion.usuario',
+                        'asignacion.seccion.estudiantes',
+                        'asignacion.materia'
+                    ])
+                    ->get();
             } else if ($esCoordinador) {
                 $clasesProfesor = collect();
             } else {
@@ -144,18 +213,18 @@ class LimpiezaController extends Controller
                     $estudiantes = collect();
                     if ($request->old('estudiantes')) {
                         $estudiantes = collect($request->old('estudiantes'))
-                            ->map(function($estudianteData) use ($estudiantesDeSeccion) {
+                            ->map(function ($estudianteData) use ($estudiantesDeSeccion) {
                                 return $estudiantesDeSeccion->firstWhere('id', $estudianteData['id']);
                             })
-                            ->filter(); 
+                            ->filter();
                     }
 
-                    $estudiantesDisponibles = $estudiantesDeSeccion->filter(function($estudiante) use ($estudiantes) {
+                    $estudiantesDisponibles = $estudiantesDeSeccion->filter(function ($estudiante) use ($estudiantes) {
                         return !$estudiantes->contains('id', $estudiante->id);
                     });
 
                     if ($estudiantes->isEmpty() && !$estudiantesDisponibles->isEmpty()) {
-                        $estudiantes = collect(); 
+                        $estudiantes = collect();
                     } else if ($estudiantes->isEmpty() && $estudiantesDisponibles->isEmpty()) {
                         return redirect()->back()->with('error', 'No hay estudiantes asignados a esta sección');
                     }
@@ -172,12 +241,11 @@ class LimpiezaController extends Controller
                     return redirect()->back()->with('error', 'Horario no encontrado o no válido');
                 }
             }
-
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error al cargar el formulario. Por favor, contacte al administrador.');
         }
     }
-    
+
 
     public function getEstudiantes(Horario $clase)
     {
@@ -202,14 +270,16 @@ class LimpiezaController extends Controller
             $validated['hora_inicio'] = Carbon::parse($validated['hora_inicio'])->format('H:i');
             $validated['hora_fin'] = Carbon::parse($validated['hora_fin'])->format('H:i');
 
-            $esCoordinador = auth()->user()->hasRole('coordinador');
-            $esProfesor = auth()->user()->hasRole('profesor');
+            /** @var \App\Models\User|null $user */
+            $user = Auth::user();
+            $esCoordinador = $user && $user->hasRole('coordinador');
+            $esProfesor = $user && $user->hasRole('profesor');
 
             $clase = Horario::with(['asignacion.seccion', 'asignacion.materia'])
                 ->findOrFail($validated['horario_id']);
 
             if ($esProfesor) {
-                $profesor = auth()->user()->profesor;
+                $profesor = $user->profesor;
                 if ($clase->asignacion->profesor_id !== $profesor->id) {
                     return redirect()->route('limpiezas.index')
                         ->with('error', 'No tienes permiso para asignar limpiezas a esta clase');
@@ -221,7 +291,7 @@ class LimpiezaController extends Controller
 
             try {
                 $limpieza = Limpieza::create([
-                    'profesor_id' => $request->profesor_id, 
+                    'profesor_id' => $request->profesor_id,
                     'horario_id' => $validated['horario_id'],
                     'fecha' => $validated['fecha'],
                     'hora_inicio' => $validated['hora_inicio'],
@@ -234,7 +304,6 @@ class LimpiezaController extends Controller
 
             return redirect()->route('limpiezas.index')
                 ->with('success', 'Limpieza asignada exitosamente');
-
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
@@ -245,7 +314,7 @@ class LimpiezaController extends Controller
     public function show(Limpieza $limpieza)
     {
         $limpieza->estudiantes_tareas = json_decode($limpieza->estudiantes_tareas, true) ?? [];
-        
+
         $limpieza->load('horario.asignacion.seccion');
 
         $idsEstudiantesAsignados = array_column($limpieza->estudiantes_tareas, 'id');
@@ -273,13 +342,15 @@ class LimpiezaController extends Controller
                 'observaciones' => $tareaData['observaciones'] ?? ''
             ];
         }
-        
+
         return view('limpiezas.show', compact('limpieza', 'estudiantes', 'estudiantesConTareas'));
     }
 
     public function edit(Limpieza $limpieza)
     {
-        if (auth()->user()->hasRole('profesor') && $limpieza->realizada) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        if ($user && $user->hasRole('profesor') && $limpieza->realizada) {
             return redirect()->route('limpiezas.index')
                 ->with('error', 'No puedes editar una limpieza que ya ha sido completada');
         }
@@ -296,24 +367,24 @@ class LimpiezaController extends Controller
         ]);
 
         $limpieza->load('horario.asignacion.seccion');
-        
+
         $estudiantes = $limpieza->horario->asignacion->seccion->estudiantes()
             ->get()
-            ->filter(function($estudiante) use ($limpieza) {
+            ->filter(function ($estudiante) use ($limpieza) {
                 return in_array($estudiante->id, array_column($limpieza->estudiantes_tareas, 'id'));
             })
             ->sortBy('apellidos');
-        
+
         Log::info('Estudiantes filtrados:', [
             'count' => $estudiantes->count(),
             'estudiantes' => $estudiantes->pluck('id', 'nombres')->toArray()
         ]);
 
         $tareasPorEstudiante = collect($limpieza->estudiantes_tareas)
-            ->mapWithKeys(function($tareaData) {
+            ->mapWithKeys(function ($tareaData) {
                 return [$tareaData['id'] => $tareaData];
             });
-        
+
         Log::info('Tareas por estudiante:', [
             'tareas' => $tareasPorEstudiante->toArray()
         ]);
@@ -331,10 +402,12 @@ class LimpiezaController extends Controller
     public function update(Request $request, Limpieza $limpieza)
     {
         try {
-            if ($limpieza->profesor_id !== auth()->user()->profesor->id) {
+            /** @var \App\Models\User|null $user */
+            $user = Auth::user();
+            if (!$user || !$user->profesor || $limpieza->profesor_id !== $user->profesor->id) {
                 return redirect()->back()->with('error', 'No tienes permisos para actualizar esta limpieza');
             }
-            
+
             $request->validate([
                 'fecha' => 'required|date',
                 'hora_inicio' => 'required|date_format:H:i',
@@ -347,12 +420,12 @@ class LimpiezaController extends Controller
                 'estudiantes_tareas.*.realizada' => 'nullable|boolean',
                 'estudiantes_tareas.*.observaciones' => 'nullable|string'
             ]);
-            
+
             $estudiantesTareas = [];
             if ($request->has('estudiantes_tareas')) {
                 foreach ($request->estudiantes_tareas as $id => $data) {
                     $realizada = isset($data['realizada']) && $data['realizada'] == '1';
-                    
+
                     $estudiantesTareas[$id] = [
                         'id' => $id,
                         'tarea' => $data['tarea'],
@@ -370,10 +443,9 @@ class LimpiezaController extends Controller
                 'observaciones' => $request->observaciones,
                 'estudiantes_tareas' => json_encode($estudiantesTareas)
             ]);
-            
+
             return redirect()->route('limpiezas.index')
                 ->with('success', 'Limpieza actualizada exitosamente');
-                
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
@@ -391,4 +463,60 @@ class LimpiezaController extends Controller
         }
     }
 
+    /**
+     * Crea una limpieza con 3 estudiantes por rotación en la sección de la clase indicada.
+     * Avanza la rotación sólo en base a limpiezas realizadas (realizada = true).
+     */
+    private function crearLimpiezaRotativa(int $profesorId, Horario $horario, Carbon $fechaActual): void
+    {
+        // Obtener estudiantes ordenados por apellidos en la sección
+        $seccion = optional($horario->asignacion)->seccion;
+        if (!$seccion) {
+            return;
+        }
+
+        $estudiantes = Estudiante::where('seccion_id', $seccion->id)
+            ->orderBy('apellidos')
+            ->orderBy('nombres')
+            ->get();
+
+        if ($estudiantes->isEmpty()) {
+            return;
+        }
+
+        // Contar limpiezas realizadas para esta sección (rotación avanza sólo con realizadas)
+        $completadas = Limpieza::where('realizada', true)
+            ->whereHas('horario.asignacion', function ($q) use ($seccion) {
+                $q->where('seccion_id', $seccion->id);
+            })
+            ->count();
+
+        $total = $estudiantes->count();
+        $offset = $total > 0 ? ($completadas % $total) : 0;
+
+        // Seleccionar 3 estudiantes en orden circular
+        $seleccion = [];
+        for ($i = 0; $i < min(3, $total); $i++) {
+            $idx = ($offset + $i) % $total;
+            $alumno = $estudiantes[$idx];
+            $seleccion[] = [
+                'id' => $alumno->id,
+                'tarea' => 'Limpieza general',
+                'realizada' => false,
+                'observaciones' => null,
+            ];
+        }
+
+        // Crear registro de limpieza inicial (no realizada)
+        Limpieza::create([
+            'profesor_id' => $profesorId,
+            'horario_id' => $horario->id,
+            'fecha' => $fechaActual->toDateString(),
+            'hora_inicio' => Carbon::parse($horario->hora_inicio)->format('H:i'),
+            'hora_fin' => Carbon::parse($horario->hora_fin)->format('H:i'),
+            'realizada' => false,
+            'estudiantes_tareas' => json_encode($seleccion),
+            'observaciones' => null,
+        ]);
+    }
 }
