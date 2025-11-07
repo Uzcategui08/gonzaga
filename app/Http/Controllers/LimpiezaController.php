@@ -157,7 +157,31 @@ class LimpiezaController extends Controller
                     ->first();
 
                 if ($limpiezaExistente) {
-                    $seleccion = collect($limpiezaExistente->estudiantes_tareas ?? []);
+                    $raw = $limpiezaExistente->estudiantes_tareas ?? [];
+                    // Normalizar estructura: cada item debe tener id, nombre, tarea, realizada, observaciones
+                    $seleccion = collect($raw)->map(function ($val, $key) {
+                        // Si es escalar (id plano), construir estructura básica
+                        if (!is_array($val)) {
+                            $id = is_numeric($val) ? (int)$val : null;
+                            $data = [
+                                'tarea' => 'Limpieza',
+                                'realizada' => false,
+                                'observaciones' => null,
+                            ];
+                        } else {
+                            $id = $val['id'] ?? (is_numeric($key) ? (int)$key : null);
+                            $data = $val;
+                        }
+
+                        $est = $id ? Estudiante::find($id) : null;
+                        return [
+                            'id' => $id,
+                            'nombre' => $est ? $est->apellidos_nombres : ($data['nombre'] ?? 'Estudiante'),
+                            'tarea' => $data['tarea'] ?? 'Limpieza',
+                            'realizada' => (bool)($data['realizada'] ?? false),
+                            'observaciones' => $data['observaciones'] ?? null,
+                        ];
+                    })->values();
                     $realizada = $limpiezaExistente->realizada;
                 } else {
                     $seleccion = collect();
