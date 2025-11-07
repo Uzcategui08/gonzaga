@@ -161,12 +161,18 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="text-center py-4">
+                                        <td></td>
+                                        <td class="text-center py-4" colspan="1">
                                             <div class="text-muted">
                                                 <i class="fas fa-calendar-times fa-3x mb-3"></i>
                                                 <p class="mb-0">No hay clases programadas para hoy</p>
                                             </div>
                                         </td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -263,12 +269,18 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-4">
+                                    <td></td>
+                                    <td class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-broom fa-3x mb-3"></i>
                                             <p class="mb-0">No hay limpiezas registradas</p>
                                         </div>
                                     </td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
                                 </tr>
                             @endforelse
                         </tbody>

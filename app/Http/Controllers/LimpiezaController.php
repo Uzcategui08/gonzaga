@@ -103,6 +103,12 @@ class LimpiezaController extends Controller
                     ->with(['profesor.usuario'])
                     ->orderBy('fecha', 'desc')
                     ->get();
+            } elseif ($esAdmin) {
+                // Admin debe ver todas las limpiezas del día
+                $limpiezas = Limpieza::whereDate('fecha', $fechaActual)
+                    ->with(['profesor.usuario'])
+                    ->orderBy('fecha', 'desc')
+                    ->get();
             } else {
                 $limpiezas = collect();
             }
@@ -132,7 +138,7 @@ class LimpiezaController extends Controller
                     })->last();
                 });
 
-            $limpiezasSecciones = $ultimoHorarioPorSeccion->map(function ($horario) {
+            $limpiezasSecciones = $ultimoHorarioPorSeccion->map(function ($horario) use ($fechaActual) {
                 $seccion = $horario->asignacion->seccion;
                 $estudiantes = $seccion->estudiantes->sortBy(['apellidos', 'nombres'])->values();
                 $total = $estudiantes->count();
@@ -145,17 +151,28 @@ class LimpiezaController extends Controller
                     ->count();
                 $offset = $total > 0 ? ($completadas % $total) : 0;
 
-                $seleccion = collect();
-                for ($i = 0; $i < min(3, $total); $i++) {
-                    $idx = ($offset + $i) % $total;
-                    $alumno = $estudiantes[$idx];
-                    $seleccion->push([
-                        'id' => $alumno->id,
-                        'nombre' => $alumno->apellidos_nombres,
-                        'tarea' => 'Limpieza',
-                        'realizada' => false,
-                        'observaciones' => null,
-                    ]);
+                // Si ya existe limpieza hoy para ese horario, usar sus datos reales
+                $limpiezaExistente = Limpieza::whereDate('fecha', $fechaActual)
+                    ->where('horario_id', $horario->id)
+                    ->first();
+
+                if ($limpiezaExistente) {
+                    $seleccion = collect($limpiezaExistente->estudiantes_tareas ?? []);
+                    $realizada = $limpiezaExistente->realizada;
+                } else {
+                    $seleccion = collect();
+                    for ($i = 0; $i < min(3, $total); $i++) {
+                        $idx = ($offset + $i) % $total;
+                        $alumno = $estudiantes[$idx];
+                        $seleccion->push([
+                            'id' => $alumno->id,
+                            'nombre' => $alumno->apellidos_nombres,
+                            'tarea' => 'Limpieza',
+                            'realizada' => false,
+                            'observaciones' => null,
+                        ]);
+                    }
+                    $realizada = false;
                 }
 
                 $profesor = optional($horario->asignacion->profesor)->usuario;
@@ -165,7 +182,7 @@ class LimpiezaController extends Controller
                     'profesor' => $profesor ? $profesor->name : 'Sin profesor',
                     'hora' => Carbon::parse($horario->hora_inicio)->format('H:i') . ' - ' . Carbon::parse($horario->hora_fin)->format('H:i'),
                     'horario_id' => $horario->id,
-                    'realizada' => false,
+                    'realizada' => $realizada,
                     'estudiantes' => $seleccion,
                 ];
                 // Devolver como colección con un único elemento para que el blade pueda iterar
@@ -418,7 +435,10 @@ class LimpiezaController extends Controller
 
     public function show(Limpieza $limpieza)
     {
-        $limpieza->estudiantes_tareas = json_decode($limpieza->estudiantes_tareas, true) ?? [];
+        // Gracias al cast en el modelo, ya viene como arreglo; sólo decodificar si es string
+        if (is_string($limpieza->estudiantes_tareas)) {
+            $limpieza->estudiantes_tareas = json_decode($limpieza->estudiantes_tareas, true) ?? [];
+        }
 
         $limpieza->load('horario.asignacion.seccion');
 
@@ -465,7 +485,9 @@ class LimpiezaController extends Controller
             'estudiantes_tareas' => $limpieza->estudiantes_tareas
         ]);
 
-        $limpieza->estudiantes_tareas = json_decode($limpieza->estudiantes_tareas, true) ?? [];
+        if (is_string($limpieza->estudiantes_tareas)) {
+            $limpieza->estudiantes_tareas = json_decode($limpieza->estudiantes_tareas, true) ?? [];
+        }
         Log::info('Después de decodificar JSON:', [
             'estudiantes_tareas' => $limpieza->estudiantes_tareas,
             'claves' => array_keys($limpieza->estudiantes_tareas)
