@@ -82,6 +82,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('limpiezas', LimpiezaController::class, ['except' => ['create']])->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':profesor,coordinador,admin']);
     Route::get('api/clase/{clase}/estudiantes', [LimpiezaController::class, 'getEstudiantes'])->name('api.clase.estudiantes');
+    // Materializar limpieza por admin para un horario específico
+    Route::post('limpiezas/materializar/{horario}', [LimpiezaController::class, 'materializar'])
+        ->name('limpiezas.materializar');
 
     Route::resource('asignaciones', AsignacionController::class)->parameters(['asignaciones' => 'asignacion']);
     Route::get('asignaciones/estudiantes/por-seccion', [AsignacionController::class, 'getEstudiantesBySeccion'])->name('asignaciones.estudiantes.por-seccion');

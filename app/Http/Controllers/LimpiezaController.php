@@ -164,6 +164,7 @@ class LimpiezaController extends Controller
                     'seccion_nombre' => $seccion->grado->nombre . ' - ' . $seccion->nombre,
                     'profesor' => $profesor ? $profesor->name : 'Sin profesor',
                     'hora' => Carbon::parse($horario->hora_inicio)->format('H:i') . ' - ' . Carbon::parse($horario->hora_fin)->format('H:i'),
+                    'horario_id' => $horario->id,
                     'realizada' => false,
                     'estudiantes' => $seleccion,
                 ];
@@ -172,7 +173,81 @@ class LimpiezaController extends Controller
             });
         }
 
-        return view('limpiezas.index', compact('clasesHoy', 'limpiezas', 'esCoordinador', 'esProfesor', 'esAdmin', 'limpiezasSecciones'));
+        // También preparar mapa de limpiezas de hoy por horario para estado del botón en vista admin
+        $limpiezasHoyPorHorario = Limpieza::whereDate('fecha', $fechaActual)->get()->keyBy('horario_id');
+
+        return view('limpiezas.index', compact('clasesHoy', 'limpiezas', 'esCoordinador', 'esProfesor', 'esAdmin', 'limpiezasSecciones', 'limpiezasHoyPorHorario'));
+    }
+
+    /**
+     * Materializar una limpieza desde el panel admin para un horario dado (última clase de sección)
+     */
+    public function materializar(Request $request, Horario $horario)
+    {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        // Validar rol admin usando permisos/roles disponibles
+        if (!$user || !$user->hasRole('admin')) {
+            abort(403);
+        }
+
+        $fechaActual = Carbon::now('America/Caracas');
+        // Verificar si ya existe limpieza para ese horario hoy
+        $existente = Limpieza::whereDate('fecha', $fechaActual)
+            ->where('horario_id', $horario->id)
+            ->first();
+        if ($existente) {
+            return redirect()->route('limpiezas.index')
+                ->with('status', 'Ya existe una limpieza para ese horario hoy.');
+        }
+
+        $asignacion = $horario->asignacion;
+        if (!$asignacion || !$asignacion->seccion) {
+            return redirect()->route('limpiezas.index')
+                ->with('error', 'Horario sin sección asociada.');
+        }
+
+        $seccion = $asignacion->seccion;
+        $estudiantes = $seccion->estudiantes->sortBy(['apellidos', 'nombres'])->values();
+        $total = $estudiantes->count();
+        if ($total === 0) {
+            return redirect()->route('limpiezas.index')
+                ->with('error', 'La sección no tiene estudiantes.');
+        }
+
+        // offset por número de limpiezas completadas históricas de la sección
+        $completadas = Limpieza::where('realizada', true)
+            ->whereHas('horario.asignacion', function ($q) use ($seccion) {
+                $q->where('seccion_id', $seccion->id);
+            })
+            ->count();
+        $offset = $total > 0 ? ($completadas % $total) : 0;
+
+        $seleccion = [];
+        for ($i = 0; $i < min(3, $total); $i++) {
+            $idx = ($offset + $i) % $total;
+            $alumno = $estudiantes[$idx];
+            $seleccion[] = [
+                'id' => $alumno->id,
+                'nombre' => $alumno->apellidos_nombres,
+                'tarea' => 'Limpieza',
+                'realizada' => false,
+                'observaciones' => null,
+            ];
+        }
+
+        Limpieza::create([
+            'fecha' => $fechaActual->toDateString(),
+            'horario_id' => $horario->id,
+            'profesor_id' => optional($asignacion->profesor)->id,
+            'hora_inicio' => Carbon::parse($horario->hora_inicio)->format('H:i'),
+            'hora_fin' => Carbon::parse($horario->hora_fin)->format('H:i'),
+            'estudiantes_tareas' => json_encode($seleccion),
+            'realizada' => false,
+        ]);
+
+        return redirect()->route('limpiezas.index')
+            ->with('success', 'Limpieza creada correctamente.');
     }
 
     public function create(Request $request, $id = null)

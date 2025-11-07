@@ -16,6 +16,11 @@
 <div class="container-fluid px-0">
     <div class="card shadow-sm">
         <div class="card-body p-3">
+            @if(session('success') || session('status') || session('error'))
+                <div class="alert {{ session('success') ? 'alert-success' : (session('error') ? 'alert-danger' : 'alert-info') }}" role="alert">
+                    {{ session('success') ?? session('error') ?? session('status') }}
+                </div>
+            @endif
             @if(isset($esAdmin) && $esAdmin)
                 <div class="mb-4">
                     <h3 class="mb-3 text-muted">Asignados por Sección (Hoy)</h3>
@@ -30,31 +35,69 @@
                                     <th class="py-3">Estudiante</th>
                                     <th class="py-3">Tarea</th>
                                     <th class="text-center py-3">Realizada</th>
+                                    <th class="text-center py-3">Acción</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @php $row = 1; @endphp
                                 @foreach(($limpiezasSecciones ?? collect()) as $seccionId => $items)
                                     @foreach($items as $item)
-                                        @foreach(($item['estudiantes'] ?? collect()) as $est)
-                                            <tr>
-                                                <td>{{ $row++ }}</td>
-                                                <td>
-                                                    <span class="font-weight-semibold text-dark">{{ $item['seccion_nombre'] }}</span>
-                                                </td>
-                                                <td>{{ $item['profesor'] ?? 'Sin profesor' }}</td>
-                                                <td>
-                                                    <span class="badge badge-pill py-2 px-3 badge-dark">{{ $item['hora'] }}</span>
-                                                </td>
-                                                <td>{{ $est['nombre'] }}</td>
-                                                <td>{{ $est['tarea'] }}</td>
-                                                <td class="text-center">
-                                                    <span class="badge badge-pill py-2 px-3 {{ ($est['realizada'] ?? false) ? 'badge-success' : 'badge-warning' }}">
-                                                        {{ ($est['realizada'] ?? false) ? 'Sí' : 'Pendiente' }}
+                                        <tr>
+                                            <td>{{ $row++ }}</td>
+                                            <td>
+                                                <span class="font-weight-semibold text-dark">{{ $item['seccion_nombre'] }}</span>
+                                            </td>
+                                            <td>{{ $item['profesor'] ?? 'Sin profesor' }}</td>
+                                            <td>
+                                                <span class="badge badge-pill py-2 px-3 badge-dark">{{ $item['hora'] }}</span>
+                                            </td>
+                                            <td>
+                                                @php $lista = collect($item['estudiantes'] ?? []); @endphp
+                                                @if($lista->isEmpty())
+                                                    <em class="text-muted">Sin asignados</em>
+                                                @else
+                                                    <ul class="list-unstyled mb-0">
+                                                        @foreach($lista as $alumno)
+                                                            <li>{{ $alumno['nombre'] }}</li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($lista->isEmpty())
+                                                    <em class="text-muted">-</em>
+                                                @else
+                                                    <ul class="list-unstyled mb-0">
+                                                        @foreach($lista as $alumno)
+                                                            <li>{{ $alumno['tarea'] }}</li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if($lista->isEmpty())
+                                                    <span class="badge badge-secondary">N/A</span>
+                                                @else
+                                                    @php $pendientes = $lista->filter(fn($a)=>!($a['realizada']??false))->count(); @endphp
+                                                    <span class="badge badge-pill py-2 px-3 {{ $pendientes===0 ? 'badge-success' : 'badge-warning' }}">
+                                                        {{ $pendientes===0 ? 'Todas' : ($pendientes.' pend.') }}
                                                     </span>
-                                                </td>
-                                            </tr>
-                                        @endforeach
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @php $yaCreada = isset($limpiezasHoyPorHorario) && $limpiezasHoyPorHorario->has($item['horario_id']); @endphp
+                                                @if($yaCreada)
+                                                    <span class="badge badge-success">Ya creada</span>
+                                                @else
+                                                    <form method="POST" action="{{ route('limpiezas.materializar', $item['horario_id']) }}">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-sm btn-primary">
+                                                            Crear limpieza
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </td>
+                                        </tr>
                                     @endforeach
                                 @endforeach
                             </tbody>
