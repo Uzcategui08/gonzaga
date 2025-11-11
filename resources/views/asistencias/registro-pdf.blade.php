@@ -256,9 +256,9 @@
                             {{ $detalle->nombres }} {{ $detalle->apellidos }}
                             @php
                                 $generoTexto = strtolower(trim((string) ($detalle->genero ?? '')));
-                                if (in_array($generoTexto, ['f', 'femenino', 'female'])) {
+                                if (in_array($generoTexto, ['F', 'femenino', 'female'])) {
                                     $generoLabel = 'Femenino';
-                                } elseif (in_array($generoTexto, ['m', 'masculino', 'male'])) {
+                                } elseif (in_array($generoTexto, ['M', 'masculino', 'male'])) {
                                     $generoLabel = 'Masculino';
                                 } else {
                                     $generoLabel = 'Género no especificado';
