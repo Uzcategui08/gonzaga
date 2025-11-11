@@ -152,7 +152,21 @@
 				</div>
 			</div>
 		</div>
-    </div>
+	</div>
+
+	@if(!$usuario->hasRole('profesor'))
+		<div class="row">
+			<div class="col-12">
+				<div class="card maintenance-card text-center py-5 px-4">
+					<div class="maintenance-icon mb-3">
+						<i class="fas fa-tools"></i>
+					</div>
+					<h4 class="mb-2">Dashboard en mantenimiento</h4>
+					<p class="text-muted mb-0">Estamos trabajando para mejorar esta sección. Vuelve más tarde.</p>
+				</div>
+			</div>
+		</div>
+	@endif
 
 	@if($usuario->hasRole('profesor'))
 		<div class="row g-3 mb-4">
