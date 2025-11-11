@@ -7,16 +7,16 @@
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
-        }
-        .container-fluid {
-            width: 100%;
-            padding: 0 10px;
-        }
-        .text-center {
-            text-align: center;
-        }
-        .mb-4 {
-            margin-bottom: 1.5rem;
+                                                                @php
+                                                                    $generoTexto = strtolower(trim((string) ($detalle->genero ?? '')));
+                                                                    if (in_array($generoTexto, ['f', 'femenino', 'female'])) {
+                                                                        $generoLabel = 'Femenino';
+                                                                    } elseif (in_array($generoTexto, ['m', 'masculino', 'male'])) {
+                                                                        $generoLabel = 'Masculino';
+                                                                    } else {
+                                                                        $generoLabel = 'Género no especificado';
+                                                                    }
+                                                                @endphp
         }
         table {
             width: 100%;

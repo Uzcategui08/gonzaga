@@ -255,10 +255,10 @@
                         <td>
                             {{ $detalle->nombres }} {{ $detalle->apellidos }}
                             @php
-                                $generoValor = strtoupper($detalle->genero ?? '');
-                                if ($generoValor === 'F') {
+                                $generoTexto = strtolower(trim((string) ($detalle->genero ?? '')));
+                                if (in_array($generoTexto, ['f', 'femenino', 'female'])) {
                                     $generoLabel = 'Femenino';
-                                } elseif ($generoValor === 'M') {
+                                } elseif (in_array($generoTexto, ['m', 'masculino', 'male'])) {
                                     $generoLabel = 'Masculino';
                                 } else {
                                     $generoLabel = 'Género no especificado';
