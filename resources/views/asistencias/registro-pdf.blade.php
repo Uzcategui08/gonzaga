@@ -182,6 +182,11 @@
     </style>
 </head>
 <body>
+    @php
+        if (!isset($asistencia) && isset($asistenciaData)) {
+            $asistencia = json_decode(json_encode($asistenciaData));
+        }
+    @endphp
     <div class="container">
         <div class="header">
             <h1>REGISTRO DE ASISTENCIA</h1>
@@ -253,17 +258,22 @@
                     @foreach($asistencia->estudiantes as $detalle)
                     <tr>
                         <td>
-                            {{ $detalle->nombres }} {{ $detalle->apellidos }}
                             @php
-                                $generoTexto = strtolower(trim((string) ($detalle->genero ?? '')));
-                                if (in_array($generoTexto, ['F', 'femenino', 'female'])) {
+                                $estudiante = $detalle->estudiante ?? null;
+                                $nombreCompleto = $estudiante
+                                    ? ($estudiante->nombres . ' ' . $estudiante->apellidos)
+                                    : ($detalle->nombres . ' ' . $detalle->apellidos);
+                                $generoRaw = $estudiante?->genero ?? $detalle->genero ?? '';
+                                $generoTexto = strtolower(trim((string) $generoRaw));
+                                if (in_array($generoTexto, ['f', 'femenino', 'female'])) {
                                     $generoLabel = 'Femenino';
-                                } elseif (in_array($generoTexto, ['M', 'masculino', 'male'])) {
+                                } elseif (in_array($generoTexto, ['m', 'masculino', 'male'])) {
                                     $generoLabel = 'Masculino';
                                 } else {
                                     $generoLabel = 'Género no especificado';
                                 }
                             @endphp
+                            {{ $nombreCompleto }}
                             <div class="student-id">ID: {{ $detalle->estudiante_id }} | {{ $generoLabel }}</div>
                         </td>
                         <td>

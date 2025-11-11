@@ -194,7 +194,8 @@ class AsistenciaReporteController extends Controller
                 'asistencia_estudiante.estado',
                 'asistencia_estudiante.observacion_individual',
                 'estudiantes.nombres',
-                'estudiantes.apellidos'
+                'estudiantes.apellidos',
+                'estudiantes.genero as genero'
             )
             ->get();
 

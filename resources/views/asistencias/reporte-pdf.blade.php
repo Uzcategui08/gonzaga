@@ -7,16 +7,6 @@
         body {
             font-family: Arial, sans-serif;
             font-size: 12px;
-                                                                @php
-                                                                    $generoTexto = strtolower(trim((string) ($detalle->genero ?? '')));
-                                                                    if (in_array($generoTexto, ['f', 'femenino', 'female'])) {
-                                                                        $generoLabel = 'Femenino';
-                                                                    } elseif (in_array($generoTexto, ['m', 'masculino', 'male'])) {
-                                                                        $generoLabel = 'Masculino';
-                                                                    } else {
-                                                                        $generoLabel = 'Género no especificado';
-                                                                    }
-                                                                @endphp
         }
         table {
             width: 100%;
@@ -102,9 +92,24 @@
                                                     @foreach($asistencia->estudiantes as $detalle)
                                                         <tr>
                                                             <td>
-                                                                {{ $detalle->nombres . ' ' . $detalle->apellidos }}
+                                                                @php
+                                                                    $estudiante = $detalle->estudiante ?? null;
+                                                                    $nombreCompleto = $estudiante
+                                                                        ? ($estudiante->nombres . ' ' . $estudiante->apellidos)
+                                                                        : ($detalle->nombres . ' ' . $detalle->apellidos);
+                                                                    $generoRaw = $estudiante?->genero ?? $detalle->genero ?? '';
+                                                                    $generoTexto = strtolower(trim((string) $generoRaw));
+                                                                    if (in_array($generoTexto, ['f', 'femenino', 'female'])) {
+                                                                        $generoLabel = 'Femenino';
+                                                                    } elseif (in_array($generoTexto, ['m', 'masculino', 'male'])) {
+                                                                        $generoLabel = 'Masculino';
+                                                                    } else {
+                                                                        $generoLabel = 'Género no especificado';
+                                                                    }
+                                                                @endphp
+                                                                {{ $nombreCompleto }}
                                                                 <br>
-                                                                <small class="text-muted">(ID: {{ $detalle->estudiante_id }})</small>
+                                                                <small class="text-muted">(ID: {{ $detalle->estudiante_id }} • {{ $generoLabel }})</small>
                                                             </td>
                                                             <td>
                                                                 {{ $detalle->estado === 'A' ? 'Asistente' : ($detalle->estado === 'I' ? 'Inasistente' : 'Pase') }}
