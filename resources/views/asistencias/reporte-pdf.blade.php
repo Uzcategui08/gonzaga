@@ -104,18 +104,6 @@
                                                             <td>
                                                                 {{ $detalle->nombres . ' ' . $detalle->apellidos }}
                                                                 <br>
-                                                                @php
-                                                                    $generoValor = strtoupper($detalle->genero ?? '');
-                                                                    if ($generoValor === 'F') {
-                                                                        $generoLabel = 'Femenino';
-                                                                    } elseif ($generoValor === 'M') {
-                                                                        $generoLabel = 'Masculino';
-                                                                    } else {
-                                                                        $generoLabel = 'Género no especificado';
-                                                                    }
-                                                                @endphp
-                                                                <small>{{ $generoLabel }}</small>
-                                                                <br>
                                                                 <small class="text-muted">(ID: {{ $detalle->estudiante_id }})</small>
                                                             </td>
                                                             <td>
