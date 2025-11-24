@@ -147,7 +147,7 @@ $(document).ready(function() {
                 $seccion.trigger('change.select2');
                 return;
             }
-            $.getJSON('{{ route('secciones.por-nivel') }}', { nivel }, function(resp){
+            $.getJSON('{{ route('secciones.por.nivel') }}', { nivel }, function(resp){
                 if (resp.success) {
                     resp.secciones.forEach(function(s){
                         const text = `${s.nombre} - ${s.grado} (${(s.nivel||'').charAt(0).toUpperCase()+ (s.nivel||'').slice(1)})`;
