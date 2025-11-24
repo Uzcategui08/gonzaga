@@ -1,0 +1,22 @@
+[
+	{
+		"task": "Planificar vista de inasistencias para coordinador",
+		"status": "done"
+	},
+	{
+		"task": "Crear ruta y controlador para resumen de inasistencias",
+		"status": "done"
+	},
+	{
+		"task": "Diseñar Blade index con tabla y multiplicador",
+		"status": "done"
+	},
+	{
+		"task": "Validar acceso solo coordinador y probar",
+		"status": "in_progress"
+	},
+	{
+		"task": "Agregar botón en menú AdminLTE",
+		"status": "pending"
+	}
+]

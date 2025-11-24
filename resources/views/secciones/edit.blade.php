@@ -60,6 +60,27 @@
                     </div>
                 </div>
 
+                <div class="form-group mb-4">
+                    <label for="titular_profesor_id" class="font-weight-bold text-gray-700">Profesor titular (opcional)</label>
+                    <div class="input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </span>
+                        </div>
+                        <select name="titular_profesor_id" id="titular_profesor_id" class="form-control form-control-lg">
+                            <option value="">Sin titular asignado</option>
+                            @isset($profesores)
+                                @foreach($profesores as $profesor)
+                                    <option value="{{ $profesor->id }}" {{ $seccion->titular_profesor_id == $profesor->id ? 'selected' : '' }}>
+                                        {{ $profesor->user->name }}
+                                    </option>
+                                @endforeach
+                            @endisset
+                        </select>
+                    </div>
+                </div>
+
                 <div class="mt-6">
                     <button type="submit" class="btn btn-warning btn-lg">
                         <i class="fas fa-save mr-1"></i> Actualizar Sección

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Seccion;
 use App\Models\Grado;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class SeccionController extends Controller
 {
@@ -30,7 +31,8 @@ class SeccionController extends Controller
     public function create()
     {
         $grados = Grado::all();
-        return view('secciones.create', compact('grados'));
+        $profesores = \App\Models\Profesor::with('user')->join('users', 'profesores.user_id', '=', 'users.id')->orderBy('users.name')->get(['profesores.*']);
+        return view('secciones.create', compact('grados', 'profesores'));
     }
 
     /**
@@ -40,15 +42,19 @@ class SeccionController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:50',
-            'grado_id' => 'required|exists:grados,id'
+            'grado_id' => 'required|exists:grados,id',
+            'titular_profesor_id' => 'nullable|exists:profesores,id'
         ]);
 
         try {
-            Seccion::create($request->all());
+            $data = $request->only(['nombre', 'grado_id', 'titular_profesor_id']);
+            $data['titular_profesor_id'] = $data['titular_profesor_id'] ?: null;
+            Seccion::create($data);
             return redirect()->route('secciones.index')
                 ->with('success', 'Sección creada exitosamente');
         } catch (\Exception $e) {
-            return back()->with('error', 'Error al crear la sección: ' . $e->getMessage());
+            Log::error('Error creando sección', ['error' => $e->getMessage()]);
+            return back()->withInput()->with('error', 'Error al crear la sección: ' . $e->getMessage());
         }
     }
 
@@ -66,7 +72,8 @@ class SeccionController extends Controller
     public function edit(Seccion $seccion)
     {
         $grados = Grado::all();
-        return view('secciones.edit', compact('seccion', 'grados'));
+        $profesores = \App\Models\Profesor::with('user')->join('users', 'profesores.user_id', '=', 'users.id')->orderBy('users.name')->get(['profesores.*']);
+        return view('secciones.edit', compact('seccion', 'grados', 'profesores'));
     }
 
     /**
@@ -76,15 +83,19 @@ class SeccionController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:50',
-            'grado_id' => 'required|exists:grados,id'
+            'grado_id' => 'required|exists:grados,id',
+            'titular_profesor_id' => 'nullable|exists:profesores,id'
         ]);
 
         try {
-            $seccion->update($request->all());
+            $data = $request->only(['nombre', 'grado_id', 'titular_profesor_id']);
+            $data['titular_profesor_id'] = $data['titular_profesor_id'] ?: null;
+            $seccion->update($data);
             return redirect()->route('secciones.index')
                 ->with('success', 'Sección actualizada exitosamente');
         } catch (\Exception $e) {
-            return back()->with('error', 'Error al actualizar la sección: ' . $e->getMessage());
+            Log::error('Error actualizando sección', ['error' => $e->getMessage()]);
+            return back()->withInput()->with('error', 'Error al actualizar la sección: ' . $e->getMessage());
         }
     }
 
@@ -100,5 +111,42 @@ class SeccionController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Error al eliminar la sección: ' . $e->getMessage());
         }
-    }    
+    }
+
+    /**
+     * API: Listar secciones por nivel de grado (e.g., 'primaria', 'secundaria').
+     */
+    public function seccionesPorNivel(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'nivel' => 'required|string'
+        ]);
+
+        try {
+            $nivel = strtolower($request->get('nivel'));
+            $secciones = Seccion::with('grado')
+                ->whereHas('grado', function ($q) use ($nivel) {
+                    $q->whereRaw('LOWER(nivel) = ?', [$nivel]);
+                })
+                ->orderBy('nombre')
+                ->get()
+                ->map(function ($s) {
+                    return [
+                        'id' => $s->id,
+                        'nombre' => $s->nombre,
+                        'grado' => $s->grado?->nombre,
+                        'nivel' => $s->grado?->nivel,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'secciones' => $secciones,
+                'requested_nivel' => $nivel,
+                'total' => $secciones->count()
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
 }

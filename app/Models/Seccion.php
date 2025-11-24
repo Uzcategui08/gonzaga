@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Seccion extends Model
 {
     protected $table = 'secciones';
-    
+
     protected $fillable = [
         'nombre',
-        'grado_id'
+        'grado_id',
+        'titular_profesor_id'
     ];
 
     public function grado()
@@ -28,10 +29,15 @@ class Seccion extends Model
         return $this->hasMany(Asignacion::class);
     }
 
+    public function titular()
+    {
+        return $this->belongsTo(Profesor::class, 'titular_profesor_id');
+    }
+
     public function coordinators()
     {
         return $this->belongsToMany(User::class, 'coordinator_section', 'section_id', 'coordinator_id')
-                    ->using(CoordinatorSection::class)
-                    ->withTimestamps();
+            ->using(CoordinatorSection::class)
+            ->withTimestamps();
     }
 }

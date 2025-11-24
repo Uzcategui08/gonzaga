@@ -42,7 +42,7 @@
                         <select name="materia_id" id="materia_id" class="form-control form-control-lg select2 @error('materia_id') is-invalid @enderror" required>
                             <option value="">Seleccione una materia</option>
                             @foreach($materias as $materia)
-                                <option value="{{ $materia->id }}" {{ $asignacion->materia_id == $materia->id ? 'selected' : '' }}>
+                                <option value="{{ $materia->id }}" data-nivel="{{ $materia->nivel }}" {{ $asignacion->materia_id == $materia->id ? 'selected' : '' }}>
                                     {{ $materia->nombre }} - {{ ucfirst($materia->nivel) }}
                                 </option>
                             @endforeach
@@ -57,8 +57,8 @@
                         <select name="seccion_id" id="seccion_id" class="form-control form-control-lg select2 @error('seccion_id') is-invalid @enderror" required>
                             <option value="">Seleccione una sección</option>
                             @foreach($secciones as $seccion)
-                                <option value="{{ $seccion->id }}" {{ $asignacion->seccion_id == $seccion->id ? 'selected' : '' }}>
-                                    {{ $seccion->nombre }} - {{ $seccion->grado->nombre }}
+                                <option value="{{ $seccion->id }}" data-nivel="{{ $seccion->grado->nivel ?? '' }}" {{ $asignacion->seccion_id == $seccion->id ? 'selected' : '' }}>
+                                    {{ $seccion->nombre }} - {{ $seccion->grado->nombre }} ({{ ucfirst($seccion->grado->nivel ?? 'N/A') }})
                                 </option>
                             @endforeach
                         </select>
@@ -135,6 +135,41 @@ document.getElementById('asignacionForm').addEventListener('submit', function(e)
 });
 
 $(document).ready(function() {
+        // Filtrar secciones por nivel de la materia seleccionada
+        const $materia = $('#materia_id');
+        const $seccion = $('#seccion_id');
+
+        function loadSeccionesByNivel(nivel, keepSelection=false) {
+            const selectedVal = keepSelection ? $seccion.val() : '';
+            $seccion.empty();
+            $seccion.append(new Option('Seleccione una sección', ''));
+            if (!nivel) {
+                $seccion.trigger('change.select2');
+                return;
+            }
+            $.getJSON('{{ route('secciones.por-nivel') }}', { nivel }, function(resp){
+                if (resp.success) {
+                    resp.secciones.forEach(function(s){
+                        const text = `${s.nombre} - ${s.grado} (${(s.nivel||'').charAt(0).toUpperCase()+ (s.nivel||'').slice(1)})`;
+                        const opt = new Option(text, s.id, false, keepSelection && s.id.toString() === (selectedVal||'').toString());
+                        $seccion.append(opt);
+                    });
+                    $seccion.trigger('change.select2');
+                }
+            });
+        }
+
+        $materia.on('change', function() {
+            const nivel = ($(this).find('option:selected').data('nivel') || '').toLowerCase();
+            loadSeccionesByNivel(nivel);
+            $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center">Seleccione una sección para ver los estudiantes</td></tr>');
+        });
+
+        // Aplicar carga inicial según materia seleccionada, manteniendo la sección si coincide
+        const nivelInicial = ($materia.find('option:selected').data('nivel') || '').toLowerCase();
+        if (nivelInicial) {
+            loadSeccionesByNivel(nivelInicial, true);
+        }
     // Inicializar select2
     $('.select2').select2({
         theme: 'bootstrap4'
