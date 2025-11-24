@@ -19,6 +19,7 @@ use App\Http\Controllers\LimpiezaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\AsistenciaMensualController;
+use App\Http\Controllers\HorarioPrimariaController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -74,6 +75,8 @@ Route::middleware(['auth'])->group(function () {
         ->middleware('auth');
 
     Route::resource('secciones', SeccionController::class)->parameters(['secciones' => 'seccion']);
+    Route::get('/api/secciones/por-nivel', [SeccionController::class, 'seccionesPorNivel'])->name('secciones.por.nivel');
+    Route::get('/api/asignaciones/secciones/por-nivel', [SeccionController::class, 'seccionesPorNivel'])->name('asignaciones.por.nivel');
     Route::resource('estudiantes', EstudianteController::class);
     Route::resource('materias', MateriaController::class);
     Route::resource('profesores', ProfesorController::class)->parameters(['profesores' => 'profesor']);
@@ -129,6 +132,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('asistencias/{asistencia}/edit', [AsistenciaController::class, 'edit'])->name('asistencias.edit')->middleware('auth');
     Route::resource('horarios', HorarioController::class);
     Route::resource('grado-materia', GradoMateriaController::class);
+
+    // Editor de horario para primaria por sección
+    Route::get('horarios/primaria/{seccion}', [HorarioPrimariaController::class, 'edit'])->name('horarios.primaria.edit');
+    Route::post('horarios/primaria/{seccion}', [HorarioPrimariaController::class, 'update'])->name('horarios.primaria.update');
 
     Route::get('justificativos/profesor', [JustificativoController::class, 'indexProfesor'])->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':profesor'])->name('justificativos.profesor');
 
