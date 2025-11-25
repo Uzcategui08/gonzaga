@@ -477,7 +477,9 @@ class AsistenciaCoordinadorController extends Controller
           return $row->seccion_id . '|' . $row->estudiante_id;
         })
         ->map(function ($rows) use ($columnKeys, $summaryMode, $segmentLength, $startDate) {
-          $flags = array_fill_keys($columnKeys, false);
+          $flags = $summaryMode === 'monthly'
+            ? array_fill_keys($columnKeys, [])
+            : array_fill_keys($columnKeys, false);
 
           foreach ($rows as $row) {
             $fecha = $row->fecha instanceof Carbon ? $row->fecha : Carbon::parse($row->fecha);
@@ -493,7 +495,14 @@ class AsistenciaCoordinadorController extends Controller
             }
 
             if ($columnKey && array_key_exists($columnKey, $flags)) {
-              $flags[$columnKey] = true;
+              if ($summaryMode === 'monthly') {
+                $letter = $this->resolveDayLetter($fecha);
+                if ($letter && !in_array($letter, $flags[$columnKey], true)) {
+                  $flags[$columnKey][] = $letter;
+                }
+              } else {
+                $flags[$columnKey] = true;
+              }
             }
           }
 
@@ -507,7 +516,10 @@ class AsistenciaCoordinadorController extends Controller
         $valorDoble = $count * 2;
         $nombreEstudiante = trim($registro->nombres . ' ' . $registro->apellidos);
         $mapKey = $registro->seccion_id . '|' . $registro->estudiante_id;
-        $diasInasistencia = $inasistenciasPorDia[$mapKey] ?? array_fill_keys($columnKeys, false);
+        $diasInasistencia = $inasistenciasPorDia[$mapKey]
+          ?? ($summaryMode === 'monthly'
+            ? array_fill_keys($columnKeys, [])
+            : array_fill_keys($columnKeys, false));
 
         if (!isset($sectionsData[$registro->seccion_id])) {
           $sectionsData[$registro->seccion_id] = [
@@ -675,5 +687,22 @@ class AsistenciaCoordinadorController extends Controller
     }
 
     return [$startDate, $endDate];
+  }
+
+  private function resolveDayLetter(Carbon $date): ?string
+  {
+    $map = [
+      'monday' => 'L',
+      'tuesday' => 'M',
+      'wednesday' => 'Mi',
+      'thursday' => 'J',
+      'friday' => 'V',
+      'saturday' => 'S',
+      'sunday' => 'D',
+    ];
+
+    $key = strtolower($date->format('l'));
+
+    return $map[$key] ?? null;
   }
 }

@@ -206,13 +206,29 @@
                                                             </td>
                                                             @foreach($dayLabels as $dayKey => $label)
                                                                 @php
-                                                                    $faltóDia = $estudiante['dias_inasistencia'][$dayKey] ?? false;
+                                                                    $summaryModeCurrent = $summaryMode ?? 'weekly';
                                                                 @endphp
                                                                 <td class="text-center">
-                                                                    @if($faltóDia)
-                                                                        <span class="badge badge-danger" aria-label="Inasistencia el {{ $label }}">F</span>
+                                                                    @if($summaryModeCurrent === 'monthly')
+                                                                        @php
+                                                                            $faltasSemana = $estudiante['dias_inasistencia'][$dayKey] ?? [];
+                                                                        @endphp
+                                                                        @if(!empty($faltasSemana))
+                                                                            <span class="badge badge-danger" aria-label="Inasistencias en {{ $label }}">
+                                                                                {{ implode(', ', $faltasSemana) }}
+                                                                            </span>
+                                                                        @else
+                                                                            <span class="text-muted">—</span>
+                                                                        @endif
                                                                     @else
-                                                                        <span class="text-muted">—</span>
+                                                                        @php
+                                                                            $faltóDia = $estudiante['dias_inasistencia'][$dayKey] ?? false;
+                                                                        @endphp
+                                                                        @if($faltóDia)
+                                                                            <span class="badge badge-danger" aria-label="Inasistencia el {{ $label }}">F</span>
+                                                                        @else
+                                                                            <span class="text-muted">—</span>
+                                                                        @endif
                                                                     @endif
                                                                 </td>
                                                             @endforeach
