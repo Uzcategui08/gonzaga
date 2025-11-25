@@ -19,25 +19,54 @@ class PaseController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        $fecha = request('fecha', now()->format('Y-m-d'));
+        $fechaInicio = request('fecha_inicio');
+        $fechaFin = request('fecha_fin');
+        $rango = null;
+
+        try {
+            $inicio = $fechaInicio ? Carbon::parse($fechaInicio) : now()->startOfDay();
+        } catch (\Exception $e) {
+            $inicio = now()->startOfDay();
+        }
+
+        try {
+            $fin = $fechaFin ? Carbon::parse($fechaFin) : now()->endOfDay();
+        } catch (\Exception $e) {
+            $fin = now()->endOfDay();
+        }
+
+        if ($fin->lt($inicio)) {
+            [$inicio, $fin] = [$fin, $inicio];
+        }
+
+        $rango = [$inicio, $fin];
 
         if ($user->hasRole('coordinador')) {
             $secciones = $user->secciones;
-            $pases = Pase::with(['estudiante', 'usuario'])
+            $pasesQuery = Pase::with(['estudiante', 'usuario'])
                 ->whereHas('estudiante', function ($query) use ($secciones) {
                     $query->whereIn('seccion_id', $secciones->pluck('id'));
-                })
-                ->whereDate('fecha', $fecha)
-                ->orderBy('fecha', 'desc')
-                ->get();
+                });
         } else {
-            $pases = Pase::with(['estudiante', 'usuario'])
-                ->whereDate('fecha', $fecha)
-                ->orderBy('fecha', 'desc')
-                ->get();
+            $pasesQuery = Pase::with(['estudiante', 'usuario']);
         }
 
-        return view('pases.index', compact('pases'));
+        if ($rango) {
+            [$inicio, $fin] = $rango;
+            $pasesQuery->whereBetween('fecha', [$inicio->toDateString(), $fin->toDateString()]);
+        }
+
+        $pases = $pasesQuery->orderBy('fecha', 'desc')->get();
+
+        return view('pases.index', [
+            'pases' => $pases,
+            'fechaInicio' => $inicio->toDateString(),
+            'fechaFin' => $fin->toDateString(),
+            'rangoSeleccionado' => [
+                'desde' => $inicio->format('d/m/Y'),
+                'hasta' => $fin->format('d/m/Y'),
+            ]
+        ]);
     }
 
     public function create()

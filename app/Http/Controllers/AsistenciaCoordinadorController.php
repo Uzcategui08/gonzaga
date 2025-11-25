@@ -572,7 +572,31 @@ class AsistenciaCoordinadorController extends Controller
     $startDate = null;
     $endDate = null;
 
-    if ($referenceDateInput) {
+    try {
+      if ($startDateInput) {
+        $startDate = Carbon::createFromFormat('Y-m-d', $startDateInput)->startOfDay();
+      }
+    } catch (\Throwable $exception) {
+      $startDate = null;
+    }
+
+    try {
+      if ($endDateInput) {
+        $endDate = Carbon::createFromFormat('Y-m-d', $endDateInput)->endOfDay();
+      }
+    } catch (\Throwable $exception) {
+      $endDate = null;
+    }
+
+    if ($startDate && !$endDate) {
+      $endDate = $startDate->copy()->endOfDay();
+    }
+
+    if (!$startDate && $endDate) {
+      $startDate = $endDate->copy()->startOfDay();
+    }
+
+    if (!$startDate && !$endDate && $referenceDateInput) {
       try {
         $reference = Carbon::createFromFormat('Y-m-d', $referenceDateInput);
         $startDate = $reference->copy()->startOfWeek(Carbon::MONDAY);
@@ -593,20 +617,10 @@ class AsistenciaCoordinadorController extends Controller
       }
     }
 
-    try {
-      if (!$startDate && $startDateInput) {
-        $startDate = Carbon::createFromFormat('Y-m-d', $startDateInput)->startOfDay();
-      }
-    } catch (\Throwable $exception) {
-      $startDate = null;
-    }
-
-    try {
-      if (!$endDate && $endDateInput) {
-        $endDate = Carbon::createFromFormat('Y-m-d', $endDateInput)->endOfDay();
-      }
-    } catch (\Throwable $exception) {
-      $endDate = null;
+    if (!$startDate && !$endDate) {
+      $today = Carbon::today();
+      $startDate = $today->copy()->startOfDay();
+      $endDate = $today->copy()->endOfDay();
     }
 
     if ($startDate && $endDate && $startDate->greaterThan($endDate)) {
@@ -614,20 +628,6 @@ class AsistenciaCoordinadorController extends Controller
         $endDate->copy()->startOfDay(),
         $startDate->copy()->endOfDay(),
       ];
-    }
-
-    if (!$startDate && !$endDate) {
-      $now = Carbon::now();
-      $startDate = $now->copy()->startOfWeek(Carbon::MONDAY);
-      $endDate = $now->copy()->endOfWeek(Carbon::SUNDAY);
-    }
-
-    if ($startDate && !$endDate) {
-      $endDate = $startDate->copy()->endOfWeek(Carbon::SUNDAY);
-    }
-
-    if (!$startDate && $endDate) {
-      $startDate = $endDate->copy()->startOfWeek(Carbon::MONDAY);
     }
 
     return [$startDate, $endDate];

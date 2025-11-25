@@ -5,13 +5,23 @@
 @section('content_header')
     <div class="d-flex justify-content-between align-items-center">
         <h1>Pases de Entrada</h1>
-        <form method="GET" action="" class="form-inline mb-0">
-            <div class="form-group mr-2">
-                <label for="fecha" class="mb-0 mr-2">Fecha</label>
-                <input type="date" name="fecha" id="fecha" class="form-control" value="{{ request('fecha', now()->format('Y-m-d')) }}">
-            </div>
-            <button type="submit" class="btn btn-primary mr-2">Filtrar</button>
-        </form>
+        <div>
+            <form method="GET" action="{{ route('pases.index') }}" class="form-inline mb-1 flex-wrap">
+                <div class="form-group mr-3 mb-2">
+                    <label for="fecha_inicio" class="mb-0 mr-2">Desde</label>
+                    <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="{{ $fechaInicio ?? now()->format('Y-m-d') }}">
+                </div>
+                <div class="form-group mr-3 mb-2">
+                    <label for="fecha_fin" class="mb-0 mr-2">Hasta</label>
+                    <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="{{ $fechaFin ?? now()->format('Y-m-d') }}">
+                </div>
+                <button type="submit" class="btn btn-primary mr-2 mb-2">Filtrar</button>
+                @if(request()->filled('fecha_inicio') || request()->filled('fecha_fin'))
+                    <a href="{{ route('pases.index') }}" class="btn btn-link mb-2">Limpiar</a>
+                @endif
+            </form>
+            <small class="text-muted">Si no seleccionas un rango, se mostrará únicamente la fecha de hoy.</small>
+        </div>
         <a href="{{ route('pases.create') }}" class="btn btn-primary">
             <i class="fas fa-plus"></i> Nuevo Pase
         </a>
@@ -26,6 +36,9 @@
                 <i class="fas fa-list text-primary mr-2"></i>
                 Listado
             </h3>
+            <div class="mt-2">
+                <span class="badge badge-info">Rango activo: {{ $rangoSeleccionado['desde'] }} - {{ $rangoSeleccionado['hasta'] }}</span>
+            </div>
         </div>
 
         <div class="card-body">
