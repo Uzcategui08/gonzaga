@@ -393,21 +393,11 @@ class AsistenciaCoordinadorController extends Controller
 
     $seccionIds = $secciones->pluck('id');
 
-    $dayKeys = [
-      'monday',
-      'tuesday',
-      'wednesday',
-      'thursday',
-      'friday',
-    ];
-
-    $dayLabels = [
-      'monday' => 'Lun',
-      'tuesday' => 'Mar',
-      'wednesday' => 'Mié',
-      'thursday' => 'Jue',
-      'friday' => 'Vie',
-    ];
+    $summaryColumns = $this->resolveSummaryColumns($startDate, $endDate);
+    $columnKeys = $summaryColumns['keys'];
+    $dayLabels = $summaryColumns['labels'];
+    $summaryMode = $summaryColumns['mode'];
+    $segmentLength = $summaryColumns['segment_length'];
 
     $sectionsData = [];
 
@@ -486,15 +476,24 @@ class AsistenciaCoordinadorController extends Controller
         ->groupBy(function ($row) {
           return $row->seccion_id . '|' . $row->estudiante_id;
         })
-        ->map(function ($rows) use ($dayKeys) {
-          $flags = array_fill_keys($dayKeys, false);
+        ->map(function ($rows) use ($columnKeys, $summaryMode, $segmentLength, $startDate) {
+          $flags = array_fill_keys($columnKeys, false);
 
           foreach ($rows as $row) {
             $fecha = $row->fecha instanceof Carbon ? $row->fecha : Carbon::parse($row->fecha);
-            $dayKey = strtolower($fecha->format('l'));
+            $columnKey = null;
 
-            if (array_key_exists($dayKey, $flags)) {
-              $flags[$dayKey] = true;
+            if ($summaryMode === 'monthly' && $startDate && $segmentLength) {
+              $diff = max(0, $startDate->diffInDays($fecha));
+              $index = (int) floor($diff / $segmentLength);
+              $index = min($index, count($columnKeys) - 1);
+              $columnKey = $columnKeys[$index] ?? null;
+            } else {
+              $columnKey = strtolower($fecha->format('l'));
+            }
+
+            if ($columnKey && array_key_exists($columnKey, $flags)) {
+              $flags[$columnKey] = true;
             }
           }
 
@@ -508,7 +507,7 @@ class AsistenciaCoordinadorController extends Controller
         $valorDoble = $count * 2;
         $nombreEstudiante = trim($registro->nombres . ' ' . $registro->apellidos);
         $mapKey = $registro->seccion_id . '|' . $registro->estudiante_id;
-        $diasInasistencia = $inasistenciasPorDia[$mapKey] ?? array_fill_keys($dayKeys, false);
+        $diasInasistencia = $inasistenciasPorDia[$mapKey] ?? array_fill_keys($columnKeys, false);
 
         if (!isset($sectionsData[$registro->seccion_id])) {
           $sectionsData[$registro->seccion_id] = [
@@ -559,7 +558,52 @@ class AsistenciaCoordinadorController extends Controller
       'startDate' => $startDate,
       'endDate' => $endDate,
       'dayLabels' => $dayLabels,
+      'summaryMode' => $summaryMode,
     ];
+  }
+
+  private function resolveSummaryColumns(?Carbon $startDate, ?Carbon $endDate): array
+  {
+    $default = [
+      'mode' => 'weekly',
+      'keys' => ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      'labels' => [
+        'monday' => 'Lun',
+        'tuesday' => 'Mar',
+        'wednesday' => 'Mié',
+        'thursday' => 'Jue',
+        'friday' => 'Vie',
+      ],
+      'segment_length' => null,
+    ];
+
+    if (!$startDate || !$endDate) {
+      return $default;
+    }
+
+    $sameMonth = $startDate->isSameMonth($endDate);
+    $rangeDays = max(1, $startDate->diffInDays($endDate) + 1);
+    $coversMonth = $startDate->isSameDay($startDate->copy()->startOfMonth())
+      && $endDate->isSameDay($endDate->copy()->endOfMonth());
+    $longRangeSameMonth = $sameMonth && $rangeDays >= 21;
+
+    if ($sameMonth && ($coversMonth || $longRangeSameMonth)) {
+      $segmentLength = (int) max(1, ceil($rangeDays / 4));
+      $labels = [];
+
+      foreach (range(1, 4) as $index) {
+        $labels['week_' . $index] = 'Sem ' . $index;
+      }
+
+      return [
+        'mode' => 'monthly',
+        'keys' => array_keys($labels),
+        'labels' => $labels,
+        'segment_length' => $segmentLength,
+      ];
+    }
+
+    return $default;
   }
 
   private function resolveDateRange(Request $request): array

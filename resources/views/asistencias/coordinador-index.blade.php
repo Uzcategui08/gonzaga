@@ -122,6 +122,9 @@
                     Secciones monitoreadas
                 </h3>
                 <span class="text-muted small">Haz clic en una sección para ver los estudiantes con inasistencias.</span>
+                @if(($summaryMode ?? 'weekly') === 'monthly')
+                    <span class="text-muted small d-block">Vista mensual activa: cada columna representa una semana del mes seleccionado.</span>
+                @endif
             </div>
             <div class="d-flex align-items-center">
                 <a href="{{ route('asistencias.coordinador.pdf', $pdfParams) }}" class="btn btn-sm btn-primary mr-3" target="_blank">
