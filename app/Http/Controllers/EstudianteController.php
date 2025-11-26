@@ -6,6 +6,7 @@ use App\Models\Estudiante;
 use App\Models\Seccion;
 use App\Models\Asignacion;
 use App\Models\Horario;
+use App\Models\Grado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -14,15 +15,34 @@ class EstudianteController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
         try {
-            $estudiantes = Estudiante::with('seccion')
+            $nivel = $request->input('nivel');
+
+            $estudiantesQuery = Estudiante::with(['seccion.grado'])
                 ->orderBy('apellidos')
-                ->orderBy('nombres')
-                ->get();
-            
-            return view('estudiantes.index', compact('estudiantes'));
+                ->orderBy('nombres');
+
+            if ($nivel) {
+                $estudiantesQuery->whereHas('seccion.grado', function ($query) use ($nivel) {
+                    $query->where('nivel', $nivel);
+                });
+            }
+
+            $estudiantes = $estudiantesQuery->get();
+
+            $niveles = Grado::select('nivel')
+                ->whereNotNull('nivel')
+                ->distinct()
+                ->orderBy('nivel')
+                ->pluck('nivel');
+
+            return view('estudiantes.index', [
+                'estudiantes' => $estudiantes,
+                'niveles' => $niveles,
+                'nivelSeleccionado' => $nivel,
+            ]);
         } catch (\Exception $e) {
             return view('estudiantes.index')->with('error', 'Error al cargar los estudiantes: ' . $e->getMessage());
         }
@@ -74,11 +94,10 @@ class EstudianteController extends Controller
 
             return redirect()->route('estudiantes.index')
                 ->with('success', 'Estudiante creado exitosamente.');
-
         } catch (\Exception $e) {
             return redirect()->back()
-            ->withInput()
-            ->with('error', 'Error al crear el estudiante: ' . $e->getMessage());
+                ->withInput()
+                ->with('error', 'Error al crear el estudiante: ' . $e->getMessage());
         }
     }
 
@@ -137,7 +156,6 @@ class EstudianteController extends Controller
 
             return redirect()->route('estudiantes.index')
                 ->with('success', 'Estudiante actualizado exitosamente.');
-
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
@@ -183,14 +201,14 @@ class EstudianteController extends Controller
                 return response()->json([], 400);
             }
 
-            $horarios = Horario::whereHas('asignacion', function($query) use ($estudiante) {
+            $horarios = Horario::whereHas('asignacion', function ($query) use ($estudiante) {
                 $query->where('seccion_id', $estudiante->seccion_id);
             })
-            ->where('dia', $diaActualEsp)
-            ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.profesor.user'])
-            ->get();
+                ->where('dia', $diaActualEsp)
+                ->with(['asignacion.materia', 'asignacion.seccion', 'asignacion.profesor.user'])
+                ->get();
 
-            $horariosArray = $horarios->map(function($horario) {
+            $horariosArray = $horarios->map(function ($horario) {
                 return [
                     'id' => $horario->id,
                     'asignacion_id' => $horario->asignacion_id,
@@ -199,16 +217,16 @@ class EstudianteController extends Controller
                     'hora_fin' => $horario->hora_fin,
                     'aula' => $horario->aula,
                     'asignacion' => [
-                            'id' => $horario->asignacion->id,
-                            'materia' => [
-                                'id' => $horario->asignacion->materia->id,
-                                'nombre' => $horario->asignacion->materia->nombre
-                            ],
-                            'profesor' => [
-                                'id' => $horario->asignacion->profesor->id ?? null,
-                                'nombre' => $horario->asignacion->profesor->user->name ?? ($horario->asignacion->profesor->nombres ?? null)
-                            ]
+                        'id' => $horario->asignacion->id,
+                        'materia' => [
+                            'id' => $horario->asignacion->materia->id,
+                            'nombre' => $horario->asignacion->materia->nombre
+                        ],
+                        'profesor' => [
+                            'id' => $horario->asignacion->profesor->id ?? null,
+                            'nombre' => $horario->asignacion->profesor->user->name ?? ($horario->asignacion->profesor->nombres ?? null)
                         ]
+                    ]
                 ];
             });
 
@@ -217,5 +235,4 @@ class EstudianteController extends Controller
             return response()->json(['error' => 'Error al obtener los horarios'], 500);
         }
     }
-    
 }

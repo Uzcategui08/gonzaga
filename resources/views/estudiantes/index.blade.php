@@ -15,11 +15,29 @@
 
 @section('content')
 <div class="container-fluid px-0">
-    <div class="card shadow-sm">
+        @php
+            $niveles = $niveles ?? collect();
+            $nivelSeleccionado = $nivelSeleccionado ?? request('nivel');
+        @endphp
+        <div class="card shadow-sm">
         <div class="card-header bg-white border-bottom-0">
-            <h3 class="card-title mb-0">
-                <i class="fas fa-users text-primary mr-2"></i>Listado
-            </h3>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-users text-primary mr-2"></i>Listado
+                </h3>
+                <form method="GET" action="{{ route('estudiantes.index') }}" class="form-inline mt-3 mt-md-0">
+                    <label for="nivel" class="mr-2 mb-0 font-weight-semibold">Nivel</label>
+                    <select name="nivel" id="nivel" class="form-control mr-2" onchange="this.form.submit()">
+                        <option value="">Todos</option>
+                        @foreach($niveles as $nivel)
+                            <option value="{{ $nivel }}" {{ $nivelSeleccionado === $nivel ? 'selected' : '' }}>{{ $nivel }}</option>
+                        @endforeach
+                    </select>
+                    @if($nivelSeleccionado)
+                        <a href="{{ route('estudiantes.index') }}" class="btn btn-link">Limpiar</a>
+                    @endif
+                </form>
+            </div>
         </div>
 
         <div class="card-body p-3">
@@ -43,7 +61,7 @@
                         @isset($estudiantes)
                             @if($estudiantes->isEmpty())
                                 <tr>
-                                    <td colspan="9" class="text-center py-4">
+                                    <td colspan="10" class="text-center py-4">
                                         <div class="text-muted">
                                             <i class="fas fa-users fa-3x mb-3"></i>
                                             <p class="mb-0">¡No hay estudiantes registrados!</p>
