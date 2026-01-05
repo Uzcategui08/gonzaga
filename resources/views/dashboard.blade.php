@@ -103,32 +103,10 @@
 		? $asistenciasHoy
 		: collect();
 	$fechaHoy = now('America/Caracas');
+	$levelBreakdownCollection = collect($levelBreakdown ?? []);
 @endphp
 
 <div class="container-fluid">
-@if(!$usuario->hasRole('profesor'))
-	<div class="row justify-content-center">
-		<div class="col-lg-7 col-md-9">
-			<div class="card shadow-lg border-0 maintenance-card">
-				<div class="card-body text-center p-4 p-md-5">
-					<div class="maintenance-icon mb-4">
-						<i class="fas fa-tools"></i>
-					</div>
-					<h3 class="font-weight-bold mb-3">Dashboard en mantenimiento</h3>
-					<p class="text-muted mb-4">
-						Estamos renovando esta sección para ofrecerte una experiencia más clara y útil. Mientras tanto, todas las demás áreas del sistema siguen disponibles con normalidad.
-					</p>
-					<a href="{{ url()->previous() !== url()->current() ? url()->previous() : route('dashboard') }}" class="btn btn-outline-primary btn-sm px-4">
-						<i class="fas fa-arrow-left mr-2"></i>Volver a navegar
-					</a>
-					<a href="{{ route('asistencias.reporte') }}" class="btn btn-primary btn-sm px-4 ml-2">
-						<i class="fas fa-external-link-alt mr-2"></i>Ir al módulo de asistencias
-					</a>
-				</div>
-			</div>
-		</div>
-	</div>
-@else
 	<div class="row mb-4">
 		<div class="col-12">
 			<div class="hero-card">
@@ -176,6 +154,78 @@
 			</div>
 		</div>
 	</div>
+
+	@if(!$usuario->hasRole('profesor') && $levelBreakdownCollection->isNotEmpty())
+		<div class="row g-3 mt-1">
+			@foreach($levelBreakdownCollection as $nivelData)
+				@php
+					$nivelTotalEventos = max($nivelData['totalEventos'] ?? 0, 1);
+					$nivelAsistencias = $nivelData['asistencias'] ?? 0;
+					$nivelTardios = $nivelData['tardios'] ?? 0;
+					$nivelInasistencias = $nivelData['inasistencias'] ?? 0;
+					$nivelCoverage = $nivelData['cobertura'] ?? 0;
+					$nivelScheduled = $nivelData['clasesProgramadas'] ?? 0;
+					$nivelWithAttendance = $nivelData['clasesConAsistencia'] ?? 0;
+				@endphp
+				<div class="col-12 col-xl-6">
+					<div class="card level-card h-100">
+						<div class="level-card__header">
+							<div>
+								<p class="level-card__subtitle mb-1">Nivel académico</p>
+								<h4 class="mb-0">{{ $nivelData['nivel'] }}</h4>
+							</div>
+							<span class="badge badge-light level-card__badge">
+								Cobertura {{ $nivelCoverage }}%
+							</span>
+						</div>
+						<div class="level-card__body">
+							<div class="level-card__stat-grid">
+								<div>
+									<p class="text-muted mb-1">Estudiantes</p>
+									<strong class="level-card__stat">{{ number_format($nivelData['estudiantes'] ?? 0) }}</strong>
+								</div>
+								<div>
+									<p class="text-muted mb-1">Profesores</p>
+									<strong class="level-card__stat">{{ number_format($nivelData['profesores'] ?? 0) }}</strong>
+								</div>
+								<div>
+									<p class="text-muted mb-1">Secciones</p>
+									<strong class="level-card__stat">{{ number_format($nivelData['secciones'] ?? 0) }}</strong>
+								</div>
+							</div>
+							<div class="level-card__progress mt-3">
+								<div class="d-flex justify-content-between mb-1 text-muted">
+									<span>Clases con asistencia</span>
+									<span>{{ $nivelWithAttendance }}/{{ $nivelScheduled }}</span>
+								</div>
+								<div class="progress progress-slim mb-1">
+									<div class="progress-bar bg-primary" style="width: {{ $nivelCoverage }}%"></div>
+								</div>
+								<small class="text-muted">Programadas para {{ strtolower($diaActual ?? '') ?: 'hoy' }}</small>
+							</div>
+							<div class="level-card__attendance mt-4">
+								<div>
+									<p class="text-muted mb-1">Asistencias</p>
+									<strong>{{ number_format($nivelAsistencias) }}</strong>
+									<div class="level-card__bar level-card__bar--success" style="width: {{ round(($nivelAsistencias / $nivelTotalEventos) * 100) }}%"></div>
+								</div>
+								<div>
+									<p class="text-muted mb-1">Pases</p>
+									<strong>{{ number_format($nivelTardios) }}</strong>
+									<div class="level-card__bar level-card__bar--warning" style="width: {{ round(($nivelTardios / $nivelTotalEventos) * 100) }}%"></div>
+								</div>
+								<div>
+									<p class="text-muted mb-1">Inasistencias</p>
+									<strong>{{ number_format($nivelInasistencias) }}</strong>
+									<div class="level-card__bar level-card__bar--danger" style="width: {{ round(($nivelInasistencias / $nivelTotalEventos) * 100) }}%"></div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			@endforeach
+		</div>
+	@endif
 
 	@if($usuario->hasRole('profesor'))
 		<div class="row g-3 mb-4">
@@ -501,30 +551,12 @@
 			</div>
 		</div>
 	@endif
-@endif
 </div>
 @endsection
 
 @section('css')
 <link rel="stylesheet" href="{{ asset('/build/assets/admin/admin.css') }}">
 <style>
-	.maintenance-card {
-		border-radius: 1.5rem;
-		background: linear-gradient(145deg, #ffffff 0%, #f5f7ff 100%);
-	}
-
-	.maintenance-icon {
-		font-size: 3rem;
-		color: #6366f1;
-		background: rgba(99, 102, 241, 0.12);
-		width: 80px;
-		height: 80px;
-		border-radius: 50%;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
 	.hero-card {
 		position: relative;
 		border-radius: 22px;
@@ -597,6 +629,63 @@
 		justify-content: center;
 		font-size: 3rem;
 	}
+
+	.level-card {
+		border-radius: 20px;
+		box-shadow: 0 16px 40px -28px rgba(15, 23, 42, 0.4);
+		border: none;
+	}
+
+	.level-card__header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 1.5rem 1.5rem 0;
+	}
+
+	.level-card__subtitle {
+		text-transform: uppercase;
+		letter-spacing: 0.1rem;
+		font-size: 0.75rem;
+		color: #9CA3AF;
+	}
+
+	.level-card__badge {
+		border-radius: 12px;
+		font-weight: 600;
+		font-size: 0.85rem;
+	}
+
+	.level-card__body {
+		padding: 1.5rem;
+	}
+
+	.level-card__stat-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+		gap: 1rem;
+	}
+
+	.level-card__stat {
+		font-size: 1.6rem;
+		color: #111827;
+	}
+
+	.level-card__attendance {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+		gap: 1rem;
+	}
+
+	.level-card__bar {
+		height: 6px;
+		border-radius: 999px;
+		margin-top: 0.4rem;
+	}
+
+	.level-card__bar--success { background: rgba(16, 185, 129, 0.9); }
+	.level-card__bar--warning { background: rgba(245, 158, 11, 0.9); }
+	.level-card__bar--danger { background: rgba(239, 68, 68, 0.9); }
 
 	.stat-card {
 		display: flex;
