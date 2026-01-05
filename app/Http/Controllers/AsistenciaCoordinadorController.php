@@ -481,8 +481,14 @@ class AsistenciaCoordinadorController extends Controller
             ? array_fill_keys($columnKeys, [])
             : array_fill_keys($columnKeys, false);
 
+          $uniqueDates = [];
+
           foreach ($rows as $row) {
             $fecha = $row->fecha instanceof Carbon ? $row->fecha : Carbon::parse($row->fecha);
+
+            $dateKey = $fecha->format('Y-m-d');
+            $uniqueDates[$dateKey] = true;
+
             $columnKey = null;
 
             if ($summaryMode === 'monthly' && $startDate && $segmentLength) {
@@ -506,7 +512,7 @@ class AsistenciaCoordinadorController extends Controller
             }
           }
 
-          return $flags;
+          return $flags + ['dias_total' => count($uniqueDates)];
         });
 
       $totalEstudiantes = $registros->count();
@@ -517,9 +523,11 @@ class AsistenciaCoordinadorController extends Controller
         $nombreEstudiante = trim($registro->nombres . ' ' . $registro->apellidos);
         $mapKey = $registro->seccion_id . '|' . $registro->estudiante_id;
         $diasInasistencia = $inasistenciasPorDia[$mapKey]
-          ?? ($summaryMode === 'monthly'
+          ?? (($summaryMode === 'monthly'
             ? array_fill_keys($columnKeys, [])
-            : array_fill_keys($columnKeys, false));
+            : array_fill_keys($columnKeys, false)) + ['dias_total' => 0]);
+
+        $diasTotales = (int) ($diasInasistencia['dias_total'] ?? 0);
 
         if (!isset($sectionsData[$registro->seccion_id])) {
           $sectionsData[$registro->seccion_id] = [
@@ -538,6 +546,7 @@ class AsistenciaCoordinadorController extends Controller
           'estudiante_id' => $registro->estudiante_id,
           'estudiante' => $nombreEstudiante,
           'inasistencias' => $count,
+          'dias_inasistencia_total' => $diasTotales,
           'valor_doble' => $valorDoble,
           'dias_inasistencia' => $diasInasistencia,
         ];

@@ -126,6 +126,7 @@
                     <tr>
                         <th>Estudiante</th>
                         <th class="text-right">Inasistencias</th>
+                        <th class="text-right">Días de inasistencia</th>
                         <th class="text-right">Horas Totales</th>
                     </tr>
                 </thead>
@@ -134,6 +135,7 @@
                         <tr>
                             <td>{{ $estudiante['estudiante'] }}</td>
                             <td class="text-right">{{ $estudiante['inasistencias'] }}</td>
+                            <td class="text-right">{{ $estudiante['dias_inasistencia_total'] ?? 0 }}</td>
                             <td class="text-right">{{ $estudiante['valor_doble'] }}</td>
                         </tr>
                     @endforeach
