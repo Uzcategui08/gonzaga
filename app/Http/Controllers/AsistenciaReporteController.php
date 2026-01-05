@@ -8,6 +8,7 @@ use App\Models\AsistenciaEstudiante;
 use App\Models\Estudiante;
 use App\Models\Profesor;
 use App\Models\Materia;
+use App\Models\Seccion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Carbon;
@@ -73,12 +74,41 @@ class AsistenciaReporteController extends Controller
 
         $selectedFlag = request('flag');
 
+        $selectedSeccionId = $request->input('seccion_id');
+        if ($selectedSeccionId !== null && $selectedSeccionId !== '') {
+            $selectedSeccionId = (int) $selectedSeccionId;
+        } else {
+            $selectedSeccionId = null;
+        }
+
         if (!array_key_exists($selectedFlag, $flagOptions)) {
             $selectedFlag = null;
         }
 
+        $seccionesOptions = [];
+
         if ($user && $user->hasRole('coordinador')) {
-            $seccionesCoordinador = $user->secciones->pluck('id');
+            $seccionesCoordinador = ($user->secciones ?? collect())->pluck('id');
+
+            if ($seccionesCoordinador->isNotEmpty()) {
+                $seccionesOptions = Seccion::with('grado:id,nombre')
+                    ->whereIn('id', $seccionesCoordinador)
+                    ->orderBy('nombre')
+                    ->get()
+                    ->sortBy(function ($seccion) {
+                        return sprintf('%s_%s', optional($seccion->grado)->nombre ?? '', $seccion->nombre);
+                    }, SORT_NATURAL | SORT_FLAG_CASE)
+                    ->mapWithKeys(function ($seccion) {
+                        $label = trim(sprintf('%s - %s', optional($seccion->grado)->nombre ?? 'Sin grado', $seccion->nombre));
+                        return [$seccion->id => $label];
+                    })
+                    ->all();
+            }
+
+            if ($selectedSeccionId !== null && !$seccionesCoordinador->contains($selectedSeccionId)) {
+                $selectedSeccionId = null;
+            }
+
             $asistencias = Asistencia::with([
                 'profesor' => function ($query) {
                     $query->with('user:id,name');
@@ -100,6 +130,11 @@ class AsistenciaReporteController extends Controller
                     $query->whereIn('seccion_id', $seccionesCoordinador);
                 })
                 ->whereBetween('fecha', [$startString, $endString])
+                ->when($selectedSeccionId, function ($query) use ($selectedSeccionId) {
+                    $query->whereHas('horario.asignacion', function ($query) use ($selectedSeccionId) {
+                        $query->where('seccion_id', $selectedSeccionId);
+                    });
+                })
                 ->when($selectedFlag, function ($query) use ($selectedFlag) {
                     $query->where($selectedFlag, true);
                 })
@@ -110,6 +145,9 @@ class AsistenciaReporteController extends Controller
                 $estudiantes = AsistenciaEstudiante::join('estudiantes', 'asistencia_estudiante.estudiante_id', '=', 'estudiantes.id')
                     ->where('asistencia_id', $asistencia->id)
                     ->whereIn('estudiantes.seccion_id', $seccionesCoordinador)
+                    ->when($selectedSeccionId, function ($query) use ($selectedSeccionId) {
+                        $query->where('estudiantes.seccion_id', $selectedSeccionId);
+                    })
                     ->select(
                         'asistencia_estudiante.id',
                         'asistencia_estudiante.estudiante_id',
@@ -122,15 +160,39 @@ class AsistenciaReporteController extends Controller
                 $asistencia->estudiantes = $estudiantes;
             }
         } else {
+            $seccionesOptions = Seccion::with('grado:id,nombre')
+                ->orderBy('nombre')
+                ->get()
+                ->sortBy(function ($seccion) {
+                    return sprintf('%s_%s', optional($seccion->grado)->nombre ?? '', $seccion->nombre);
+                }, SORT_NATURAL | SORT_FLAG_CASE)
+                ->mapWithKeys(function ($seccion) {
+                    $label = trim(sprintf('%s - %s', optional($seccion->grado)->nombre ?? 'Sin grado', $seccion->nombre));
+                    return [$seccion->id => $label];
+                })
+                ->all();
+
             $asistencias = Asistencia::with([
                 'profesor' => function ($query) {
                     $query->with('user:id,name');
                 },
                 'materia' => function ($query) {
                     $query->select('id', 'nombre');
-                }
+                },
+                'horario' => function ($query) {
+                    $query->with([
+                        'asignacion' => function ($query) {
+                            $query->with('seccion.grado');
+                        }
+                    ]);
+                },
             ])
                 ->whereBetween('fecha', [$startString, $endString])
+                ->when($selectedSeccionId, function ($query) use ($selectedSeccionId) {
+                    $query->whereHas('horario.asignacion', function ($query) use ($selectedSeccionId) {
+                        $query->where('seccion_id', $selectedSeccionId);
+                    });
+                })
                 ->when($selectedFlag, function ($query) use ($selectedFlag) {
                     $query->where($selectedFlag, true);
                 })
@@ -140,6 +202,9 @@ class AsistenciaReporteController extends Controller
             foreach ($asistencias as $asistencia) {
                 $estudiantes = AsistenciaEstudiante::join('estudiantes', 'asistencia_estudiante.estudiante_id', '=', 'estudiantes.id')
                     ->where('asistencia_id', $asistencia->id)
+                    ->when($selectedSeccionId, function ($query) use ($selectedSeccionId) {
+                        $query->where('estudiantes.seccion_id', $selectedSeccionId);
+                    })
                     ->select(
                         'asistencia_estudiante.id',
                         'asistencia_estudiante.estudiante_id',
@@ -157,6 +222,8 @@ class AsistenciaReporteController extends Controller
             'asistencias' => $asistencias,
             'flagOptions' => $flagOptions,
             'selectedFlag' => $selectedFlag,
+            'seccionesOptions' => $seccionesOptions,
+            'selectedSeccionId' => $selectedSeccionId,
             'selectedStartDate' => $startString,
             'selectedEndDate' => $endString,
         ]);

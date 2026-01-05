@@ -26,6 +26,17 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="mr-2 mb-2">
+                    <label for="seccion_id" class="font-weight-bold mb-0">Sección</label>
+                    <select name="seccion_id" id="seccion_id" class="form-control">
+                        <option value="">Todas</option>
+                        @foreach(($seccionesOptions ?? []) as $seccionId => $seccionLabel)
+                            <option value="{{ $seccionId }}" {{ ((int) ($selectedSeccionId ?? 0)) === (int) $seccionId ? 'selected' : '' }}>
+                                {{ $seccionLabel }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="mb-2">
                     <button type="submit" class="btn btn-primary">Filtrar</button>
                 </div>
