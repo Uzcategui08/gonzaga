@@ -176,6 +176,7 @@
                                                         <th>Estudiante</th>
                                                         <th class="text-center">Inasistencias</th>
                                                         <th class="text-center">Horas</th>
+                                                        <th class="text-center">Días</th>
                                                         <th class="text-center">Detalle</th>
                                                         @foreach($dayLabels as $dayKey => $label)
                                                             <th class="text-center" title="{{ $label }}">{{ $label }}</th>
@@ -194,6 +195,11 @@
                                                             <td class="text-center">
                                                                 <span class="badge badge-pill {{ $estudiante['valor_doble'] > 0 ? 'badge-warning' : 'badge-secondary' }} px-3 py-2">
                                                                     {{ $estudiante['valor_doble'] }}
+                                                                </span>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <span class="badge badge-pill {{ ($estudiante['dias_inasistencia_total'] ?? 0) > 0 ? 'badge-primary' : 'badge-secondary' }} px-3 py-2">
+                                                                    {{ $estudiante['dias_inasistencia_total'] ?? 0 }}
                                                                 </span>
                                                             </td>
                                                             <td class="text-center">
