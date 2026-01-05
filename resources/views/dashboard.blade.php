@@ -254,6 +254,78 @@
 				</div>
 			</div>
 		</div>
+
+		@if($levelBreakdownCollection->isNotEmpty())
+			<div class="row g-3 mt-1">
+				@foreach($levelBreakdownCollection as $nivelData)
+					@php
+						$nivelTotalEventos = max($nivelData['totalEventos'] ?? 0, 1);
+						$nivelAsistencias = $nivelData['asistencias'] ?? 0;
+						$nivelTardios = $nivelData['tardios'] ?? 0;
+						$nivelInasistencias = $nivelData['inasistencias'] ?? 0;
+						$nivelCoverage = $nivelData['cobertura'] ?? 0;
+						$nivelScheduled = $nivelData['clasesProgramadas'] ?? 0;
+						$nivelWithAttendance = $nivelData['clasesConAsistencia'] ?? 0;
+					@endphp
+					<div class="col-12 col-xl-6">
+						<div class="card level-card h-100">
+							<div class="level-card__header">
+								<div>
+									<p class="level-card__subtitle mb-1">Nivel académico</p>
+									<h4 class="mb-0">{{ $nivelData['nivel'] }}</h4>
+								</div>
+								<span class="badge badge-light level-card__badge">
+									Cobertura {{ $nivelCoverage }}%
+								</span>
+							</div>
+							<div class="level-card__body">
+								<div class="level-card__stat-grid">
+									<div>
+										<p class="text-muted mb-1">Estudiantes</p>
+										<strong class="level-card__stat">{{ number_format($nivelData['estudiantes'] ?? 0) }}</strong>
+									</div>
+									<div>
+										<p class="text-muted mb-1">Profesores</p>
+										<strong class="level-card__stat">{{ number_format($nivelData['profesores'] ?? 0) }}</strong>
+									</div>
+									<div>
+										<p class="text-muted mb-1">Secciones</p>
+										<strong class="level-card__stat">{{ number_format($nivelData['secciones'] ?? 0) }}</strong>
+									</div>
+								</div>
+								<div class="level-card__progress mt-3">
+									<div class="d-flex justify-content-between mb-1 text-muted">
+										<span>Clases con asistencia</span>
+										<span>{{ $nivelWithAttendance }}/{{ $nivelScheduled }}</span>
+									</div>
+									<div class="progress progress-slim mb-1">
+										<div class="progress-bar bg-primary" style="width: {{ $nivelCoverage }}%"></div>
+									</div>
+									<small class="text-muted">Programadas para {{ strtolower($diaActual ?? '') ?: 'hoy' }}</small>
+								</div>
+								<div class="level-card__attendance mt-4">
+									<div>
+										<p class="text-muted mb-1">Asistencias</p>
+										<strong>{{ number_format($nivelAsistencias) }}</strong>
+										<div class="level-card__bar level-card__bar--success" style="width: {{ round(($nivelAsistencias / $nivelTotalEventos) * 100) }}%"></div>
+									</div>
+									<div>
+										<p class="text-muted mb-1">Pases</p>
+										<strong>{{ number_format($nivelTardios) }}</strong>
+										<div class="level-card__bar level-card__bar--warning" style="width: {{ round(($nivelTardios / $nivelTotalEventos) * 100) }}%"></div>
+									</div>
+									<div>
+										<p class="text-muted mb-1">Inasistencias</p>
+										<strong>{{ number_format($nivelInasistencias) }}</strong>
+										<div class="level-card__bar level-card__bar--danger" style="width: {{ round(($nivelInasistencias / $nivelTotalEventos) * 100) }}%"></div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				@endforeach
+			</div>
+		@endif
 	@endif
 
 	@if($usuario->hasRole('profesor') && isset($horarioHoy))
