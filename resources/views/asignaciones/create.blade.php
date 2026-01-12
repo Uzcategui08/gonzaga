@@ -82,6 +82,8 @@
                                             <div class="mt-1 small text-muted">
                                                 <input type="checkbox" id="select-top-half" title="Seleccionar mitad superior"> <span class="ml-1">Top</span>
                                                 <input type="checkbox" id="select-bottom-half" title="Seleccionar mitad inferior" class="ml-2"> <span class="ml-1">Bottom</span>
+                                                <input type="checkbox" id="select-male" title="Seleccionar hombres" class="ml-2"> <span class="ml-1">H</span>
+                                                <input type="checkbox" id="select-female" title="Seleccionar mujeres" class="ml-2"> <span class="ml-1">M</span>
                                             </div>
                                         </div>
                                     </th>
@@ -190,8 +192,9 @@ $(document).ready(function() {
                     if (response.success && response.estudiantes && response.estudiantes.length > 0) {
                         var html = '';
                         response.estudiantes.forEach(function(estudiante) {
+                            var genero = (estudiante.genero || '').toString().toUpperCase();
                             html += '<tr>';
-                            html += '<td class="text-center"><input type="checkbox" name="estudiantes_id[]" value="' + estudiante.id + '" class="estudiante-checkbox"></td>';
+                            html += '<td class="text-center"><input type="checkbox" name="estudiantes_id[]" value="' + estudiante.id + '" class="estudiante-checkbox" data-genero="' + genero + '"></td>';
                             html += '<td>' + estudiante.id + '</td>';
                             html += '<td>' + estudiante.nombre_completo + '</td>';
                             html += '<td>' + (estudiante.cedula || 'N/A') + '</td>';
@@ -199,6 +202,8 @@ $(document).ready(function() {
                             html += '</tr>';
                         });
                         tbody.html(html);
+                        // reset toggles al recargar tabla
+                        $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
                         // Actualizar estado del checkbox "select all" después de renderizar
                         updateSelectAllState();
                     } else {
@@ -236,6 +241,27 @@ $(document).ready(function() {
     $('#select-all-estudiantes').on('change', function() {
         var checked = $(this).is(':checked');
         $('.estudiante-checkbox').prop('checked', checked);
+        $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
+    });
+
+    function toggleGeneroSelection(genero, checked) {
+        $('.estudiante-checkbox').each(function() {
+            var g = (($(this).data('genero') || '') + '').toUpperCase();
+            if (g === genero) {
+                $(this).prop('checked', checked);
+            }
+        });
+        // reset mitades cuando se usa selección por género
+        $('#select-top-half, #select-bottom-half').prop('checked', false);
+        updateSelectAllState();
+    }
+
+    $('#select-male').on('change', function() {
+        toggleGeneroSelection('M', $(this).is(':checked'));
+    });
+
+    $('#select-female').on('change', function() {
+        toggleGeneroSelection('F', $(this).is(':checked'));
     });
 
     // Seleccionar mitad superior
@@ -247,6 +273,8 @@ $(document).ready(function() {
         all.slice(0, half).prop('checked', checked);
         // reset other half checkbox
         $('#select-bottom-half').prop('checked', false);
+        // reset género
+        $('#select-male, #select-female').prop('checked', false);
         updateSelectAllState();
     });
 
@@ -259,6 +287,8 @@ $(document).ready(function() {
         all.slice(half).prop('checked', checked);
         // reset top half checkbox
         $('#select-top-half').prop('checked', false);
+        // reset género
+        $('#select-male, #select-female').prop('checked', false);
         updateSelectAllState();
     });
 });

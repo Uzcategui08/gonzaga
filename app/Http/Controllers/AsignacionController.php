@@ -184,7 +184,7 @@ class AsignacionController extends Controller
             ]);
 
             $estudiantes = Estudiante::where('seccion_id', $request->seccion_id)
-                ->select('id', 'nombres', 'apellidos', 'codigo_estudiante', 'estado')
+                ->select('id', 'nombres', 'apellidos', 'codigo_estudiante', 'estado', 'genero')
                 ->orderBy('apellidos', 'asc')
                 ->get()
                 ->map(function ($estudiante) {
@@ -192,7 +192,8 @@ class AsignacionController extends Controller
                         'id' => $estudiante->id,
                         'nombre_completo' => $estudiante->nombres . ' ' . $estudiante->apellidos,
                         'cedula' => $estudiante->codigo_estudiante,
-                        'estado' => $estudiante->estado
+                        'estado' => $estudiante->estado,
+                        'genero' => $estudiante->genero,
                     ];
                 });
 
