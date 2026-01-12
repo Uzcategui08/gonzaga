@@ -53,6 +53,10 @@
 
                     <div class="form-group col-md-4">
                         <label for="seccion_id" class="font-weight-bold text-gray-700">Sección</label>
+                        <div class="custom-control custom-checkbox mb-2">
+                            <input type="checkbox" class="custom-control-input" id="aplicar_todas_secciones" name="aplicar_todas_secciones" value="1">
+                            <label class="custom-control-label" for="aplicar_todas_secciones">Aplicar a todas las secciones del profesor</label>
+                        </div>
                         <select name="seccion_id" id="seccion_id" class="form-control form-control-lg select2 @error('seccion_id') is-invalid @enderror" required>
                             <option value="">Seleccione una sección</option>
                             @foreach($secciones as $seccion)
@@ -94,7 +98,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Los estudiantes se cargarán aquí dinámicamente -->
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Seleccione una sección (o marque “todas las secciones”) para ver los estudiantes</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -139,9 +145,11 @@ document.getElementById('asignacionForm').addEventListener('submit', function(e)
 
 
 $(document).ready(function() {
+        const $profesor = $('#profesor_id');
         // Filtrar secciones por nivel de la materia seleccionada
         const $materia = $('#materia_id');
         const $seccion = $('#seccion_id');
+        const $todas = $('#aplicar_todas_secciones');
 
         function loadSeccionesByNivel(nivel, keepSelection=false) {
             const selectedVal = keepSelection ? $seccion.val() : '';
@@ -163,62 +171,129 @@ $(document).ready(function() {
             });
         }
 
+        function setInitialTableMessage(message) {
+            $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center text-muted">' + message + '</td></tr>');
+        }
+
         $materia.on('change', function() {
             const nivel = ($(this).find('option:selected').data('nivel') || '').toLowerCase();
             loadSeccionesByNivel(nivel);
-            $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center">Seleccione una sección para ver los estudiantes</td></tr>');
+            setInitialTableMessage('Seleccione una sección (o marque “todas las secciones”) para ver los estudiantes');
         });
     // Inicializar select2
     $('.select2').select2({
         theme: 'bootstrap4'
     });
 
-    $('#seccion_id').change(function() {
-        var seccionId = $(this).val();
+    function renderEstudiantes(estudiantes) {
         var tbody = $('#estudiantes-table tbody');
-        
-        if (seccionId) {
-            // Mostrar carga
-            tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
-            
-            // Hacer la petición AJAX
-            $.ajax({
-                url: '{{ route("asignaciones.estudiantes.por-seccion") }}',
-                type: 'GET',
-                data: {
-                    seccion_id: seccionId
-                },
-                success: function(response) {
-                    if (response.success && response.estudiantes && response.estudiantes.length > 0) {
-                        var html = '';
-                        response.estudiantes.forEach(function(estudiante) {
-                            var genero = (estudiante.genero || '').toString().toUpperCase();
-                            html += '<tr>';
-                            html += '<td class="text-center"><input type="checkbox" name="estudiantes_id[]" value="' + estudiante.id + '" class="estudiante-checkbox" data-genero="' + genero + '"></td>';
-                            html += '<td>' + estudiante.id + '</td>';
-                            html += '<td>' + estudiante.nombre_completo + '</td>';
-                            html += '<td>' + (estudiante.cedula || 'N/A') + '</td>';
-                            html += '<td><span class="badge ' + (estudiante.estado === 'activo' ? 'badge-success' : 'badge-secondary') + '">' + (estudiante.estado || 'N/A') + '</span></td>';
-                            html += '</tr>';
-                        });
-                        tbody.html(html);
-                        // reset toggles al recargar tabla
-                        $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
-                        // Actualizar estado del checkbox "select all" después de renderizar
-                        updateSelectAllState();
-                    } else {
-                        tbody.html('<tr><td colspan="5" class="text-center">No hay estudiantes en esta sección</td></tr>');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error al cargar estudiantes:', error);
-                    tbody.html('<tr><td colspan="5" class="text-center text-danger">Error al cargar los estudiantes</td></tr>');
+        if (estudiantes && estudiantes.length > 0) {
+            var html = '';
+            estudiantes.forEach(function(estudiante) {
+                var genero = (estudiante.genero || '').toString().toUpperCase();
+                var seccionId = (estudiante.seccion_id || '').toString();
+                var nombre = estudiante.nombre_completo;
+                if (estudiante.seccion_nombre) {
+                    nombre = nombre + ' - ' + estudiante.seccion_nombre;
                 }
+                html += '<tr>';
+                html += '<td class="text-center"><input type="checkbox" name="estudiantes_id[]" value="' + estudiante.id + '" class="estudiante-checkbox" data-genero="' + genero + '" data-seccion-id="' + seccionId + '"></td>';
+                html += '<td>' + estudiante.id + '</td>';
+                html += '<td>' + nombre + '</td>';
+                html += '<td>' + (estudiante.cedula || 'N/A') + '</td>';
+                html += '<td><span class="badge ' + (estudiante.estado === 'activo' ? 'badge-success' : 'badge-secondary') + '">' + (estudiante.estado || 'N/A') + '</span></td>';
+                html += '</tr>';
             });
+            tbody.html(html);
+            $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
+            updateSelectAllState();
         } else {
-            tbody.html('<tr><td colspan="4" class="text-center">Seleccione una sección para ver los estudiantes</td></tr>');
+            setInitialTableMessage('No hay estudiantes para mostrar');
+        }
+    }
+
+    function cargarEstudiantesPorProfesor(profesorId) {
+        var tbody = $('#estudiantes-table tbody');
+        if (!profesorId) {
+            setInitialTableMessage('Seleccione un profesor');
+            return;
+        }
+        tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
+        $.ajax({
+            url: '{{ route("asignaciones.estudiantes.por-profesor") }}',
+            type: 'GET',
+            data: { profesor_id: profesorId },
+            success: function(response) {
+                if (response && response.success) {
+                    renderEstudiantes(response.estudiantes || []);
+                } else {
+                    setInitialTableMessage('No se pudieron cargar los estudiantes');
+                }
+            },
+            error: function(xhr) {
+                console.error('Error al cargar estudiantes por profesor:', xhr);
+                setInitialTableMessage('Error al cargar los estudiantes');
+            }
+        });
+    }
+
+    function cargarEstudiantesPorSeccion(seccionId) {
+        var tbody = $('#estudiantes-table tbody');
+        if (!seccionId) {
+            setInitialTableMessage('Seleccione una sección para ver los estudiantes');
+            return;
+        }
+        tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
+        $.ajax({
+            url: '{{ route("asignaciones.estudiantes.por-seccion") }}',
+            type: 'GET',
+            data: { seccion_id: seccionId },
+            success: function(response) {
+                if (response && response.success) {
+                    renderEstudiantes(response.estudiantes || []);
+                } else {
+                    setInitialTableMessage('No hay estudiantes en esta sección');
+                }
+            },
+            error: function(xhr) {
+                console.error('Error al cargar estudiantes por sección:', xhr);
+                setInitialTableMessage('Error al cargar los estudiantes');
+            }
+        });
+    }
+
+    function syncModoTodasSecciones() {
+        var enabled = $todas.is(':checked');
+        $seccion.prop('disabled', enabled);
+        $seccion.prop('required', !enabled);
+        if (enabled) {
+            $seccion.val('').trigger('change.select2');
+            cargarEstudiantesPorProfesor($profesor.val());
+        } else {
+            setInitialTableMessage('Seleccione una sección (o marque “todas las secciones”) para ver los estudiantes');
+        }
+    }
+
+    $todas.on('change', function() {
+        syncModoTodasSecciones();
+    });
+
+    $profesor.on('change', function() {
+        if ($todas.is(':checked')) {
+            cargarEstudiantesPorProfesor($(this).val());
         }
     });
+
+    $('#seccion_id').change(function() {
+        if ($('#aplicar_todas_secciones').is(':checked')) {
+            return;
+        }
+        var seccionId = $(this).val();
+        cargarEstudiantesPorSeccion(seccionId);
+    });
+
+    // estado inicial
+    syncModoTodasSecciones();
 
     // Función para actualizar el estado del checkbox "select all"
     function updateSelectAllState() {

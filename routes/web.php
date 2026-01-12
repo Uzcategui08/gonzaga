@@ -91,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('asignaciones', AsignacionController::class)->parameters(['asignaciones' => 'asignacion']);
     Route::get('asignaciones/estudiantes/por-seccion', [AsignacionController::class, 'getEstudiantesBySeccion'])->name('asignaciones.estudiantes.por-seccion');
+    Route::get('asignaciones/estudiantes/por-profesor', [AsignacionController::class, 'getEstudiantesByProfesor'])->name('asignaciones.estudiantes.por-profesor');
 
     Route::get('/asistencias/reporte', [AsistenciaReporteController::class, 'index'])
         ->middleware([\App\Http\Middleware\CheckUserType::class . ':admin,profesor,coordinador,secretaria'])
