@@ -153,6 +153,51 @@ $(document).ready(function() {
 
         var seleccionPorSeccion = @json($seleccionPorSeccion ?? []);
 
+        function isModoTodasSecciones() {
+            return $todas.is(':checked');
+        }
+
+        function normalizarIds(ids) {
+            return (ids || []).map(function(v){ return v.toString(); });
+        }
+
+        function setSeleccionSeccion(seccionId, ids) {
+            if (!seccionId) return;
+            seleccionPorSeccion[seccionId.toString()] = normalizarIds(ids);
+        }
+
+        function getSeleccionSeccion(seccionId) {
+            if (!seccionId) return [];
+            return normalizarIds(seleccionPorSeccion[seccionId.toString()] || []);
+        }
+
+        function syncSeleccionDesdeDOM() {
+            var all = $('.estudiante-checkbox');
+            if (all.length === 0) return;
+
+            if (isModoTodasSecciones()) {
+                // Rebuild completo por sección
+                var nuevo = {};
+                all.filter(':checked').each(function(){
+                    var sid = (($(this).data('seccion-id') || '') + '').toString();
+                    var eid = (($(this).val() || '') + '').toString();
+                    if (!sid || !eid) return;
+                    if (!nuevo[sid]) nuevo[sid] = [];
+                    nuevo[sid].push(eid);
+                });
+                seleccionPorSeccion = nuevo;
+            } else {
+                // Solo actualizar la sección actual
+                var seccionActual = ($seccion.val() || '').toString();
+                if (!seccionActual) return;
+                var ids = [];
+                all.filter(':checked').each(function(){
+                    ids.push((($(this).val() || '') + '').toString());
+                });
+                setSeleccionSeccion(seccionActual, ids);
+            }
+        }
+
         function setInitialTableMessage(message) {
             $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center text-muted">' + message + '</td></tr>');
         }
@@ -232,6 +277,7 @@ $(document).ready(function() {
                         // reset toggles al recargar tabla
                         $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
                         updateSelectAllState();
+                        syncSeleccionDesdeDOM();
                     } else {
                         tbody.html('<tr><td colspan="5" class="text-center">No hay estudiantes en esta sección</td></tr>');
                     }
@@ -280,6 +326,7 @@ $(document).ready(function() {
                     tbody.html(html);
                     $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
                     updateSelectAllState();
+                    syncSeleccionDesdeDOM();
                 } else {
                     setInitialTableMessage('No hay estudiantes para mostrar');
                 }
@@ -312,7 +359,7 @@ $(document).ready(function() {
             return;
         }
         var seccionId = $(this).val();
-        cargarEstudiantes(seccionId);
+        cargarEstudiantes(seccionId, getSeleccionSeccion(seccionId));
     });
 
     // Cargar estudiantes al cargar la página si hay sección seleccionada
@@ -322,7 +369,8 @@ $(document).ready(function() {
     // Normalizar a strings para comparar con los ids que vienen del servidor (evita fallo por tipo)
     estudiantesSeleccionados = estudiantesSeleccionados.map(function(v) { return v.toString(); });
     if (seccionInicial) {
-        cargarEstudiantes(seccionInicial, estudiantesSeleccionados);
+        var precargados = getSeleccionSeccion(seccionInicial);
+        cargarEstudiantes(seccionInicial, precargados.length ? precargados : estudiantesSeleccionados);
     }
 
     // Eventos modo todas las secciones
@@ -373,6 +421,7 @@ $(document).ready(function() {
     // Delegated event: cuando cualquier checkbox individual cambie, actualizar encabezado
     $(document).on('change', '.estudiante-checkbox', function() {
         updateSelectAllState();
+        syncSeleccionDesdeDOM();
     });
 
     // Manejar el toggle de "select all"
@@ -380,6 +429,7 @@ $(document).ready(function() {
         var checked = $(this).is(':checked');
         $('.estudiante-checkbox').prop('checked', checked);
         $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
+        syncSeleccionDesdeDOM();
     });
 
     function toggleGeneroSelection(genero, checked) {
@@ -392,6 +442,7 @@ $(document).ready(function() {
         // reset mitades cuando se usa selección por género
         $('#select-top-half, #select-bottom-half').prop('checked', false);
         updateSelectAllState();
+        syncSeleccionDesdeDOM();
     }
 
     $('#select-male').on('change', function() {
@@ -414,6 +465,7 @@ $(document).ready(function() {
         // reset género
         $('#select-male, #select-female').prop('checked', false);
         updateSelectAllState();
+        syncSeleccionDesdeDOM();
     });
 
     // Seleccionar mitad inferior
@@ -428,6 +480,7 @@ $(document).ready(function() {
         // reset género
         $('#select-male, #select-female').prop('checked', false);
         updateSelectAllState();
+        syncSeleccionDesdeDOM();
     });
 });
 </script>
