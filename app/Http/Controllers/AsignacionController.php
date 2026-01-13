@@ -62,18 +62,25 @@ class AsignacionController extends Controller
 
             $validated = $request->validate([
                 'profesor_id' => 'required|exists:profesores,id',
-                'materia_id' => 'required|exists:materias,id',
-                'seccion_id' => 'required_without:aplicar_todas_secciones|exists:secciones,id',
+                'materias_id' => 'required_without:aplicar_todas_materias|array|min:1',
+                'materias_id.*' => 'exists:materias,id',
+                'aplicar_todas_materias' => 'nullable',
+                'secciones_id' => 'required_without:aplicar_todas_secciones|array|min:1',
+                'secciones_id.*' => 'exists:secciones,id',
                 'aplicar_todas_secciones' => 'nullable',
                 'estudiantes_id' => 'required|array|min:1',
                 'estudiantes_id.*' => 'exists:estudiantes,id'
             ], [
                 'profesor_id.required' => 'El profesor es requerido',
                 'profesor_id.exists' => 'El profesor seleccionado no existe',
-                'materia_id.required' => 'La materia es requerida',
-                'materia_id.exists' => 'La materia seleccionada no existe',
-                'seccion_id.required_without' => 'La sección es requerida',
-                'seccion_id.exists' => 'La sección seleccionada no existe',
+                'materias_id.required_without' => 'Debe seleccionar al menos una materia',
+                'materias_id.array' => 'Formato de materias inválido',
+                'materias_id.min' => 'Debe seleccionar al menos una materia',
+                'materias_id.*.exists' => 'Una o más materias seleccionadas no existen',
+                'secciones_id.required_without' => 'Debe seleccionar al menos una sección',
+                'secciones_id.array' => 'Formato de secciones inválido',
+                'secciones_id.min' => 'Debe seleccionar al menos una sección',
+                'secciones_id.*.exists' => 'Una o más secciones seleccionadas no existen',
                 'estudiantes_id.required' => 'Debe seleccionar al menos un estudiante',
                 'estudiantes_id.array' => 'Formato de estudiantes inválido',
                 'estudiantes_id.min' => 'Debe seleccionar al menos un estudiante',
@@ -81,26 +88,32 @@ class AsignacionController extends Controller
             ]);
 
             $aplicarTodas = $request->boolean('aplicar_todas_secciones');
-            if (!$aplicarTodas) {
-                Asignacion::create([
-                    'profesor_id' => $validated['profesor_id'],
-                    'materia_id' => $validated['materia_id'],
-                    'seccion_id' => $validated['seccion_id'],
-                    'estudiantes_id' => json_encode($validated['estudiantes_id'])
-                ]);
+            $aplicarTodasMaterias = $request->boolean('aplicar_todas_materias');
 
-                return redirect()->route('asignaciones.index')
-                    ->with('success', 'Asignación creada exitosamente.');
+            $materiaIds = $aplicarTodasMaterias
+                ? Materia::query()->pluck('id')->map(fn($v) => (int) $v)->values()->all()
+                : collect($validated['materias_id'] ?? [])->map(fn($v) => (int) $v)->unique()->values()->all();
+
+            if (empty($materiaIds)) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Debe seleccionar al menos una materia.');
             }
 
-            // Crear múltiples asignaciones (una por sección del profesor como titular),
-            // agrupando los estudiantes seleccionados por su sección.
-            $seccionIds = Seccion::where('titular_profesor_id', $validated['profesor_id'])->pluck('id');
-            $seccionIds = $seccionIds
-                ->merge(Asignacion::where('profesor_id', $validated['profesor_id'])->pluck('seccion_id'))
-                ->unique()
-                ->values()
-                ->all();
+            // Determinar secciones destino (seleccionadas o todas las del profesor).
+            if ($aplicarTodas) {
+                $seccionIds = Seccion::where('titular_profesor_id', $validated['profesor_id'])->pluck('id')
+                    ->merge(Asignacion::where('profesor_id', $validated['profesor_id'])->pluck('seccion_id'))
+                    ->unique()
+                    ->values()
+                    ->all();
+            } else {
+                $seccionIds = collect($validated['secciones_id'] ?? [])
+                    ->map(fn($v) => (int) $v)
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
 
             if (empty($seccionIds)) {
                 return redirect()->back()
@@ -120,20 +133,46 @@ class AsignacionController extends Controller
             if ($idsPorSeccion->isEmpty()) {
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', 'No se encontraron estudiantes seleccionados dentro de las secciones del profesor.');
+                    ->with('error', 'No se encontraron estudiantes seleccionados dentro de las secciones seleccionadas.');
             }
 
-            foreach ($idsPorSeccion as $seccionId => $ids) {
-                Asignacion::create([
-                    'profesor_id' => $validated['profesor_id'],
-                    'materia_id' => $validated['materia_id'],
-                    'seccion_id' => $seccionId,
-                    'estudiantes_id' => json_encode($ids)
-                ]);
+            $created = 0;
+            $skippedPairs = 0;
+
+            foreach ($materiaIds as $materiaId) {
+                $materiaId = (int) $materiaId;
+                foreach ($idsPorSeccion as $seccionId => $ids) {
+                    $seccionId = (int) $seccionId;
+
+                    $exists = Asignacion::where('materia_id', $materiaId)
+                        ->where('seccion_id', $seccionId)
+                        ->exists();
+
+                    if ($exists) {
+                        $skippedPairs++;
+                        continue;
+                    }
+
+                    Asignacion::create([
+                        'profesor_id' => $validated['profesor_id'],
+                        'materia_id' => $materiaId,
+                        'seccion_id' => $seccionId,
+                        'estudiantes_id' => json_encode($ids)
+                    ]);
+                    $created++;
+                }
+            }
+
+            $msg = $created === 1
+                ? 'Asignación creada exitosamente.'
+                : "Asignaciones creadas exitosamente ({$created}).";
+
+            if ($skippedPairs > 0) {
+                $msg .= " Se omitieron {$skippedPairs} combinaciones (materia/sección) ya existentes.";
             }
 
             return redirect()->route('asignaciones.index')
-                ->with('success', 'Asignaciones creadas exitosamente para las secciones del profesor.');
+                ->with('success', $msg);
         } catch (\Exception $e) {
             \Log::error('Error creating asignación: ' . $e->getMessage());
             \Log::error($e->getTraceAsString());
