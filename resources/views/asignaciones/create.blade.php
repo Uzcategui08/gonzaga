@@ -37,35 +37,35 @@
                     </div>
 
                     <div class="form-group col-md-4">
-                        <label for="materia_id" class="font-weight-bold text-gray-700">Materia</label>
-                        <select name="materia_id" id="materia_id" class="form-control form-control-lg select2 @error('materia_id') is-invalid @enderror" required>
-                            <option value="">Seleccione una materia</option>
+                        <label for="materias_id" class="font-weight-bold text-gray-700">Materias</label>
+                        <div class="custom-control custom-checkbox mb-2">
+                            <input type="checkbox" class="custom-control-input" id="aplicar_todas_materias" name="aplicar_todas_materias" value="1">
+                            <label class="custom-control-label" for="aplicar_todas_materias">Seleccionar todas las materias</label>
+                        </div>
+                        <select name="materias_id[]" id="materias_id" class="form-control form-control-lg select2 @error('materias_id') is-invalid @enderror" multiple>
                             @foreach($materias as $materia)
                                 <option value="{{ $materia->id }}" data-nivel="{{ $materia->nivel }}">
                                     {{ $materia->nombre }} - {{ ucfirst($materia->nivel) }}
                                 </option>
                             @endforeach
                         </select>
-                        @error('materia_id')
+                        <div class="small text-muted mt-1">Puedes seleccionar varias materias</div>
+                        @error('materias_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
 
                     <div class="form-group col-md-4">
-                        <label for="seccion_id" class="font-weight-bold text-gray-700">Sección</label>
+                        <label for="secciones_id" class="font-weight-bold text-gray-700">Secciones</label>
                         <div class="custom-control custom-checkbox mb-2">
                             <input type="checkbox" class="custom-control-input" id="aplicar_todas_secciones" name="aplicar_todas_secciones" value="1">
                             <label class="custom-control-label" for="aplicar_todas_secciones">Aplicar a todas las secciones del profesor</label>
                         </div>
-                        <select name="seccion_id" id="seccion_id" class="form-control form-control-lg select2 @error('seccion_id') is-invalid @enderror" required>
-                            <option value="">Seleccione una sección</option>
-                            @foreach($secciones as $seccion)
-                                <option value="{{ $seccion->id }}" data-nivel="{{ $seccion->grado->nivel ?? '' }}">
-                                    {{ $seccion->nombre }} - {{ $seccion->grado->nombre }} ({{ ucfirst($seccion->grado->nivel ?? 'N/A') }})
-                                </option>
-                            @endforeach
+                        <select name="secciones_id[]" id="secciones_id" class="form-control form-control-lg select2 @error('secciones_id') is-invalid @enderror" multiple>
+                            <option value="">Seleccione una o varias secciones</option>
                         </select>
-                        @error('seccion_id')
+                        <div class="small text-muted mt-1">Se cargan automáticamente según el profesor (y el nivel de la materia)</div>
+                        @error('secciones_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
@@ -99,7 +99,7 @@
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="5" class="text-center text-muted">Seleccione una sección (o marque “todas las secciones”) para ver los estudiantes</td>
+                                    <td colspan="5" class="text-center text-muted">Seleccione un profesor y luego secciones (o marque “todas las secciones”) para ver los estudiantes</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -147,38 +147,115 @@ document.getElementById('asignacionForm').addEventListener('submit', function(e)
 $(document).ready(function() {
         const $profesor = $('#profesor_id');
         // Filtrar secciones por nivel de la materia seleccionada
-        const $materia = $('#materia_id');
-        const $seccion = $('#seccion_id');
+    const $materias = $('#materias_id');
+    const $todasMaterias = $('#aplicar_todas_materias');
+        const $secciones = $('#secciones_id');
         const $todas = $('#aplicar_todas_secciones');
 
-        function loadSeccionesByNivel(nivel, keepSelection=false) {
-            const selectedVal = keepSelection ? $seccion.val() : '';
-            $seccion.empty();
-            $seccion.append(new Option('Seleccione una sección', ''));
-            if (!nivel) {
-                $seccion.trigger('change.select2');
-                return;
-            }
-            $.getJSON('{{ route('asignaciones.por.nivel') }}', { nivel }, function(resp){
-                if (resp.success) {
-                    resp.secciones.forEach(function(s){
-                        const text = `${s.nombre} - ${s.grado} (${(s.nivel||'').charAt(0).toUpperCase()+ (s.nivel||'').slice(1)})`;
-                        const opt = new Option(text, s.id, false, keepSelection && s.id.toString() === (selectedVal||'').toString());
-                        $seccion.append(opt);
-                    });
-                    $seccion.trigger('change.select2');
-                }
-            });
-        }
+        let profesorSecciones = [];
+        let profesorEstudiantes = [];
 
         function setInitialTableMessage(message) {
             $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center text-muted">' + message + '</td></tr>');
         }
 
-        $materia.on('change', function() {
-            const nivel = ($(this).find('option:selected').data('nivel') || '').toLowerCase();
-            loadSeccionesByNivel(nivel);
-            setInitialTableMessage('Seleccione una sección (o marque “todas las secciones”) para ver los estudiantes');
+        function ucFirst(str) {
+            if (!str) return '';
+            str = str.toString();
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function nivelesMateriasSeleccionadas() {
+            const niveles = [];
+            $materias.find('option:selected').each(function() {
+                const n = (($(this).data('nivel') || '') + '').toLowerCase();
+                if (n) niveles.push(n);
+            });
+            return Array.from(new Set(niveles));
+        }
+
+        function getNivelParaFiltrarSecciones() {
+            const niveles = nivelesMateriasSeleccionadas();
+            // Si todas las materias seleccionadas son del mismo nivel, filtramos por ese.
+            // Si hay mezcla de niveles o no hay selección, no filtramos.
+            return niveles.length === 1 ? niveles[0] : '';
+        }
+
+        function seccionesFiltradasPorNivel() {
+            const nivel = getNivelParaFiltrarSecciones();
+            if (!nivel) return (profesorSecciones || []);
+            return (profesorSecciones || []).filter(function(s) {
+                return ((s.nivel || '') + '').toLowerCase() === nivel;
+            });
+        }
+
+        function renderSeccionesOptions(keepSelection=false) {
+            const filtered = seccionesFiltradasPorNivel();
+            const prev = keepSelection ? ($secciones.val() || []).map(String) : [];
+
+            $secciones.empty();
+            filtered.forEach(function(s) {
+                const text = `${s.nombre} - ${s.grado || ''} (${ucFirst(s.nivel || '')})`;
+                const selected = keepSelection && prev.includes(String(s.id));
+                $secciones.append(new Option(text, s.id, false, selected));
+            });
+            $secciones.trigger('change.select2');
+
+            if ($todas.is(':checked')) {
+                $secciones.val(filtered.map(s => String(s.id))).trigger('change.select2');
+            }
+        }
+
+        function renderEstudiantesBySelectedSecciones() {
+            if ($todas.is(':checked')) {
+                renderEstudiantes(profesorEstudiantes || []);
+                return;
+            }
+
+            const selected = ($secciones.val() || []).map(String);
+            if (!selected.length) {
+                setInitialTableMessage('Seleccione una o varias secciones para ver los estudiantes');
+                return;
+            }
+
+            const filtered = (profesorEstudiantes || []).filter(function(e) {
+                return selected.includes(String(e.seccion_id));
+            });
+            renderEstudiantes(filtered);
+        }
+
+        function syncModoTodasSecciones() {
+            var enabled = $todas.is(':checked');
+            $secciones.prop('disabled', enabled);
+            if (enabled) {
+                const filtered = seccionesFiltradasPorNivel();
+                $secciones.val(filtered.map(s => String(s.id))).trigger('change.select2');
+            }
+        }
+
+        function syncModoTodasMaterias() {
+            const enabled = $todasMaterias.is(':checked');
+            $materias.prop('disabled', enabled);
+            if (enabled) {
+                const allIds = [];
+                $materias.find('option').each(function() {
+                    const v = $(this).attr('value');
+                    if (v) allIds.push(String(v));
+                });
+                $materias.val(allIds).trigger('change.select2');
+            }
+        }
+
+        $materias.on('change', function() {
+            renderSeccionesOptions(true);
+            renderEstudiantesBySelectedSecciones();
+        });
+
+        $todasMaterias.on('change', function() {
+            syncModoTodasMaterias();
+            renderSeccionesOptions(true);
+            syncModoTodasSecciones();
+            renderEstudiantesBySelectedSecciones();
         });
     // Inicializar select2
     $('.select2').select2({
@@ -215,6 +292,10 @@ $(document).ready(function() {
     function cargarEstudiantesPorProfesor(profesorId) {
         var tbody = $('#estudiantes-table tbody');
         if (!profesorId) {
+            profesorSecciones = [];
+            profesorEstudiantes = [];
+            $secciones.empty().trigger('change.select2');
+            $secciones.prop('disabled', true);
             setInitialTableMessage('Seleccione un profesor');
             return;
         }
@@ -225,7 +306,14 @@ $(document).ready(function() {
             data: { profesor_id: profesorId },
             success: function(response) {
                 if (response && response.success) {
-                    renderEstudiantes(response.estudiantes || []);
+                    profesorSecciones = response.secciones || [];
+                    profesorEstudiantes = response.estudiantes || [];
+                    renderSeccionesOptions(false);
+
+                    // Si hay secciones disponibles, habilitar el selector (a menos que esté en modo todas)
+                    $secciones.prop('disabled', $todas.is(':checked') ? true : false);
+                    syncModoTodasSecciones();
+                    renderEstudiantesBySelectedSecciones();
                 } else {
                     setInitialTableMessage('No se pudieron cargar los estudiantes');
                 }
@@ -237,63 +325,24 @@ $(document).ready(function() {
         });
     }
 
-    function cargarEstudiantesPorSeccion(seccionId) {
-        var tbody = $('#estudiantes-table tbody');
-        if (!seccionId) {
-            setInitialTableMessage('Seleccione una sección para ver los estudiantes');
-            return;
-        }
-        tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
-        $.ajax({
-            url: '{{ route("asignaciones.estudiantes.por-seccion") }}',
-            type: 'GET',
-            data: { seccion_id: seccionId },
-            success: function(response) {
-                if (response && response.success) {
-                    renderEstudiantes(response.estudiantes || []);
-                } else {
-                    setInitialTableMessage('No hay estudiantes en esta sección');
-                }
-            },
-            error: function(xhr) {
-                console.error('Error al cargar estudiantes por sección:', xhr);
-                setInitialTableMessage('Error al cargar los estudiantes');
-            }
-        });
-    }
-
-    function syncModoTodasSecciones() {
-        var enabled = $todas.is(':checked');
-        $seccion.prop('disabled', enabled);
-        $seccion.prop('required', !enabled);
-        if (enabled) {
-            $seccion.val('').trigger('change.select2');
-            cargarEstudiantesPorProfesor($profesor.val());
-        } else {
-            setInitialTableMessage('Seleccione una sección (o marque “todas las secciones”) para ver los estudiantes');
-        }
-    }
-
     $todas.on('change', function() {
         syncModoTodasSecciones();
+        renderEstudiantesBySelectedSecciones();
     });
 
     $profesor.on('change', function() {
-        if ($todas.is(':checked')) {
-            cargarEstudiantesPorProfesor($(this).val());
-        }
+        cargarEstudiantesPorProfesor($(this).val());
     });
 
-    $('#seccion_id').change(function() {
-        if ($('#aplicar_todas_secciones').is(':checked')) {
-            return;
-        }
-        var seccionId = $(this).val();
-        cargarEstudiantesPorSeccion(seccionId);
+    $secciones.on('change', function() {
+        renderEstudiantesBySelectedSecciones();
     });
 
     // estado inicial
+    $secciones.prop('disabled', true);
+    syncModoTodasMaterias();
     syncModoTodasSecciones();
+    renderEstudiantesBySelectedSecciones();
 
     // Función para actualizar el estado del checkbox "select all"
     function updateSelectAllState() {
