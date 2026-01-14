@@ -388,32 +388,53 @@ $(document).ready(function() {
         toggleGeneroSelection('F', $(this).is(':checked'));
     });
 
+    function selectHalfBySeccion(whichHalf, checked) {
+        var all = $('.estudiante-checkbox');
+        all.prop('checked', false);
+
+        if (!checked) {
+            updateSelectAllState();
+            return;
+        }
+
+        var bySeccion = {};
+        all.each(function() {
+            var sid = (($(this).data('seccion-id') || '') + '').toString();
+            if (!bySeccion[sid]) bySeccion[sid] = [];
+            bySeccion[sid].push(this);
+        });
+
+        Object.keys(bySeccion).forEach(function(sid) {
+            var arr = bySeccion[sid] || [];
+            var half = Math.ceil(arr.length / 2);
+            if (whichHalf === 'top') {
+                $(arr.slice(0, half)).prop('checked', true);
+            } else {
+                $(arr.slice(half)).prop('checked', true);
+            }
+        });
+
+        updateSelectAllState();
+    }
+
     // Seleccionar mitad superior
     $('#select-top-half').on('change', function() {
         var checked = $(this).is(':checked');
-        var all = $('.estudiante-checkbox');
-        var half = Math.ceil(all.length / 2);
-        all.prop('checked', false);
-        all.slice(0, half).prop('checked', checked);
+        selectHalfBySeccion('top', checked);
         // reset other half checkbox
         $('#select-bottom-half').prop('checked', false);
         // reset género
         $('#select-male, #select-female').prop('checked', false);
-        updateSelectAllState();
     });
 
     // Seleccionar mitad inferior
     $('#select-bottom-half').on('change', function() {
         var checked = $(this).is(':checked');
-        var all = $('.estudiante-checkbox');
-        var half = Math.ceil(all.length / 2);
-        all.prop('checked', false);
-        all.slice(half).prop('checked', checked);
+        selectHalfBySeccion('bottom', checked);
         // reset top half checkbox
         $('#select-top-half').prop('checked', false);
         // reset género
         $('#select-male, #select-female').prop('checked', false);
-        updateSelectAllState();
     });
 });
 </script>

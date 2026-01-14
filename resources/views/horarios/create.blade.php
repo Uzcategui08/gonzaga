@@ -93,7 +93,7 @@
                                                 @foreach($entradas as $i => $entrada)
                                                     <tr>
                                                         <td>
-                                                            <select name="schedule[{{ $dia }}][{{ $i }}][asignacion_id]" class="form-control select2">
+                                                            <select name="schedule[{{ $dia }}][{{ $i }}][asignacion_id]" class="form-control select2 js-asignacion-select">
                                                                 <option value="">Seleccione una opción</option>
                                                                 @foreach($asignaciones as $asignacion)
                                                                     @php
@@ -177,7 +177,7 @@
 <template id="horario-row-template">
     <tr>
         <td>
-            <select name="schedule[__DAY__][__INDEX__][asignacion_id]" class="form-control select2">
+            <select name="schedule[__DAY__][__INDEX__][asignacion_id]" class="form-control select2 js-asignacion-select">
                 <option value="">Seleccione una opción</option>
                 @foreach($asignaciones as $asignacion)
                     <option value="{{ $asignacion->id }}" data-profesor-id="{{ $asignacion->profesor_id }}">
@@ -204,30 +204,58 @@
 </template>
 
 <script>
-    function initSelect2(root) {
-        if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) return;
-        $(root).find('select.select2').select2({ width: '100%' });
+    function getSelectedProfesorId() {
+        const profesorSelect = document.getElementById('profesor_id');
+        return profesorSelect ? (profesorSelect.value || '') : '';
     }
 
-    function applyProfessorFilter() {
-        const profesorSelect = document.getElementById('profesor_id');
-        const profesorId = profesorSelect ? profesorSelect.value : '';
+    function initSelect2Basic(root) {
+        if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) return;
+        $(root).find('select.select2').not('.js-asignacion-select').select2({ width: '100%' });
+    }
 
-        document.querySelectorAll('select[name*="[asignacion_id]"]').forEach((selectEl) => {
+    function initAsignacionSelect2(root) {
+        if (typeof $ === 'undefined' || !$.fn || !$.fn.select2) return;
+
+        const matcher = function (params, data) {
+            // data.id puede ser undefined en placeholders
+            if (!data || !data.element) return data;
+            const profesorId = getSelectedProfesorId();
+            if (!profesorId) return data;
+
+            const optProfesorId = data.element.getAttribute('data-profesor-id') || '';
+            if (optProfesorId !== profesorId) {
+                return null;
+            }
+
+            // Filtro por texto (comportamiento default)
+            if (!params || !params.term) return data;
+            const term = (params.term || '').toLowerCase();
+            const text = (data.text || '').toLowerCase();
+            return text.indexOf(term) > -1 ? data : null;
+        };
+
+        // Reinicializar solo los selects de asignación
+        $(root).find('select.js-asignacion-select').each(function () {
+            const $el = $(this);
+            if ($el.data('select2')) {
+                $el.select2('destroy');
+            }
+            $el.select2({ width: '100%', matcher });
+        });
+    }
+
+    function ensureAsignacionSelectionsValid() {
+        const profesorId = getSelectedProfesorId();
+        if (!profesorId) return;
+
+        document.querySelectorAll('select.js-asignacion-select').forEach((selectEl) => {
             const currentValue = selectEl.value;
-            let currentStillValid = false;
+            if (!currentValue) return;
 
-            Array.from(selectEl.options).forEach((opt) => {
-                if (!opt.value) return;
-                const optProfesorId = opt.getAttribute('data-profesor-id') || '';
-                const isAllowed = !profesorId || optProfesorId === profesorId;
-                opt.disabled = !isAllowed;
-                if (isAllowed && opt.value === currentValue) {
-                    currentStillValid = true;
-                }
-            });
-
-            if (profesorId && currentValue && !currentStillValid) {
+            const selectedOpt = selectEl.selectedOptions && selectEl.selectedOptions[0] ? selectEl.selectedOptions[0] : null;
+            const optProfesorId = selectedOpt ? (selectedOpt.getAttribute('data-profesor-id') || '') : '';
+            if (optProfesorId !== profesorId) {
                 if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
                     $(selectEl).val('').trigger('change');
                 } else {
@@ -238,13 +266,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        initSelect2(document);
-        applyProfessorFilter();
+        initSelect2Basic(document);
+        initAsignacionSelect2(document);
+        ensureAsignacionSelectionsValid();
 
         const profesorSelect = document.getElementById('profesor_id');
         if (profesorSelect) {
             profesorSelect.addEventListener('change', function () {
-                applyProfessorFilter();
+                // Refiltra el dropdown (oculta opciones no permitidas)
+                initAsignacionSelect2(document);
+                ensureAsignacionSelectionsValid();
             });
         }
 
@@ -263,8 +294,9 @@
                 .replace(/__INDEX__/g, String(index));
 
             tbody.insertAdjacentHTML('beforeend', rowHtml);
-            initSelect2(tbody);
-            applyProfessorFilter();
+            initSelect2Basic(tbody);
+            initAsignacionSelect2(tbody);
+            ensureAsignacionSelectionsValid();
         }
 
         document.addEventListener('click', function (e) {
