@@ -10,6 +10,7 @@ use App\Models\Profesor;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Seccion;
+use Illuminate\Support\Facades\DB;
 
 class HorarioController extends Controller
 {
@@ -22,27 +23,27 @@ class HorarioController extends Controller
             $user = auth()->user();
             $professorId = $request->query('professor_id');
             $sectionId = $request->query('section_id');
-            
+
             $query = Horario::with([
-                'asignacion.profesor.user', 
-                'asignacion.materia', 
-                'asignacion.seccion', 
+                'asignacion.profesor.user',
+                'asignacion.materia',
+                'asignacion.seccion',
                 'grado.seccion.grado'
             ]);
 
             if ($user->hasRole('coordinador')) {
                 $seccionesCoordinador = $user->secciones->pluck('id');
-                $query->whereHas('asignacion', function($query) use ($seccionesCoordinador) {
+                $query->whereHas('asignacion', function ($query) use ($seccionesCoordinador) {
                     $query->whereIn('seccion_id', $seccionesCoordinador);
                 });
             }
 
             if ($professorId) {
-                $query->whereHas('asignacion', function($query) use ($professorId) {
+                $query->whereHas('asignacion', function ($query) use ($professorId) {
                     $query->where('profesor_id', $professorId);
                 });
             } elseif ($sectionId) {
-                $query->whereHas('asignacion', function($query) use ($sectionId) {
+                $query->whereHas('asignacion', function ($query) use ($sectionId) {
                     $query->where('seccion_id', $sectionId);
                 });
             }
@@ -76,7 +77,7 @@ class HorarioController extends Controller
             }
 
             $horarios = Horario::with(['asignacion.materia'])
-                ->whereHas('asignacion', function($query) use ($profesor) {
+                ->whereHas('asignacion', function ($query) use ($profesor) {
                     $query->where('profesor_id', $profesor->id);
                 })
                 ->orderBy('dia')
@@ -108,7 +109,14 @@ class HorarioController extends Controller
             return $asignacion->materia->nombre;
         });
 
-        return view('horarios.create', compact('asignaciones'));
+        $professores = $asignaciones
+            ->map(fn($a) => $a->profesor)
+            ->filter()
+            ->unique('id')
+            ->sortBy(fn($p) => optional($p->user)->name)
+            ->values();
+
+        return view('horarios.create', compact('asignaciones', 'professores'));
     }
 
     /**
@@ -117,6 +125,101 @@ class HorarioController extends Controller
     public function store(Request $request)
     {
         try {
+            // Creación en bloque (una sola pantalla)
+            if ($request->has('schedule')) {
+                $validated = $request->validate([
+                    'schedule' => 'required|array',
+                    'schedule.*' => 'nullable|array',
+                    'schedule.*.*.asignacion_id' => 'nullable|exists:asignaciones,id',
+                    'schedule.*.*.hora_inicio' => 'nullable|date_format:H:i',
+                    'schedule.*.*.hora_fin' => 'nullable|date_format:H:i',
+                    'schedule.*.*.aula' => 'nullable|string|max:50',
+                ]);
+
+                $diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                $schedule = $validated['schedule'] ?? [];
+
+                $creados = 0;
+
+                DB::beginTransaction();
+                try {
+                    foreach ($schedule as $dia => $filas) {
+                        if (!in_array($dia, $diasValidos, true)) {
+                            continue;
+                        }
+                        if (!is_array($filas)) {
+                            continue;
+                        }
+
+                        foreach ($filas as $fila) {
+                            $fila = array_merge([
+                                'asignacion_id' => null,
+                                'hora_inicio' => null,
+                                'hora_fin' => null,
+                                'aula' => null,
+                            ], (array) $fila);
+
+                            $tieneAlgo = (bool) ($fila['asignacion_id'] || $fila['hora_inicio'] || $fila['hora_fin'] || $fila['aula']);
+                            if (!$tieneAlgo) {
+                                continue;
+                            }
+
+                            if (!$fila['asignacion_id'] || !$fila['hora_inicio'] || !$fila['hora_fin'] || !$fila['aula']) {
+                                DB::rollBack();
+                                return redirect()->back()
+                                    ->withInput()
+                                    ->with('error', "En {$dia}: si llenas una fila, debes completar Asignación, Hora Inicio, Hora Fin y Aula.");
+                            }
+
+                            if ($fila['hora_fin'] <= $fila['hora_inicio']) {
+                                DB::rollBack();
+                                return redirect()->back()
+                                    ->withInput()
+                                    ->with('error', "En {$dia}: la Hora Fin debe ser después de la Hora Inicio.");
+                            }
+
+                            // Solape correcto: [inicio, fin) se solapa si existing_inicio < nuevo_fin y existing_fin > nuevo_inicio
+                            $exists = Horario::where('asignacion_id', $fila['asignacion_id'])
+                                ->where('dia', $dia)
+                                ->where('hora_inicio', '<', $fila['hora_fin'])
+                                ->where('hora_fin', '>', $fila['hora_inicio'])
+                                ->exists();
+
+                            if ($exists) {
+                                DB::rollBack();
+                                return redirect()->back()
+                                    ->withInput()
+                                    ->with('error', "Ya existe un horario para esta asignación en {$dia} que se solapa con {$fila['hora_inicio']} - {$fila['hora_fin']}.");
+                            }
+
+                            Horario::create([
+                                'asignacion_id' => $fila['asignacion_id'],
+                                'dia' => $dia,
+                                'hora_inicio' => $fila['hora_inicio'],
+                                'hora_fin' => $fila['hora_fin'],
+                                'aula' => $fila['aula'],
+                            ]);
+
+                            $creados++;
+                        }
+                    }
+
+                    if ($creados === 0) {
+                        DB::rollBack();
+                        return redirect()->back()
+                            ->withInput()
+                            ->with('error', 'No se detectaron filas completas para guardar.');
+                    }
+
+                    DB::commit();
+                    return redirect()->route('horarios.index')
+                        ->with('success', "Se crearon {$creados} horarios exitosamente.");
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    throw $e;
+                }
+            }
+
             $asignacion = Asignacion::find($request->asignacion_id);
             if (!$asignacion) {
                 return redirect()->back()
@@ -141,10 +244,8 @@ class HorarioController extends Controller
 
             $exists = Horario::where('asignacion_id', $request->asignacion_id)
                 ->where('dia', $request->dia)
-                ->where(function ($query) use ($request) {
-                    $query->whereBetween('hora_inicio', [$request->hora_inicio, $request->hora_fin])
-                        ->orWhereBetween('hora_fin', [$request->hora_inicio, $request->hora_fin]);
-                })
+                ->where('hora_inicio', '<', $request->hora_fin)
+                ->where('hora_fin', '>', $request->hora_inicio)
                 ->exists();
 
             if ($exists) {
@@ -157,7 +258,6 @@ class HorarioController extends Controller
 
             return redirect()->route('horarios.index')
                 ->with('success', 'Horario creado exitosamente.');
-
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
@@ -179,13 +279,13 @@ class HorarioController extends Controller
     public function edit(Horario $horario)
     {
         $horario->load('asignacion.profesor.user', 'asignacion.materia', 'asignacion.seccion');
-        
+
         $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
             ->get()
             ->sortBy(function ($asignacion) {
                 return $asignacion->materia->nombre;
             });
-        
+
         return view('horarios.edit', compact('horario', 'asignaciones'));
     }
 
@@ -232,7 +332,6 @@ class HorarioController extends Controller
 
             return redirect()->route('horarios.index')
                 ->with('success', 'Horario actualizado exitosamente.');
-
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
@@ -269,7 +368,7 @@ class HorarioController extends Controller
                 Log::info('Secciones del coordinador:', ['secciones' => $seccionesCoordinador->toArray()]);
 
                 $professors = Profesor::with(['user', 'secciones'])
-                    ->whereHas('secciones', function($query) use ($seccionesCoordinador) {
+                    ->whereHas('secciones', function ($query) use ($seccionesCoordinador) {
                         $query->whereIn('seccion_id', $seccionesCoordinador);
                     })
                     ->join('users', 'profesores.user_id', '=', 'users.id')
@@ -298,26 +397,25 @@ class HorarioController extends Controller
             if ($request->has('professor_id')) {
                 try {
                     $selectedProfessor = Profesor::with('user')
-                        ->whereHas('user', function($query) use ($request) {
+                        ->whereHas('user', function ($query) use ($request) {
                             $query->where('id', $request->professor_id);
                         })->first();
-                    
+
                     if (!$selectedProfessor) {
                         return redirect()->back()->with('error', 'Profesor no encontrado.');
                     }
 
                     // Filtrar por profesor
-                    $query->whereHas('asignacion', function($query) use ($selectedProfessor) {
+                    $query->whereHas('asignacion', function ($query) use ($selectedProfessor) {
                         $query->where('profesor_id', $selectedProfessor->id);
                     });
 
                     // Aplicar restricciones de coordinador si es necesario
                     if (!$user->hasRole('admin')) {
-                        $query->whereHas('asignacion', function($query) use ($seccionesCoordinador) {
+                        $query->whereHas('asignacion', function ($query) use ($seccionesCoordinador) {
                             $query->whereIn('seccion_id', $seccionesCoordinador);
                         });
                     }
-
                 } catch (\Exception $e) {
                     Log::error('Error buscando profesor:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                     return redirect()->back()
@@ -333,17 +431,16 @@ class HorarioController extends Controller
                     }
 
                     // Filtrar por sección
-                    $query->whereHas('asignacion', function($query) use ($selectedSection) {
+                    $query->whereHas('asignacion', function ($query) use ($selectedSection) {
                         $query->where('seccion_id', $selectedSection->id);
                     });
 
                     // Aplicar restricciones de coordinador si es necesario
                     if (!$user->hasRole('admin')) {
-                        $query->whereHas('asignacion', function($query) use ($seccionesCoordinador) {
+                        $query->whereHas('asignacion', function ($query) use ($seccionesCoordinador) {
                             $query->whereIn('seccion_id', $seccionesCoordinador);
                         });
                     }
-
                 } catch (\Exception $e) {
                     Log::error('Error buscando sección:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                     return redirect()->back()
@@ -354,7 +451,7 @@ class HorarioController extends Controller
             else {
                 // Aplicar restricciones de coordinador si es necesario
                 if (!$user->hasRole('admin')) {
-                    $query->whereHas('asignacion', function($query) use ($seccionesCoordinador) {
+                    $query->whereHas('asignacion', function ($query) use ($seccionesCoordinador) {
                         $query->whereIn('seccion_id', $seccionesCoordinador);
                     });
                 }
@@ -381,5 +478,4 @@ class HorarioController extends Controller
                 ->with('error', 'Error al cargar el horario. Por favor, contacte al administrador.');
         }
     }
-
 }
