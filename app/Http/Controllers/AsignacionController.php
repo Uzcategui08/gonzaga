@@ -359,17 +359,32 @@ class AsignacionController extends Controller
     public function getEstudiantesByProfesor(Request $request)
     {
         try {
-            $request->validate([
-                'profesor_id' => 'required|exists:profesores,id'
+            $request->merge([
+                'nivel' => $request->filled('nivel') ? strtolower((string) $request->input('nivel')) : null,
             ]);
+
+            $request->validate([
+                'profesor_id' => 'required|exists:profesores,id',
+                'nivel' => 'nullable|in:primaria,secundaria',
+            ]);
+
+            $nivel = $request->input('nivel');
 
             $seccionIds = Seccion::where('titular_profesor_id', $request->profesor_id)->pluck('id')
                 ->merge(Asignacion::where('profesor_id', $request->profesor_id)->pluck('seccion_id'))
                 ->unique()
                 ->values();
 
-            $secciones = Seccion::with(['grado'])
-                ->whereIn('id', $seccionIds)
+            $seccionesQuery = Seccion::with(['grado'])
+                ->whereIn('id', $seccionIds);
+
+            if ($nivel) {
+                $seccionesQuery->whereHas('grado', function ($q) use ($nivel) {
+                    $q->where('nivel', $nivel);
+                });
+            }
+
+            $secciones = $seccionesQuery
                 ->orderBy('nombre')
                 ->get(['id', 'nombre', 'grado_id']);
 
