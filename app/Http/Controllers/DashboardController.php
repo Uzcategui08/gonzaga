@@ -96,7 +96,7 @@ class DashboardController extends Controller
             $fechaActual = now('America/Caracas');
 
             $latestAsistenciaIds = $this->latestAsistenciaIdsForDateByHorario($fechaActual);
-            $attendanceCounts = $this->countAttendanceRowsByState($latestAsistenciaIds);
+            $attendanceCounts = $this->countUniqueStudentsByState($latestAsistenciaIds);
 
             $data['asistenciasHoy'] = $attendanceCounts['A'] + $attendanceCounts['P'];
             $data['tardiosHoy'] = $attendanceCounts['P'];
@@ -201,7 +201,7 @@ class DashboardController extends Controller
             $diaActual = $fechaActual->format('l');
 
             $latestAsistenciaIds = $this->latestAsistenciaIdsForDateByHorario($fechaActual, $seccionesCoordinador);
-            $attendanceCounts = $this->countAttendanceRowsByState($latestAsistenciaIds);
+            $attendanceCounts = $this->countUniqueStudentsByState($latestAsistenciaIds);
 
             $data['asistenciasHoy'] = $attendanceCounts['A'] + $attendanceCounts['P'];
             $data['tardiosHoy'] = $attendanceCounts['P'];
@@ -624,6 +624,47 @@ class DashboardController extends Controller
     }
 
     /**
+     * Count unique students per resulting state for provided asistencias.
+     *
+     * If a student has multiple records across classes, they are counted once
+     * using the precedence: I (inasistencia) > P (tardío/pase) > A (asistencia).
+     */
+    private function countUniqueStudentsByState(Collection $asistenciaIds): array
+    {
+        if ($asistenciaIds->isEmpty()) {
+            return ['A' => 0, 'P' => 0, 'I' => 0];
+        }
+
+        $rows = AsistenciaEstudiante::select(
+            'estudiante_id',
+            DB::raw("MAX(CASE WHEN estado = 'I' THEN 1 ELSE 0 END) as has_i"),
+            DB::raw("MAX(CASE WHEN estado = 'P' THEN 1 ELSE 0 END) as has_p"),
+            DB::raw("MAX(CASE WHEN estado = 'A' THEN 1 ELSE 0 END) as has_a")
+        )
+            ->whereIn('asistencia_id', $asistenciaIds->all())
+            ->whereIn('estado', ['A', 'P', 'I'])
+            ->groupBy('estudiante_id')
+            ->get();
+
+        $counts = ['A' => 0, 'P' => 0, 'I' => 0];
+        foreach ($rows as $row) {
+            if ((int) $row->has_i === 1) {
+                $counts['I']++;
+                continue;
+            }
+            if ((int) $row->has_p === 1) {
+                $counts['P']++;
+                continue;
+            }
+            if ((int) $row->has_a === 1) {
+                $counts['A']++;
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
      * Build dashboard metrics grouped by nivel (primaria/secundaria).
      */
     private function buildLevelBreakdown(?Collection $restrictedSectionIds, Carbon $fechaActual): array
@@ -673,7 +714,7 @@ class DashboardController extends Controller
                 ->count('horario_id');
 
             $latestIds = $this->latestAsistenciaIdsForDateByHorario($fechaActual, $sectionIds);
-            $stateCounts = $this->countAttendanceRowsByState($latestIds);
+            $stateCounts = $this->countUniqueStudentsByState($latestIds);
             $totalEvents = array_sum($stateCounts);
 
             $coverage = $classesScheduled > 0
