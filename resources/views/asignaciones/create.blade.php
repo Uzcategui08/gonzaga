@@ -20,6 +20,17 @@
         <div class="card-body p-3">
             <form id="asignacionForm" action="{{ route('asignaciones.store') }}" method="POST">
                 @csrf
+                <div class="form-row mb-3">
+                    <div class="form-group col-md-4">
+                        <label for="nivel_select" class="font-weight-bold text-gray-700">Nivel</label>
+                        <select id="nivel_select" class="form-control form-control-lg">
+                            <option value="">Todos</option>
+                            <option value="primaria">Primaria</option>
+                            <option value="secundaria">Secundaria</option>
+                        </select>
+                        <div class="small text-muted mt-1">Filtrar materias, secciones y estudiantes por nivel</div>
+                    </div>
+                </div>
                 <div class="form-row">
                     <div class="form-group col-md-4">
                         <label for="profesor_id" class="font-weight-bold text-gray-700">Profesor</label>
@@ -146,8 +157,9 @@ document.getElementById('asignacionForm').addEventListener('submit', function(e)
 
 $(document).ready(function() {
         const $profesor = $('#profesor_id');
-        // Filtrar secciones por nivel de la materia seleccionada
-    const $materias = $('#materias_id');
+            // Filtrar secciones por nivel de la materia seleccionada
+        const $materias = $('#materias_id');
+        const $nivel = $('#nivel_select');
     const $todasMaterias = $('#aplicar_todas_materias');
         const $secciones = $('#secciones_id');
         const $todas = $('#aplicar_todas_secciones');
@@ -165,6 +177,17 @@ $(document).ready(function() {
             return str.charAt(0).toUpperCase() + str.slice(1);
         }
 
+        let allMateriasOptions = [];
+
+        // cache materia options present on page
+        $materias.find('option').each(function() {
+            allMateriasOptions.push({
+                value: $(this).val(),
+                text: $(this).text(),
+                nivel: ((($(this).data('nivel') || '') + '')).toString().toLowerCase()
+            });
+        });
+
         function nivelesMateriasSeleccionadas() {
             const niveles = [];
             $materias.find('option:selected').each(function() {
@@ -181,12 +204,28 @@ $(document).ready(function() {
             return niveles.length === 1 ? niveles[0] : '';
         }
 
+        function getNivelSeleccionado() {
+            const sel = (($nivel.val() || '') + '').toLowerCase();
+            return sel || getNivelParaFiltrarSecciones();
+        }
+
         function seccionesFiltradasPorNivel() {
-            const nivel = getNivelParaFiltrarSecciones();
+            const nivel = getNivelSeleccionado();
             if (!nivel) return (profesorSecciones || []);
             return (profesorSecciones || []).filter(function(s) {
                 return ((s.nivel || '') + '').toLowerCase() === nivel;
             });
+        }
+
+        function renderMateriasByNivel(nivel) {
+            $materias.empty();
+            allMateriasOptions.forEach(function(opt) {
+                if (!nivel || opt.nivel === nivel) {
+                    $materias.append(new Option(opt.text, opt.value));
+                }
+            });
+            $materias.trigger('change.select2');
+            if ($todasMaterias.is(':checked')) syncModoTodasMaterias();
         }
 
         function renderSeccionesOptions(keepSelection=false) {
@@ -247,6 +286,13 @@ $(document).ready(function() {
         }
 
         $materias.on('change', function() {
+            renderSeccionesOptions(true);
+            renderEstudiantesBySelectedSecciones();
+        });
+
+        $nivel.on('change', function() {
+            const nivel = ($(this).val() || '').toString().toLowerCase();
+            renderMateriasByNivel(nivel);
             renderSeccionesOptions(true);
             renderEstudiantesBySelectedSecciones();
         });
