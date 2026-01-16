@@ -221,9 +221,7 @@ $(document).ready(function() {
             $materias.empty();
             allMateriasOptions.forEach(function(opt) {
                 if (!nivel || opt.nivel === nivel) {
-                    const option = new Option(opt.text, opt.value);
-                    $(option).attr('data-nivel', opt.nivel);
-                    $materias.append(option);
+                    $materias.append(new Option(opt.text, opt.value));
                 }
             });
             $materias.trigger('change.select2');
@@ -295,8 +293,8 @@ $(document).ready(function() {
         $nivel.on('change', function() {
             const nivel = ($(this).val() || '').toString().toLowerCase();
             renderMateriasByNivel(nivel);
-            // Recargar data del profesor para filtrar también desde el servidor
-            cargarEstudiantesPorProfesor($profesor.val());
+            renderSeccionesOptions(true);
+            renderEstudiantesBySelectedSecciones();
         });
 
         $todasMaterias.on('change', function() {
@@ -348,17 +346,10 @@ $(document).ready(function() {
             return;
         }
         tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
-
-        var ajaxData = { profesor_id: profesorId };
-        var nivel = ($nivel.val() || '').toString().toLowerCase();
-        if (nivel) {
-            ajaxData.nivel = nivel;
-        }
-
         $.ajax({
             url: '{{ route("asignaciones.estudiantes.por-profesor") }}',
             type: 'GET',
-            data: ajaxData,
+            data: { profesor_id: profesorId },
             success: function(response) {
                 if (response && response.success) {
                     profesorSecciones = response.secciones || [];
