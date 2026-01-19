@@ -125,6 +125,7 @@ class HorarioController extends Controller
     public function store(Request $request)
     {
         try {
+            Log::info('Horario.store request', $request->all());
             // Creación en bloque (una sola pantalla)
             if ($request->has('schedule')) {
                 $validated = $request->validate([
@@ -192,13 +193,14 @@ class HorarioController extends Controller
                                     ->with('error', "Ya existe un horario para esta asignación en {$dia} que se solapa con {$fila['hora_inicio']} - {$fila['hora_fin']}.");
                             }
 
-                            Horario::create([
+                            $created = Horario::create([
                                 'asignacion_id' => $fila['asignacion_id'],
                                 'dia' => $dia,
                                 'hora_inicio' => $fila['hora_inicio'],
                                 'hora_fin' => $fila['hora_fin'],
                                 'aula' => $fila['aula'],
                             ]);
+                            Log::info('Horario creado (bulk)', ['id' => $created->id ?? null, 'dia' => $dia, 'asignacion_id' => $fila['asignacion_id']]);
 
                             $creados++;
                         }
@@ -255,6 +257,7 @@ class HorarioController extends Controller
             }
 
             $horario = Horario::create($validated);
+            Log::info('Horario creado (single)', ['id' => $horario->id ?? null, 'data' => $validated]);
 
             return redirect()->route('horarios.index')
                 ->with('success', 'Horario creado exitosamente.');
