@@ -10,7 +10,21 @@
 
 @section('content')
 <div class="container-fluid px-0">
-    @if(session('error'))
+    @if(!empty($error))
+        <div class="alert alert-danger alert-dismissible fade show">
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+            {{ $error }}
+        </div>
+        @if(!empty($errorsList) && is_array($errorsList) && count($errorsList) > 1)
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    @foreach($errorsList as $msg)
+                        <li>{{ $msg }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    @elseif(session('error'))
         <div class="alert alert-danger alert-dismissible fade show">
             <button type="button" class="close" data-dismiss="alert">&times;</button>
             {{ session('error') }}
@@ -31,8 +45,8 @@
 
                 @php
                     $dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                    $scheduleOld = old('schedule', []);
-                    $profesorOld = old('profesor_id', '');
+                    $scheduleOld = $schedule ?? old('schedule', []);
+                    $profesorOld = $profesor_id ?? old('profesor_id', '');
                 @endphp
 
                 <div class="alert alert-info">
@@ -143,7 +157,6 @@
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="fas fa-save mr-1"></i> Guardar Horarios
                         </button>
-                        </a>
                         <a href="{{ route('horarios.index') }}" class="btn btn-secondary btn-lg ml-2">
                             <i class="fas fa-times mr-1"></i> Cancelar
                         </a>

@@ -11,9 +11,30 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Seccion;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class HorarioController extends Controller
 {
+    private function getCreateViewData(): array
+    {
+        $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
+            ->get();
+
+        $asignaciones = $asignaciones->sortBy(function ($asignacion) {
+            return $asignacion->materia->nombre;
+        });
+
+        $professores = $asignaciones
+            ->map(fn($a) => $a->profesor)
+            ->filter()
+            ->unique('id')
+            ->sortBy(fn($p) => optional($p->user)->name)
+            ->values();
+
+        return compact('asignaciones', 'professores');
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -97,24 +118,14 @@ class HorarioController extends Controller
      */
     public function create()
     {
-        $asignaciones = Asignacion::with(['profesor.user', 'materia', 'seccion'])
-            ->get();
+        $data = $this->getCreateViewData();
+        $asignaciones = $data['asignaciones'];
+        $professores = $data['professores'];
 
         if ($asignaciones->isEmpty()) {
             return redirect()->route('horarios.index')
                 ->with('error', 'No hay asignaciones disponibles para crear horarios.');
         }
-
-        $asignaciones = $asignaciones->sortBy(function ($asignacion) {
-            return $asignacion->materia->nombre;
-        });
-
-        $professores = $asignaciones
-            ->map(fn($a) => $a->profesor)
-            ->filter()
-            ->unique('id')
-            ->sortBy(fn($p) => optional($p->user)->name)
-            ->values();
 
         return view('horarios.create', compact('asignaciones', 'professores'));
     }
@@ -128,7 +139,7 @@ class HorarioController extends Controller
             Log::info('Horario.store request', $request->all());
             // Creación en bloque (una sola pantalla)
             if ($request->has('schedule')) {
-                $validated = $request->validate([
+                $validator = Validator::make($request->all(), [
                     'schedule' => 'required|array',
                     'schedule.*' => 'nullable|array',
                     'schedule.*.*.asignacion_id' => 'nullable|exists:asignaciones,id',
@@ -137,89 +148,138 @@ class HorarioController extends Controller
                     'schedule.*.*.aula' => 'nullable|string|max:50',
                 ]);
 
+                if ($validator->fails()) {
+                    $data = $this->getCreateViewData();
+                    return response()
+                        ->view('horarios.create', array_merge($data, [
+                            'schedule' => $request->input('schedule', []),
+                            'profesor_id' => $request->input('profesor_id', ''),
+                            'error' => 'Hay campos con formato inválido. Revisa horas y selección de asignación.',
+                        ]))
+                        ->withErrors($validator)
+                        ->setStatusCode(422);
+                }
+
                 $diasValidos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-                $schedule = $validated['schedule'] ?? [];
+                $schedule = $request->input('schedule', []);
 
-                $creados = 0;
+                // 1) Validar todo primero (sin escribir en BD) para evitar que una fila mala "tire" todo sin claridad.
+                $errores = [];
+                $rowsToCreate = [];
 
-                DB::beginTransaction();
-                try {
-                    foreach ($schedule as $dia => $filas) {
-                        if (!in_array($dia, $diasValidos, true)) {
+                foreach ($schedule as $dia => $filas) {
+                    if (!in_array($dia, $diasValidos, true) || !is_array($filas)) {
+                        continue;
+                    }
+
+                    foreach ($filas as $index => $fila) {
+                        $fila = array_merge([
+                            'asignacion_id' => null,
+                            'hora_inicio' => null,
+                            'hora_fin' => null,
+                            'aula' => null,
+                        ], (array) $fila);
+
+                        $tieneAlgo = (bool) ($fila['asignacion_id'] || $fila['hora_inicio'] || $fila['hora_fin'] || $fila['aula']);
+                        if (!$tieneAlgo) {
                             continue;
                         }
-                        if (!is_array($filas)) {
+
+                        $filaLabel = 'fila ' . ((int) $index + 1);
+
+                        if (!$fila['asignacion_id'] || !$fila['hora_inicio'] || !$fila['hora_fin'] || !$fila['aula']) {
+                            $errores[] = "En {$dia} ({$filaLabel}): si llenas una fila, debes completar Asignación, Hora Inicio, Hora Fin y Aula.";
                             continue;
                         }
 
-                        foreach ($filas as $fila) {
-                            $fila = array_merge([
-                                'asignacion_id' => null,
-                                'hora_inicio' => null,
-                                'hora_fin' => null,
-                                'aula' => null,
-                            ], (array) $fila);
+                        try {
+                            $inicio = Carbon::createFromFormat('H:i', $fila['hora_inicio']);
+                            $fin = Carbon::createFromFormat('H:i', $fila['hora_fin']);
+                        } catch (\Exception $e) {
+                            $errores[] = "En {$dia} ({$filaLabel}): formato de hora inválido.";
+                            continue;
+                        }
 
-                            $tieneAlgo = (bool) ($fila['asignacion_id'] || $fila['hora_inicio'] || $fila['hora_fin'] || $fila['aula']);
-                            if (!$tieneAlgo) {
+                        $inicioStr = $inicio->format('H:i');
+                        $finStr = $fin->format('H:i');
+
+                        if ($fin->lessThanOrEqualTo($inicio)) {
+                            $errores[] = "En {$dia} ({$filaLabel}): la Hora Fin ({$finStr}) debe ser después de la Hora Inicio ({$inicioStr}). Si querías 12:50, no uses 00:50.";
+                            continue;
+                        }
+
+                        // Solape correcto: [inicio, fin) se solapa si existing_inicio < nuevo_fin y existing_fin > nuevo_inicio
+                        $existsInDb = Horario::where('asignacion_id', $fila['asignacion_id'])
+                            ->where('dia', $dia)
+                            ->where('hora_inicio', '<', $finStr)
+                            ->where('hora_fin', '>', $inicioStr)
+                            ->exists();
+
+                        if ($existsInDb) {
+                            $errores[] = "En {$dia} ({$filaLabel}): ya existe un horario para esta asignación que se solapa con {$inicioStr} - {$finStr}.";
+                            continue;
+                        }
+
+                        // Solape dentro del mismo formulario (para que no dependa solo de BD)
+                        $existsInRequest = false;
+                        foreach ($rowsToCreate as $r) {
+                            if ($r['dia'] !== $dia) {
                                 continue;
                             }
-
-                            if (!$fila['asignacion_id'] || !$fila['hora_inicio'] || !$fila['hora_fin'] || !$fila['aula']) {
-                                DB::rollBack();
-                                return redirect()->back()
-                                    ->withInput()
-                                    ->with('error', "En {$dia}: si llenas una fila, debes completar Asignación, Hora Inicio, Hora Fin y Aula.");
+                            if ((string) $r['asignacion_id'] !== (string) $fila['asignacion_id']) {
+                                continue;
                             }
-
-                            if ($fila['hora_fin'] <= $fila['hora_inicio']) {
-                                DB::rollBack();
-                                return redirect()->back()
-                                    ->withInput()
-                                    ->with('error', "En {$dia}: la Hora Fin debe ser después de la Hora Inicio.");
+                            if ($r['hora_inicio'] < $finStr && $r['hora_fin'] > $inicioStr) {
+                                $existsInRequest = true;
+                                break;
                             }
-
-                            // Solape correcto: [inicio, fin) se solapa si existing_inicio < nuevo_fin y existing_fin > nuevo_inicio
-                            $exists = Horario::where('asignacion_id', $fila['asignacion_id'])
-                                ->where('dia', $dia)
-                                ->where('hora_inicio', '<', $fila['hora_fin'])
-                                ->where('hora_fin', '>', $fila['hora_inicio'])
-                                ->exists();
-
-                            if ($exists) {
-                                DB::rollBack();
-                                return redirect()->back()
-                                    ->withInput()
-                                    ->with('error', "Ya existe un horario para esta asignación en {$dia} que se solapa con {$fila['hora_inicio']} - {$fila['hora_fin']}.");
-                            }
-
-                            $created = Horario::create([
-                                'asignacion_id' => $fila['asignacion_id'],
-                                'dia' => $dia,
-                                'hora_inicio' => $fila['hora_inicio'],
-                                'hora_fin' => $fila['hora_fin'],
-                                'aula' => $fila['aula'],
-                            ]);
-                            Log::info('Horario creado (bulk)', ['id' => $created->id ?? null, 'dia' => $dia, 'asignacion_id' => $fila['asignacion_id']]);
-
-                            $creados++;
                         }
-                    }
+                        if ($existsInRequest) {
+                            $errores[] = "En {$dia} ({$filaLabel}): hay un solape duplicado dentro del formulario para esa asignación.";
+                            continue;
+                        }
 
-                    if ($creados === 0) {
-                        DB::rollBack();
-                        return redirect()->back()
-                            ->withInput()
-                            ->with('error', 'No se detectaron filas completas para guardar.');
+                        $rowsToCreate[] = [
+                            'asignacion_id' => $fila['asignacion_id'],
+                            'dia' => $dia,
+                            'hora_inicio' => $inicioStr,
+                            'hora_fin' => $finStr,
+                            'aula' => $fila['aula'],
+                        ];
                     }
+                }
 
+                if (empty($rowsToCreate)) {
+                    $errores[] = 'No se detectaron filas completas para guardar.';
+                }
+
+                if (!empty($errores)) {
+                    $data = $this->getCreateViewData();
+                    return response()->view('horarios.create', array_merge($data, [
+                        'schedule' => $request->input('schedule', []),
+                        'profesor_id' => $request->input('profesor_id', ''),
+                        'error' => $errores[0],
+                        'errorsList' => $errores,
+                    ]))->setStatusCode(422);
+                }
+
+                // 2) Guardar todo en una transacción
+                $creados = 0;
+                DB::beginTransaction();
+                try {
+                    foreach ($rowsToCreate as $row) {
+                        $created = Horario::create($row);
+                        Log::info('Horario creado (bulk)', ['id' => $created->id ?? null, 'dia' => $row['dia'], 'asignacion_id' => $row['asignacion_id']]);
+                        $creados++;
+                    }
                     DB::commit();
-                    return redirect()->route('horarios.index')
-                        ->with('success', "Se crearon {$creados} horarios exitosamente.");
                 } catch (\Exception $e) {
                     DB::rollBack();
                     throw $e;
                 }
+
+                return redirect()->route('horarios.index')
+                    ->with('success', "Se crearon {$creados} horarios exitosamente.");
             }
 
             $asignacion = Asignacion::find($request->asignacion_id);
