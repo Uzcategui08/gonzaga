@@ -72,6 +72,10 @@
                             <input type="checkbox" class="custom-control-input" id="aplicar_todas_secciones" name="aplicar_todas_secciones" value="1">
                             <label class="custom-control-label" for="aplicar_todas_secciones">Aplicar a todas las secciones</label>
                         </div>
+                        <div class="custom-control custom-checkbox mb-2">
+                            <input type="checkbox" class="custom-control-input" id="mostrar_todas_secciones" value="1">
+                            <label class="custom-control-label" for="mostrar_todas_secciones">Mostrar todas las secciones (elegir una por una)</label>
+                        </div>
                         <select name="secciones_id[]" id="secciones_id" class="form-control form-control-lg select2 @error('secciones_id') is-invalid @enderror" multiple>
                             <option value="">Seleccione una o varias secciones</option>
                         </select>
@@ -84,7 +88,13 @@
 
                 <!-- Tabla de estudiantes -->
                 <div class="mt-4">
-                    <h5 class="font-weight-bold text-gray-700 mb-3">Estudiantes de la Sección</h5>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+                        <h5 class="font-weight-bold text-gray-700 mb-0">Estudiantes de la Sección</h5>
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="aplicar_todos_estudiantes" name="aplicar_todos_estudiantes" value="1">
+                            <label class="custom-control-label" for="aplicar_todos_estudiantes">Aplicar a todos los estudiantes (sin seleccionar)</label>
+                        </div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover" id="estudiantes-table">
                             <thead class="bg-light">
@@ -137,6 +147,14 @@
 // Función para manejar el envío del formulario
 document.getElementById('asignacionForm').addEventListener('submit', function(e) {
     e.preventDefault();
+
+    const aplicarTodosEstudiantes = document.getElementById('aplicar_todos_estudiantes');
+    if (aplicarTodosEstudiantes && aplicarTodosEstudiantes.checked) {
+        // Evita enviar cientos/miles de estudiantes_id[] en el POST.
+        $('.estudiante-checkbox').prop('checked', false).prop('disabled', true);
+        this.submit();
+        return;
+    }
     
     // Validar que al menos un estudiante esté seleccionado
     const checkboxes = document.querySelectorAll('.estudiante-checkbox:checked');
@@ -163,12 +181,25 @@ $(document).ready(function() {
     const $todasMaterias = $('#aplicar_todas_materias');
         const $secciones = $('#secciones_id');
         const $todas = $('#aplicar_todas_secciones');
+        const $mostrarTodasSecciones = $('#mostrar_todas_secciones');
+        const $todasEstudiantes = $('#aplicar_todos_estudiantes');
 
         let profesorSecciones = [];
         let profesorEstudiantes = [];
 
         function setInitialTableMessage(message) {
             $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center text-muted">' + message + '</td></tr>');
+        }
+
+        function syncModoTodosEstudiantes() {
+            const on = $todasEstudiantes.is(':checked');
+            $('#estudiantes-table thead input[type=checkbox]').prop('disabled', on);
+            $('.estudiante-checkbox').prop('disabled', on);
+            if (on) {
+                $('.estudiante-checkbox').prop('checked', false);
+                $('#select-top-half, #select-bottom-half, #select-male, #select-female, #select-all-estudiantes').prop('checked', false);
+            }
+            updateSelectAllState();
         }
 
         function ucFirst(str) {
@@ -337,6 +368,7 @@ $(document).ready(function() {
             tbody.html(html);
             $('#select-top-half, #select-bottom-half, #select-male, #select-female').prop('checked', false);
             updateSelectAllState();
+            syncModoTodosEstudiantes();
         } else {
             setInitialTableMessage('No hay estudiantes para mostrar');
         }
@@ -359,7 +391,7 @@ $(document).ready(function() {
             data: {
                 profesor_id: profesorId,
                 todas_secciones: todasSecciones ? 1 : 0,
-                nivel: ''
+                nivel: (getNivelSeleccionado() || '')
             },
             success: function(response) {
                 if (response && response.success) {
@@ -386,14 +418,26 @@ $(document).ready(function() {
         syncModoTodasSecciones();
         const profesorId = $profesor.val();
         if (profesorId) {
-            cargarEstudiantesPorProfesor(profesorId, $(this).is(':checked'));
+            const todasSecciones = $(this).is(':checked') || $mostrarTodasSecciones.is(':checked');
+            cargarEstudiantesPorProfesor(profesorId, todasSecciones);
+        } else {
+            renderEstudiantesBySelectedSecciones();
+        }
+    });
+
+    $mostrarTodasSecciones.on('change', function() {
+        const profesorId = $profesor.val();
+        if (profesorId) {
+            const todasSecciones = $todas.is(':checked') || $(this).is(':checked');
+            cargarEstudiantesPorProfesor(profesorId, todasSecciones);
         } else {
             renderEstudiantesBySelectedSecciones();
         }
     });
 
     $profesor.on('change', function() {
-        cargarEstudiantesPorProfesor($(this).val(), $todas.is(':checked'));
+        const todasSecciones = $todas.is(':checked') || $mostrarTodasSecciones.is(':checked');
+        cargarEstudiantesPorProfesor($(this).val(), todasSecciones);
     });
 
     $secciones.on('change', function() {
@@ -405,6 +449,10 @@ $(document).ready(function() {
     syncModoTodasMaterias();
     syncModoTodasSecciones();
     renderEstudiantesBySelectedSecciones();
+
+    $todasEstudiantes.on('change', function() {
+        syncModoTodosEstudiantes();
+    });
 
     // Función para actualizar el estado del checkbox "select all"
     function updateSelectAllState() {

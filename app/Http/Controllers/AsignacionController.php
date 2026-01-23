@@ -79,7 +79,8 @@ class AsignacionController extends Controller
                 'secciones_id' => 'required_without:aplicar_todas_secciones|array|min:1',
                 'secciones_id.*' => 'exists:secciones,id',
                 'aplicar_todas_secciones' => 'nullable',
-                'estudiantes_id' => 'required|array|min:1',
+                'aplicar_todos_estudiantes' => 'nullable|boolean',
+                'estudiantes_id' => 'required_unless:aplicar_todos_estudiantes,1|array|min:1',
                 'estudiantes_id.*' => 'exists:estudiantes,id'
             ], [
                 'profesor_id.required' => 'El profesor es requerido',
@@ -92,7 +93,7 @@ class AsignacionController extends Controller
                 'secciones_id.array' => 'Formato de secciones inválido',
                 'secciones_id.min' => 'Debe seleccionar al menos una sección',
                 'secciones_id.*.exists' => 'Una o más secciones seleccionadas no existen',
-                'estudiantes_id.required' => 'Debe seleccionar al menos un estudiante',
+                'estudiantes_id.required_unless' => 'Debe seleccionar al menos un estudiante',
                 'estudiantes_id.array' => 'Formato de estudiantes inválido',
                 'estudiantes_id.min' => 'Debe seleccionar al menos un estudiante',
                 'estudiantes_id.*.exists' => 'Uno o más estudiantes seleccionados no existen'
@@ -138,10 +139,16 @@ class AsignacionController extends Controller
                     ->with('error', 'No hay secciones disponibles para aplicar la asignación.');
             }
 
-            $selectedIds = $validated['estudiantes_id'];
-            $estudiantes = Estudiante::whereIn('id', $selectedIds)
-                ->whereIn('seccion_id', $seccionIds)
-                ->get(['id', 'seccion_id']);
+            $aplicarTodosEstudiantes = $request->boolean('aplicar_todos_estudiantes');
+            if ($aplicarTodosEstudiantes) {
+                $estudiantes = Estudiante::whereIn('seccion_id', $seccionIds)
+                    ->get(['id', 'seccion_id']);
+            } else {
+                $selectedIds = $validated['estudiantes_id'];
+                $estudiantes = Estudiante::whereIn('id', $selectedIds)
+                    ->whereIn('seccion_id', $seccionIds)
+                    ->get(['id', 'seccion_id']);
+            }
 
             $idsPorSeccion = $estudiantes
                 ->groupBy('seccion_id')
