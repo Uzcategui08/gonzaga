@@ -310,6 +310,19 @@ $(document).ready(function() {
             }
         }
 
+        function syncModosSecciones() {
+            // Son modos distintos: (1) aplicar a todas, (2) mostrar todas para elegir.
+            if ($todas.is(':checked')) {
+                $mostrarTodasSecciones.prop('checked', false);
+                // Si se aplicará a todas las secciones, normalmente también aplica a todos los estudiantes.
+                $todasEstudiantes.prop('checked', true);
+                syncModoTodosEstudiantes();
+            }
+            if ($mostrarTodasSecciones.is(':checked')) {
+                $todas.prop('checked', false);
+            }
+        }
+
         function syncModoTodasMaterias() {
             const enabled = $todasMaterias.is(':checked');
             $materias.prop('disabled', enabled);
@@ -333,6 +346,12 @@ $(document).ready(function() {
             renderMateriasByNivel(nivel);
             renderSeccionesOptions(true);
             renderEstudiantesBySelectedSecciones();
+
+            const profesorId = $profesor.val();
+            if (profesorId) {
+                const todasSecciones = $todas.is(':checked') || $mostrarTodasSecciones.is(':checked');
+                cargarEstudiantesPorProfesor(profesorId, todasSecciones);
+            }
         });
 
         $todasMaterias.on('change', function() {
@@ -415,6 +434,7 @@ $(document).ready(function() {
     }
 
     $todas.on('change', function() {
+        syncModosSecciones();
         syncModoTodasSecciones();
         const profesorId = $profesor.val();
         if (profesorId) {
@@ -426,6 +446,7 @@ $(document).ready(function() {
     });
 
     $mostrarTodasSecciones.on('change', function() {
+        syncModosSecciones();
         const profesorId = $profesor.val();
         if (profesorId) {
             const todasSecciones = $todas.is(':checked') || $(this).is(':checked');
@@ -447,6 +468,7 @@ $(document).ready(function() {
     // estado inicial
     $secciones.prop('disabled', true);
     syncModoTodasMaterias();
+    syncModosSecciones();
     syncModoTodasSecciones();
     renderEstudiantesBySelectedSecciones();
 

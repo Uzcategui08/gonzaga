@@ -65,6 +65,7 @@ class AsignacionController extends Controller
                 'profesor_id' => $request->input('profesor_id'),
                 'aplicar_todas_materias' => $request->boolean('aplicar_todas_materias'),
                 'aplicar_todas_secciones' => $request->boolean('aplicar_todas_secciones'),
+                'aplicar_todos_estudiantes' => $request->boolean('aplicar_todos_estudiantes'),
                 'materias_count' => is_array($request->input('materias_id')) ? count($request->input('materias_id')) : 0,
                 'secciones_count' => is_array($request->input('secciones_id')) ? count($request->input('secciones_id')) : 0,
                 'estudiantes_count' => is_array($request->input('estudiantes_id')) ? count($request->input('estudiantes_id')) : 0,
