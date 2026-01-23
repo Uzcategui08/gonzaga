@@ -61,6 +61,7 @@ class AsignacionController extends Controller
             \Log::info('Form data received:', $request->all());
 
             $validated = $request->validate([
+                'nivel' => 'nullable|in:primaria,secundaria',
                 'profesor_id' => 'required|exists:profesores,id',
                 'materias_id' => 'required_without:aplicar_todas_materias|array|min:1',
                 'materias_id.*' => 'exists:materias,id',
@@ -102,9 +103,15 @@ class AsignacionController extends Controller
 
             // Determinar secciones destino (seleccionadas o todas las del profesor).
             if ($aplicarTodas) {
-                $seccionIds = Seccion::where('titular_profesor_id', $validated['profesor_id'])->pluck('id')
-                    ->merge(Asignacion::where('profesor_id', $validated['profesor_id'])->pluck('seccion_id'))
-                    ->unique()
+                $nivel = ($validated['nivel'] ?? null) ? strtolower((string) $validated['nivel']) : null;
+
+                $seccionesQuery = Seccion::query();
+                if ($nivel) {
+                    $seccionesQuery->whereHas('grado', fn($q) => $q->where('nivel', $nivel));
+                }
+
+                $seccionIds = $seccionesQuery->pluck('id')
+                    ->map(fn($v) => (int) $v)
                     ->values()
                     ->all();
             } else {
@@ -118,7 +125,7 @@ class AsignacionController extends Controller
             if (empty($seccionIds)) {
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', 'Este profesor no tiene secciones asociadas (ni como titular ni por asignaciones existentes).');
+                    ->with('error', 'No hay secciones disponibles para aplicar la asignación.');
             }
 
             $selectedIds = $validated['estudiantes_id'];
@@ -252,16 +259,23 @@ class AsignacionController extends Controller
                     ->with('success', 'Asignación actualizada exitosamente.');
             }
 
-            $seccionIds = Seccion::where('titular_profesor_id', $validated['profesor_id'])->pluck('id')
-                ->merge(Asignacion::where('profesor_id', $validated['profesor_id'])->pluck('seccion_id'))
-                ->unique()
+            $nivelMateria = Materia::query()->whereKey($validated['materia_id'])->value('nivel');
+            $nivelMateria = $nivelMateria ? strtolower((string) $nivelMateria) : null;
+
+            $seccionesQuery = Seccion::query();
+            if ($nivelMateria) {
+                $seccionesQuery->whereHas('grado', fn($q) => $q->where('nivel', $nivelMateria));
+            }
+
+            $seccionIds = $seccionesQuery->pluck('id')
+                ->map(fn($v) => (int) $v)
                 ->values()
                 ->all();
 
             if (empty($seccionIds)) {
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', 'Este profesor no tiene secciones asociadas (ni como titular ni por asignaciones existentes).');
+                    ->with('error', 'No hay secciones disponibles para aplicar la asignación.');
             }
 
             $selectedIds = $validated['estudiantes_id'];
@@ -354,24 +368,83 @@ class AsignacionController extends Controller
     }
 
     /**
-     * Get students by profesor (todas las secciones donde es titular)
+     * Get students by profesor (por defecto: secciones donde es titular o ya asignadas).
+     * Si se envía todas_secciones=1, devuelve secciones/estudiantes sin depender de titularidad.
      */
     public function getEstudiantesByProfesor(Request $request)
     {
         try {
             $request->validate([
-                'profesor_id' => 'required|exists:profesores,id'
+                'profesor_id' => 'required|exists:profesores,id',
+                'todas_secciones' => 'nullable|boolean',
+                'nivel' => 'nullable|in:primaria,secundaria',
             ]);
+
+            $todasSecciones = $request->boolean('todas_secciones');
+            $nivel = $request->filled('nivel') ? strtolower((string) $request->input('nivel')) : null;
+
+            if ($todasSecciones) {
+                $seccionesQuery = Seccion::with(['grado'])
+                    ->orderBy('nombre');
+                if ($nivel) {
+                    $seccionesQuery->whereHas('grado', fn($q) => $q->where('nivel', $nivel));
+                }
+
+                $secciones = $seccionesQuery->get(['id', 'nombre', 'grado_id']);
+
+                if ($secciones->isEmpty()) {
+                    return response()->json([
+                        'success' => true,
+                        'secciones' => [],
+                        'estudiantes' => []
+                    ]);
+                }
+
+                $seccionIds = $secciones->pluck('id')->all();
+                $seccionNombre = $secciones->mapWithKeys(fn($s) => [$s->id => $s->nombre]);
+
+                $estudiantes = Estudiante::whereIn('seccion_id', $seccionIds)
+                    ->select('id', 'seccion_id', 'nombres', 'apellidos', 'codigo_estudiante', 'estado', 'genero')
+                    ->orderBy('seccion_id')
+                    ->orderBy('apellidos', 'asc')
+                    ->get()
+                    ->map(function ($estudiante) use ($seccionNombre) {
+                        return [
+                            'id' => $estudiante->id,
+                            'seccion_id' => $estudiante->seccion_id,
+                            'seccion_nombre' => $seccionNombre[$estudiante->seccion_id] ?? null,
+                            'nombre_completo' => $estudiante->nombres . ' ' . $estudiante->apellidos,
+                            'cedula' => $estudiante->codigo_estudiante,
+                            'estado' => $estudiante->estado,
+                            'genero' => $estudiante->genero,
+                        ];
+                    });
+
+                return response()->json([
+                    'success' => true,
+                    'secciones' => $secciones->map(fn($s) => [
+                        'id' => $s->id,
+                        'nombre' => $s->nombre,
+                        'grado' => $s->grado?->nombre,
+                        'nivel' => $s->grado?->nivel,
+                    ]),
+                    'estudiantes' => $estudiantes
+                ]);
+            }
 
             $seccionIds = Seccion::where('titular_profesor_id', $request->profesor_id)->pluck('id')
                 ->merge(Asignacion::where('profesor_id', $request->profesor_id)->pluck('seccion_id'))
                 ->unique()
                 ->values();
 
-            $secciones = Seccion::with(['grado'])
+            $seccionesQuery = Seccion::with(['grado'])
                 ->whereIn('id', $seccionIds)
-                ->orderBy('nombre')
-                ->get(['id', 'nombre', 'grado_id']);
+                ->orderBy('nombre');
+            if ($nivel) {
+                $seccionesQuery->whereHas('grado', fn($q) => $q->where('nivel', $nivel));
+            }
+
+            $secciones = $seccionesQuery->get(['id', 'nombre', 'grado_id']);
 
             if ($secciones->isEmpty()) {
                 return response()->json([

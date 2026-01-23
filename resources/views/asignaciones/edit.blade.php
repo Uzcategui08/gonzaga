@@ -56,7 +56,7 @@
                         <label for="seccion_id" class="font-weight-bold text-gray-700">Sección</label>
                         <div class="custom-control custom-checkbox mb-2">
                             <input type="checkbox" class="custom-control-input" id="aplicar_todas_secciones" name="aplicar_todas_secciones" value="1">
-                            <label class="custom-control-label" for="aplicar_todas_secciones">Aplicar a todas las secciones del profesor</label>
+                            <label class="custom-control-label" for="aplicar_todas_secciones">Aplicar a todas las secciones</label>
                         </div>
                         <select name="seccion_id" id="seccion_id" class="form-control form-control-lg select2 @error('seccion_id') is-invalid @enderror" required>
                             <option value="">Seleccione una sección</option>
@@ -292,7 +292,7 @@ $(document).ready(function() {
         }
     }
 
-    function cargarEstudiantesPorProfesor(profesorId, seleccionados = []) {
+    function cargarEstudiantesPorProfesor(profesorId, seleccionados = [], todasSecciones = false) {
         var tbody = $('#estudiantes-table tbody');
         if (!profesorId) {
             setInitialTableMessage('Seleccione un profesor');
@@ -302,7 +302,11 @@ $(document).ready(function() {
         $.ajax({
             url: '{{ route("asignaciones.estudiantes.por-profesor") }}',
             type: 'GET',
-            data: { profesor_id: profesorId },
+            data: {
+                profesor_id: profesorId,
+                todas_secciones: todasSecciones ? 1 : 0,
+                nivel: ((($materia.find('option:selected').data('nivel') || '') + '')).toString().toLowerCase()
+            },
             success: function(response) {
                 if (response && response.success && response.estudiantes && response.estudiantes.length > 0) {
                     var html = '';
@@ -345,7 +349,7 @@ $(document).ready(function() {
         if (enabled) {
             lastSeccionSeleccionada = $seccion.val();
             $seccion.val('').trigger('change.select2');
-            cargarEstudiantesPorProfesor($profesor.val(), getSeleccionUnion());
+            cargarEstudiantesPorProfesor($profesor.val(), getSeleccionUnion(), true);
         } else {
             if (lastSeccionSeleccionada) {
                 $seccion.val(lastSeccionSeleccionada).trigger('change.select2');
@@ -391,7 +395,7 @@ $(document).ready(function() {
         if ($todas.is(':checked')) {
             // si se cambia profesor, ya no sabemos selección previa
             seleccionPorSeccion = {};
-            cargarEstudiantesPorProfesor($(this).val(), []);
+            cargarEstudiantesPorProfesor($(this).val(), [], true);
         }
     });
 
@@ -399,7 +403,7 @@ $(document).ready(function() {
         if ($todas.is(':checked')) {
             // si se cambia materia, ya no sabemos selección previa
             seleccionPorSeccion = {};
-            cargarEstudiantesPorProfesor($profesor.val(), []);
+            cargarEstudiantesPorProfesor($profesor.val(), [], true);
         }
     });
 

@@ -23,7 +23,7 @@
                 <div class="form-row mb-3">
                     <div class="form-group col-md-4">
                         <label for="nivel_select" class="font-weight-bold text-gray-700">Nivel</label>
-                        <select id="nivel_select" class="form-control form-control-lg">
+                        <select id="nivel_select" name="nivel" class="form-control form-control-lg">
                             <option value="">Todos</option>
                             <option value="primaria">Primaria</option>
                             <option value="secundaria">Secundaria</option>
@@ -70,12 +70,12 @@
                         <label for="secciones_id" class="font-weight-bold text-gray-700">Secciones</label>
                         <div class="custom-control custom-checkbox mb-2">
                             <input type="checkbox" class="custom-control-input" id="aplicar_todas_secciones" name="aplicar_todas_secciones" value="1">
-                            <label class="custom-control-label" for="aplicar_todas_secciones">Aplicar a todas las secciones del profesor</label>
+                            <label class="custom-control-label" for="aplicar_todas_secciones">Aplicar a todas las secciones</label>
                         </div>
                         <select name="secciones_id[]" id="secciones_id" class="form-control form-control-lg select2 @error('secciones_id') is-invalid @enderror" multiple>
                             <option value="">Seleccione una o varias secciones</option>
                         </select>
-                        <div class="small text-muted mt-1">Se cargan automáticamente según el profesor (y el nivel de la materia)</div>
+                        <div class="small text-muted mt-1">Se cargan automáticamente según el profesor (y el nivel seleccionado)</div>
                         @error('secciones_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
@@ -246,12 +246,19 @@ $(document).ready(function() {
         }
 
         function renderEstudiantesBySelectedSecciones() {
+            const selected = ($secciones.val() || []).map(String);
+
             if ($todas.is(':checked')) {
-                renderEstudiantes(profesorEstudiantes || []);
+                if (!selected.length) {
+                    setInitialTableMessage('No hay secciones para mostrar con el filtro actual');
+                    return;
+                }
+                const filteredAll = (profesorEstudiantes || []).filter(function(e) {
+                    return selected.includes(String(e.seccion_id));
+                });
+                renderEstudiantes(filteredAll);
                 return;
             }
-
-            const selected = ($secciones.val() || []).map(String);
             if (!selected.length) {
                 setInitialTableMessage('Seleccione una o varias secciones para ver los estudiantes');
                 return;
@@ -335,7 +342,7 @@ $(document).ready(function() {
         }
     }
 
-    function cargarEstudiantesPorProfesor(profesorId) {
+    function cargarEstudiantesPorProfesor(profesorId, todasSecciones = false) {
         var tbody = $('#estudiantes-table tbody');
         if (!profesorId) {
             profesorSecciones = [];
@@ -349,7 +356,11 @@ $(document).ready(function() {
         $.ajax({
             url: '{{ route("asignaciones.estudiantes.por-profesor") }}',
             type: 'GET',
-            data: { profesor_id: profesorId },
+            data: {
+                profesor_id: profesorId,
+                todas_secciones: todasSecciones ? 1 : 0,
+                nivel: ''
+            },
             success: function(response) {
                 if (response && response.success) {
                     profesorSecciones = response.secciones || [];
@@ -373,11 +384,16 @@ $(document).ready(function() {
 
     $todas.on('change', function() {
         syncModoTodasSecciones();
-        renderEstudiantesBySelectedSecciones();
+        const profesorId = $profesor.val();
+        if (profesorId) {
+            cargarEstudiantesPorProfesor(profesorId, $(this).is(':checked'));
+        } else {
+            renderEstudiantesBySelectedSecciones();
+        }
     });
 
     $profesor.on('change', function() {
-        cargarEstudiantesPorProfesor($(this).val());
+        cargarEstudiantesPorProfesor($(this).val(), $todas.is(':checked'));
     });
 
     $secciones.on('change', function() {
