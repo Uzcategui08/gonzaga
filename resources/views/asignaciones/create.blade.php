@@ -148,7 +148,13 @@
 document.getElementById('asignacionForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
+    // Si se aplica a todas las secciones, evitar POST gigante (estudiantes_id[])
+    const aplicarTodasSecciones = document.getElementById('aplicar_todas_secciones');
     const aplicarTodosEstudiantes = document.getElementById('aplicar_todos_estudiantes');
+    if (aplicarTodasSecciones && aplicarTodasSecciones.checked && aplicarTodosEstudiantes) {
+        aplicarTodosEstudiantes.checked = true;
+    }
+
     if (aplicarTodosEstudiantes && aplicarTodosEstudiantes.checked) {
         // Evita enviar cientos/miles de estudiantes_id[] en el POST.
         $('.estudiante-checkbox').prop('checked', false).prop('disabled', true);
@@ -186,6 +192,7 @@ $(document).ready(function() {
 
         let profesorSecciones = [];
         let profesorEstudiantes = [];
+        const estudiantesCache = {};
 
         function setInitialTableMessage(message) {
             $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center text-muted">' + message + '</td></tr>');
@@ -279,15 +286,13 @@ $(document).ready(function() {
         function renderEstudiantesBySelectedSecciones() {
             const selected = ($secciones.val() || []).map(String);
 
+            if ($todasEstudiantes.is(':checked')) {
+                setInitialTableMessage('Modo “todos los estudiantes”: no es necesario seleccionar estudiantes.');
+                return;
+            }
+
             if ($todas.is(':checked')) {
-                if (!selected.length) {
-                    setInitialTableMessage('No hay secciones para mostrar con el filtro actual');
-                    return;
-                }
-                const filteredAll = (profesorEstudiantes || []).filter(function(e) {
-                    return selected.includes(String(e.seccion_id));
-                });
-                renderEstudiantes(filteredAll);
+                setInitialTableMessage('Modo “todas las secciones”: no es necesario listar estudiantes.');
                 return;
             }
             if (!selected.length) {
@@ -295,10 +300,29 @@ $(document).ready(function() {
                 return;
             }
 
-            const filtered = (profesorEstudiantes || []).filter(function(e) {
-                return selected.includes(String(e.seccion_id));
+            // Cargar estudiantes por sección (evita descargar todos de golpe)
+            const missing = selected.filter(sid => !estudiantesCache[sid]);
+            if (missing.length === 0) {
+                const merged = selected.flatMap(sid => estudiantesCache[sid] || []);
+                renderEstudiantes(merged);
+                return;
+            }
+
+            $('#estudiantes-table tbody').html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
+            Promise.all(missing.map(function(sid) {
+                return $.ajax({
+                    url: '{{ route("asignaciones.estudiantes.por-seccion") }}',
+                    type: 'GET',
+                    data: { seccion_id: sid }
+                }).then(function(resp) {
+                    estudiantesCache[sid] = (resp && resp.success) ? (resp.estudiantes || []) : [];
+                }).catch(function() {
+                    estudiantesCache[sid] = [];
+                });
+            })).then(function() {
+                const merged = selected.flatMap(sid => estudiantesCache[sid] || []);
+                renderEstudiantes(merged);
             });
-            renderEstudiantes(filtered);
         }
 
         function syncModoTodasSecciones() {
@@ -393,7 +417,7 @@ $(document).ready(function() {
         }
     }
 
-    function cargarEstudiantesPorProfesor(profesorId, todasSecciones = false) {
+    function cargarEstudiantesPorProfesor(profesorId, todasSecciones = false, soloSecciones = false) {
         var tbody = $('#estudiantes-table tbody');
         if (!profesorId) {
             profesorSecciones = [];
@@ -403,13 +427,16 @@ $(document).ready(function() {
             setInitialTableMessage('Seleccione un profesor');
             return;
         }
-        tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
+        if (!soloSecciones) {
+            tbody.html('<tr><td colspan="5" class="text-center"><i class="fas fa-spinner fa-spin"></i> Cargando estudiantes...</td></tr>');
+        }
         $.ajax({
             url: '{{ route("asignaciones.estudiantes.por-profesor") }}',
             type: 'GET',
             data: {
                 profesor_id: profesorId,
                 todas_secciones: todasSecciones ? 1 : 0,
+                solo_secciones: soloSecciones ? 1 : 0,
                 nivel: (getNivelSeleccionado() || '')
             },
             success: function(response) {
@@ -418,7 +445,7 @@ $(document).ready(function() {
                     profesorEstudiantes = response.estudiantes || [];
                     renderSeccionesOptions(false);
 
-                    // Si hay secciones disponibles, habilitar el selector (a menos que esté en modo todas)
+                    // Si hay secciones disponibles, habilitar el selector (a menos que esté en modo aplicar a todas)
                     $secciones.prop('disabled', $todas.is(':checked') ? true : false);
                     syncModoTodasSecciones();
                     renderEstudiantesBySelectedSecciones();
@@ -439,7 +466,8 @@ $(document).ready(function() {
         const profesorId = $profesor.val();
         if (profesorId) {
             const todasSecciones = $(this).is(':checked') || $mostrarTodasSecciones.is(':checked');
-            cargarEstudiantesPorProfesor(profesorId, todasSecciones);
+            const soloSecciones = $(this).is(':checked');
+            cargarEstudiantesPorProfesor(profesorId, todasSecciones, soloSecciones);
         } else {
             renderEstudiantesBySelectedSecciones();
         }
@@ -450,7 +478,8 @@ $(document).ready(function() {
         const profesorId = $profesor.val();
         if (profesorId) {
             const todasSecciones = $todas.is(':checked') || $(this).is(':checked');
-            cargarEstudiantesPorProfesor(profesorId, todasSecciones);
+            const soloSecciones = $(this).is(':checked');
+            cargarEstudiantesPorProfesor(profesorId, todasSecciones, soloSecciones);
         } else {
             renderEstudiantesBySelectedSecciones();
         }
@@ -458,7 +487,8 @@ $(document).ready(function() {
 
     $profesor.on('change', function() {
         const todasSecciones = $todas.is(':checked') || $mostrarTodasSecciones.is(':checked');
-        cargarEstudiantesPorProfesor($(this).val(), todasSecciones);
+        const soloSecciones = $todas.is(':checked') || $mostrarTodasSecciones.is(':checked');
+        cargarEstudiantesPorProfesor($(this).val(), todasSecciones, soloSecciones);
     });
 
     $secciones.on('change', function() {

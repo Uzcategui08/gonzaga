@@ -119,7 +119,7 @@ class AsignacionController extends Controller
 
                 $seccionesQuery = Seccion::query();
                 if ($nivel) {
-                    $seccionesQuery->whereHas('grado', fn($q) => $q->where('nivel', $nivel));
+                    $seccionesQuery->whereHas('grado', fn($q) => $q->whereRaw('LOWER(nivel) = ?', [$nivel]));
                 }
 
                 $seccionIds = $seccionesQuery->pluck('id')
@@ -395,17 +395,19 @@ class AsignacionController extends Controller
             $request->validate([
                 'profesor_id' => 'required|exists:profesores,id',
                 'todas_secciones' => 'nullable|boolean',
+                'solo_secciones' => 'nullable|boolean',
                 'nivel' => 'nullable|in:primaria,secundaria',
             ]);
 
             $todasSecciones = $request->boolean('todas_secciones');
+            $soloSecciones = $request->boolean('solo_secciones');
             $nivel = $request->filled('nivel') ? strtolower((string) $request->input('nivel')) : null;
 
             if ($todasSecciones) {
                 $seccionesQuery = Seccion::with(['grado'])
                     ->orderBy('nombre');
                 if ($nivel) {
-                    $seccionesQuery->whereHas('grado', fn($q) => $q->where('nivel', $nivel));
+                    $seccionesQuery->whereHas('grado', fn($q) => $q->whereRaw('LOWER(nivel) = ?', [$nivel]));
                 }
 
                 $secciones = $seccionesQuery->get(['id', 'nombre', 'grado_id']);
@@ -415,6 +417,19 @@ class AsignacionController extends Controller
                         'success' => true,
                         'secciones' => [],
                         'estudiantes' => []
+                    ]);
+                }
+
+                if ($soloSecciones) {
+                    return response()->json([
+                        'success' => true,
+                        'secciones' => $secciones->map(fn($s) => [
+                            'id' => $s->id,
+                            'nombre' => $s->nombre,
+                            'grado' => $s->grado?->nombre,
+                            'nivel' => $s->grado?->nivel,
+                        ]),
+                        'estudiantes' => [],
                     ]);
                 }
 
@@ -459,7 +474,7 @@ class AsignacionController extends Controller
                 ->whereIn('id', $seccionIds)
                 ->orderBy('nombre');
             if ($nivel) {
-                $seccionesQuery->whereHas('grado', fn($q) => $q->where('nivel', $nivel));
+                $seccionesQuery->whereHas('grado', fn($q) => $q->whereRaw('LOWER(nivel) = ?', [$nivel]));
             }
 
             $secciones = $seccionesQuery->get(['id', 'nombre', 'grado_id']);
