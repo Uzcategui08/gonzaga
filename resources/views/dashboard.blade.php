@@ -366,7 +366,7 @@
 											</td>
 											<td>{{ $clase->asignacion->materia->nombre }}</td>
 											<td>
-												<span class="badge badge-primary">{{ $clase->asignacion->seccion->nombre }}</span>
+												<span class="badge badge-primary">{{ $clase->asignacion->seccion->grado?->nombre }} - {{ $clase->asignacion->seccion->nombre }}</span>
 											</td>
 											<td>
 												@if($asistencia)
