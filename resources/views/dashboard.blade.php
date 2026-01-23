@@ -348,7 +348,6 @@
 										<th>Asignatura</th>
 										<th>Sección</th>
 			
-										<th>Año</th>
 										<th>Estado</th>
 										<th class="text-center">Acciones</th>
 									</tr>
