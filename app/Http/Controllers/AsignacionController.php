@@ -8,6 +8,7 @@ use App\Models\Materia;
 use App\Models\Seccion;
 use App\Models\Estudiante;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class AsignacionController extends Controller
@@ -18,7 +19,7 @@ class AsignacionController extends Controller
     public function index()
     {
         try {
-            $user = auth()->user();
+            $user = Auth::user();
 
             if ($user->hasRole('coordinador')) {
                 $seccionesCoordinador = $user->secciones->pluck('id');
@@ -58,7 +59,16 @@ class AsignacionController extends Controller
     public function store(Request $request)
     {
         try {
-            \Log::info('Form data received:', $request->all());
+            Log::info('AsignacionController@store request summary', [
+                'user_id' => optional($request->user())->id,
+                'nivel' => $request->input('nivel'),
+                'profesor_id' => $request->input('profesor_id'),
+                'aplicar_todas_materias' => $request->boolean('aplicar_todas_materias'),
+                'aplicar_todas_secciones' => $request->boolean('aplicar_todas_secciones'),
+                'materias_count' => is_array($request->input('materias_id')) ? count($request->input('materias_id')) : 0,
+                'secciones_count' => is_array($request->input('secciones_id')) ? count($request->input('secciones_id')) : 0,
+                'estudiantes_count' => is_array($request->input('estudiantes_id')) ? count($request->input('estudiantes_id')) : 0,
+            ]);
 
             $validated = $request->validate([
                 'nivel' => 'nullable|in:primaria,secundaria',
@@ -181,8 +191,8 @@ class AsignacionController extends Controller
             return redirect()->route('asignaciones.index')
                 ->with('success', $msg);
         } catch (\Exception $e) {
-            \Log::error('Error creating asignación: ' . $e->getMessage());
-            \Log::error($e->getTraceAsString());
+            Log::error('Error creating asignación: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
 
             return redirect()->back()
                 ->withInput()
