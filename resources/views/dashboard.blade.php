@@ -367,7 +367,8 @@
 											<td>{{ $clase->asignacion->materia->nombre }}</td>
 											<td>
 												<span class="badge badge-primary">{{ $clase->asignacion->seccion->nombre }}</span>
-
+											</td>
+											<td>
 												@if($asistencia)
 													<span class="status-chip status-chip--success">
 														<i class="fas fa-check"></i> Tomada
@@ -394,7 +395,7 @@
 										</tr>
 									@empty
 										<tr>
-											<td colspan="8" class="text-center py-4 text-muted">
+											<td colspan="6" class="text-center py-4 text-muted">
 												<i class="fas fa-calendar-times fa-2x mb-2"></i>
 												<p class="mb-0">No hay clases programadas para hoy</p>
 											</td>
