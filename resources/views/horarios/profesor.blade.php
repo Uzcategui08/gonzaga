@@ -130,10 +130,6 @@
                                                                             </span>
                                                                         </div>
                                                                     </div>
-                                                                    <span class="text-muted small d-block">
-                                                                        <i class="fas fa-map-marker-alt mr-1"></i>
-                                                                        {{ $horario->aula ?? 'Aula por asignar' }}
-                                                                    </span>
                                                                 </div>
                                                                 <!--
                                                                 <a href="{{ route('asistencias.registrar', [$horario->asignacion->materia->id, $horario->id]) }}" 

@@ -347,7 +347,7 @@
 										<th>Hora</th>
 										<th>Asignatura</th>
 										<th>Sección</th>
-										<th>Aula</th>
+			
 										<th>Año</th>
 										<th>Estado</th>
 										<th class="text-center">Acciones</th>
@@ -368,10 +368,7 @@
 											<td>{{ $clase->asignacion->materia->nombre }}</td>
 											<td>
 												<span class="badge badge-primary">{{ $clase->asignacion->seccion->nombre }}</span>
-											</td>
-											<td>{{ $clase->aula ?? 'Aula por asignar' }}</td>
-											<td>{{ $clase->asignacion->seccion->grado->nombre }}</td>
-											<td>
+
 												@if($asistencia)
 													<span class="status-chip status-chip--success">
 														<i class="fas fa-check"></i> Tomada

@@ -95,12 +95,16 @@ class DashboardController extends Controller
             $data['totalProfesores'] = \App\Models\Profesor::count();
             $fechaActual = now('America/Caracas');
 
-            $latestAsistenciaIds = $this->latestAsistenciaIdsForDateByHorario($fechaActual);
-            $attendanceCounts = $this->countUniqueStudentsByState($latestAsistenciaIds);
+            // Asistencias/Pases: misma lógica que el reporte de secretaria (una sesión “mejor” por sección)
+            $bestSessionCounts = $this->bestSessionAttendanceCountsForDate($fechaActual);
+            $data['asistenciasHoy'] = $bestSessionCounts['A'] + $bestSessionCounts['P'];
+            $data['tardiosHoy'] = $bestSessionCounts['P'];
 
-            $data['asistenciasHoy'] = $attendanceCounts['A'] + $attendanceCounts['P'];
-            $data['tardiosHoy'] = $attendanceCounts['P'];
-            $data['inasistenciasHoy'] = $attendanceCounts['I'];
+            // Inasistencias: 1 vez por estudiante en el día (independiente de cuántas clases falte)
+            $data['inasistenciasHoy'] = $this->countInasistenciasUniqueStudentsForDate($fechaActual);
+
+            // Mantener total de clases registradas hoy (por horario) para el card de “Clases hoy”
+            $latestAsistenciaIds = $this->latestAsistenciaIdsForDateByHorario($fechaActual);
             $data['totalClasesHoy'] = $latestAsistenciaIds->count();
 
             $attendanceByDay = DB::table('asistencia_estudiante')
@@ -200,13 +204,12 @@ class DashboardController extends Controller
             $fechaActual = now('America/Caracas');
             $diaActual = $fechaActual->format('l');
 
+            $bestSessionCounts = $this->bestSessionAttendanceCountsForDate($fechaActual, $seccionesCoordinador);
+            $data['asistenciasHoy'] = $bestSessionCounts['A'] + $bestSessionCounts['P'];
+            $data['tardiosHoy'] = $bestSessionCounts['P'];
+            $data['inasistenciasHoy'] = $this->countInasistenciasUniqueStudentsForDate($fechaActual, $seccionesCoordinador);
+
             $latestAsistenciaIds = $this->latestAsistenciaIdsForDateByHorario($fechaActual, $seccionesCoordinador);
-            $attendanceCounts = $this->countUniqueStudentsByState($latestAsistenciaIds);
-
-            $data['asistenciasHoy'] = $attendanceCounts['A'] + $attendanceCounts['P'];
-            $data['tardiosHoy'] = $attendanceCounts['P'];
-            $data['inasistenciasHoy'] = $attendanceCounts['I'];
-
             $data['totalClasesHoy'] = $latestAsistenciaIds->count();
 
             $last30Days = Carbon::now('America/Caracas')->subDays(30)->startOfDay();
@@ -713,9 +716,9 @@ class DashboardController extends Controller
                 ->distinct('horario_id')
                 ->count('horario_id');
 
-            $latestIds = $this->latestAsistenciaIdsForDateByHorario($fechaActual, $sectionIds);
-            $stateCounts = $this->countUniqueStudentsByState($latestIds);
-            $totalEvents = array_sum($stateCounts);
+            $sessionCounts = $this->bestSessionAttendanceCountsForDate($fechaActual, $sectionIds);
+            $inasistencias = $this->countInasistenciasUniqueStudentsForDate($fechaActual, $sectionIds);
+            $totalEvents = ($sessionCounts['A'] + $sessionCounts['P']) + $inasistencias;
 
             $coverage = $classesScheduled > 0
                 ? round(($classesWithAttendance / max($classesScheduled, 1)) * 100)
@@ -729,11 +732,199 @@ class DashboardController extends Controller
                 'clasesProgramadas' => $classesScheduled,
                 'clasesConAsistencia' => $classesWithAttendance,
                 'cobertura' => $coverage,
-                'asistencias' => $stateCounts['A'],
-                'tardios' => $stateCounts['P'],
-                'inasistencias' => $stateCounts['I'],
+                'asistencias' => $sessionCounts['A'],
+                'tardios' => $sessionCounts['P'],
+                'inasistencias' => $inasistencias,
                 'totalEventos' => $totalEvents
             ];
         })->values()->toArray();
+    }
+
+    /**
+     * Replica la lógica del reporte de secretaria para un día:
+     * para cada sección, se elige la “mejor sesión” (fecha|hora) con mayor cantidad
+     * de estudiantes únicos en estado A/P; luego se suman A y P.
+     */
+    private function bestSessionAttendanceCountsForDate(Carbon $date, $seccionIds = null): array
+    {
+        $query = AsistenciaEstudiante::select(
+            'asistencia_estudiante.estudiante_id',
+            'asistencia_estudiante.estado',
+            'secciones.id as seccion_id',
+            'asistencias.fecha',
+            'asistencias.hora_inicio'
+        )
+            ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
+            ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+            ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+            ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+            ->whereDate('asistencias.fecha', $date->toDateString())
+            ->whereIn('asistencia_estudiante.estado', ['A', 'P']);
+
+        if ($seccionIds !== null) {
+            $ids = $seccionIds instanceof Collection ? $seccionIds : collect($seccionIds);
+            if ($ids->isNotEmpty()) {
+                $query->whereIn('secciones.id', $ids->all());
+            }
+        }
+
+        $records = $query->get();
+
+        $sessionsBySection = [];
+
+        foreach ($records as $record) {
+            $sectionId = (int) ($record->seccion_id ?? 0);
+            if ($sectionId <= 0) {
+                continue;
+            }
+
+            $fechaValue = $record->fecha instanceof Carbon
+                ? $record->fecha->toDateString()
+                : (string) $record->fecha;
+
+            $horaValue = $record->hora_inicio ? (string) $record->hora_inicio : '00:00:00';
+            $sessionKey = $fechaValue . '|' . $horaValue;
+            $studentId = (int) ($record->estudiante_id ?? 0);
+            if ($studentId <= 0) {
+                continue;
+            }
+
+            $estado = (string) ($record->estado ?? 'A');
+            if ($estado !== 'A' && $estado !== 'P') {
+                continue;
+            }
+
+            if (!isset($sessionsBySection[$sectionId])) {
+                $sessionsBySection[$sectionId] = [];
+            }
+
+            if (!isset($sessionsBySection[$sectionId][$sessionKey])) {
+                $sessionsBySection[$sectionId][$sessionKey] = [
+                    'fecha' => $fechaValue,
+                    'hora' => $horaValue,
+                    'students' => [],
+                ];
+            }
+
+            // Si un estudiante aparece más de una vez en la misma sesión, priorizar P sobre A
+            $prev = $sessionsBySection[$sectionId][$sessionKey]['students'][$studentId] ?? null;
+            if ($prev === 'P') {
+                continue;
+            }
+            $sessionsBySection[$sectionId][$sessionKey]['students'][$studentId] = $estado;
+        }
+
+        $totals = ['A' => 0, 'P' => 0, 'I' => 0];
+
+        foreach ($sessionsBySection as $sectionId => $sessions) {
+            $bestSession = null;
+            $bestTotal = 0;
+
+            foreach ($sessions as $sessionData) {
+                $total = count($sessionData['students']);
+                if ($total > $bestTotal) {
+                    $bestTotal = $total;
+                    $bestSession = $sessionData;
+                    continue;
+                }
+
+                if ($total === $bestTotal && $bestSession !== null) {
+                    $current = $this->makeSessionDateTime($sessionData['fecha'], $sessionData['hora']);
+                    $best = $this->makeSessionDateTime($bestSession['fecha'], $bestSession['hora']);
+                    if ($current && $best && $current->greaterThan($best)) {
+                        $bestSession = $sessionData;
+                    }
+                }
+            }
+
+            if (!$bestSession) {
+                continue;
+            }
+
+            foreach ($bestSession['students'] as $estado) {
+                if ($estado === 'P') {
+                    $totals['P']++;
+                } else {
+                    $totals['A']++;
+                }
+            }
+        }
+
+        return $totals;
+    }
+
+    private function makeSessionDateTime(?string $fecha, ?string $hora): ?Carbon
+    {
+        if (!$fecha) {
+            return null;
+        }
+
+        $time = $hora ?: '00:00:00';
+
+        try {
+            return Carbon::parse($fecha . ' ' . $time, 'America/Caracas');
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Replica la lógica del reporte de inasistencias (coordinador):
+     * cuenta inasistencias únicas por estudiante en cada asignación para la fecha.
+     */
+    private function countInasistenciasByDistinctAsignacionForDate(Carbon $date, $seccionIds = null): int
+    {
+        $query = AsistenciaEstudiante::select(
+            'asistencia_estudiante.estudiante_id',
+            'horarios.asignacion_id',
+            'asistencias.fecha'
+        )
+            ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
+            ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+            ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+            ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+            ->where('asistencia_estudiante.estado', 'I')
+            ->whereDate('asistencias.fecha', $date->toDateString());
+
+        if ($seccionIds !== null) {
+            $ids = $seccionIds instanceof Collection ? $seccionIds : collect($seccionIds);
+            if ($ids->isNotEmpty()) {
+                $query->whereIn('secciones.id', $ids->all());
+            }
+        }
+
+        return $query->get()
+            ->unique(function ($row) {
+                $fecha = $row->fecha instanceof Carbon
+                    ? $row->fecha->toDateString()
+                    : Carbon::parse($row->fecha)->toDateString();
+                return $fecha . '|' . ((int) $row->asignacion_id) . '|' . ((int) $row->estudiante_id);
+            })
+            ->count();
+    }
+
+    /**
+     * Cuenta inasistencias únicas por estudiante en una fecha.
+     *
+     * Si el estudiante tiene múltiples "I" en distintas clases el mismo día, cuenta 1.
+     */
+    private function countInasistenciasUniqueStudentsForDate(Carbon $date, $seccionIds = null): int
+    {
+        $query = AsistenciaEstudiante::select('asistencia_estudiante.estudiante_id')
+            ->join('asistencias', 'asistencias.id', '=', 'asistencia_estudiante.asistencia_id')
+            ->join('horarios', 'horarios.id', '=', 'asistencias.horario_id')
+            ->join('asignaciones', 'asignaciones.id', '=', 'horarios.asignacion_id')
+            ->join('secciones', 'secciones.id', '=', 'asignaciones.seccion_id')
+            ->where('asistencia_estudiante.estado', 'I')
+            ->whereDate('asistencias.fecha', $date->toDateString());
+
+        if ($seccionIds !== null) {
+            $ids = $seccionIds instanceof Collection ? $seccionIds : collect($seccionIds);
+            if ($ids->isNotEmpty()) {
+                $query->whereIn('secciones.id', $ids->all());
+            }
+        }
+
+        return (int) $query->distinct('asistencia_estudiante.estudiante_id')->count('asistencia_estudiante.estudiante_id');
     }
 }
