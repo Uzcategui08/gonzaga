@@ -17,21 +17,30 @@
     @php
         $startValue = $filters['start_date'] ?? '';
         $endValue = $filters['end_date'] ?? '';
+        $nivelValue = $filters['nivel'] ?? '';
     @endphp
 
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form method="GET" action="{{ route('asistencias.secretaria.index') }}">
                 <div class="form-row align-items-end">
-                    <div class="col-md-4 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6 mb-3">
                         <label for="start_date" class="font-weight-semibold">Desde</label>
                         <input type="date" name="start_date" id="start_date" class="form-control" value="{{ $startValue }}">
                     </div>
-                    <div class="col-md-4 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6 mb-3">
                         <label for="end_date" class="font-weight-semibold">Hasta</label>
                         <input type="date" name="end_date" id="end_date" class="form-control" value="{{ $endValue }}">
                     </div>
-                    <div class="col-md-4 col-sm-12 mb-3 d-flex">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <label for="nivel" class="font-weight-semibold">Nivel</label>
+                        <select name="nivel" id="nivel" class="form-control">
+                            <option value="">Todos</option>
+                            <option value="secundaria" {{ $nivelValue === 'secundaria' ? 'selected' : '' }}>Secundaria</option>
+                            <option value="primaria" {{ $nivelValue === 'primaria' ? 'selected' : '' }}>Primaria</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 col-sm-12 mb-3 d-flex">
                         <button type="submit" class="btn btn-primary mr-2 flex-fill">
                             <i class="fas fa-filter mr-1"></i>Aplicar filtro
                         </button>
@@ -116,6 +125,7 @@
         $exportQuery = array_filter([
             'start_date' => $filters['start_date'] ?? null,
             'end_date' => $filters['end_date'] ?? null,
+            'nivel' => $filters['nivel'] ?? null,
         ]);
     @endphp
 

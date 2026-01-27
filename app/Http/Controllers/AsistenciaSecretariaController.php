@@ -25,6 +25,11 @@ class AsistenciaSecretariaController extends Controller
 
     [$startDate, $endDate, $sectionsCollection, $totals] = $this->buildReport($request);
 
+    // Por defecto: Secundaria (solo si el parámetro no viene en la URL).
+    // Si el usuario selecciona "Todos", el formulario envía nivel="" y se respeta.
+    $rawNivel = $request->has('nivel') ? $request->input('nivel') : 'secundaria';
+    $nivel = $this->normalizeNivel($rawNivel);
+
     return view('asistencias.secretaria-index', [
       'sections' => $sectionsCollection,
       'totals' => $totals,
@@ -33,6 +38,7 @@ class AsistenciaSecretariaController extends Controller
       'filters' => [
         'start_date' => $startDate ? $startDate->toDateString() : null,
         'end_date' => $endDate ? $endDate->toDateString() : null,
+        'nivel' => $nivel,
       ],
     ]);
   }
@@ -70,15 +76,25 @@ class AsistenciaSecretariaController extends Controller
   {
     [$startDate, $endDate] = $this->resolveDateRange($request);
 
-    $secciones = Seccion::with(['grado:id,nombre'])
-      ->orderBy('nombre')
-      ->get();
+    // Por defecto: Secundaria (solo si el parámetro no viene en la URL).
+    $rawNivel = $request->has('nivel') ? $request->input('nivel') : 'secundaria';
+    $nivel = $this->normalizeNivel($rawNivel);
+
+    $seccionesQuery = Seccion::with(['grado:id,nombre,nivel'])
+      ->orderBy('nombre');
+
+    if ($nivel) {
+      $seccionesQuery->whereHas('grado', fn($q) => $q->whereRaw('LOWER(nivel) = ?', [$nivel]));
+    }
+
+    $secciones = $seccionesQuery->get();
 
     $sectionsData = [];
     foreach ($secciones as $seccion) {
       $sectionsData[$seccion->id] = [
         'seccion_id' => $seccion->id,
         'grado' => optional($seccion->grado)->nombre ?? 'Sin grado',
+        'nivel' => optional($seccion->grado)->nivel,
         'seccion' => $seccion->nombre,
         'masculinos' => 0,
         'femeninos' => 0,
@@ -93,6 +109,7 @@ class AsistenciaSecretariaController extends Controller
         'secciones.id as seccion_id',
         'secciones.nombre as seccion_nombre',
         'grados.nombre as grado_nombre',
+        'grados.nivel as grado_nivel',
         'asistencias.fecha',
         'asistencias.hora_inicio'
       )
@@ -121,6 +138,7 @@ class AsistenciaSecretariaController extends Controller
           $sectionsData[$sectionId] = [
             'seccion_id' => $sectionId,
             'grado' => $record->grado_nombre ?? 'Sin grado',
+            'nivel' => $record->grado_nivel,
             'seccion' => $record->seccion_nombre,
             'masculinos' => 0,
             'femeninos' => 0,
@@ -218,7 +236,15 @@ class AsistenciaSecretariaController extends Controller
         return $section['total'] > 0;
       })
       ->sortBy(function ($section) {
-        return sprintf('%s_%s', $section['grado'], $section['seccion']);
+        $nivelValue = $this->normalizeNivel($section['nivel'] ?? null);
+        // Secundaria primero, luego Primaria, luego lo demás.
+        $nivelOrder = match ($nivelValue) {
+          'secundaria' => 0,
+          'primaria' => 1,
+          default => 2,
+        };
+
+        return sprintf('%d_%s_%s', $nivelOrder, $section['grado'], $section['seccion']);
       }, SORT_NATURAL | SORT_FLAG_CASE)
       ->values();
 
@@ -229,6 +255,16 @@ class AsistenciaSecretariaController extends Controller
     $totals['total'] = $totals['masculinos'] + $totals['femeninos'];
 
     return [$startDate, $endDate, $sectionsCollection, $totals];
+  }
+
+  private function normalizeNivel($nivel): ?string
+  {
+    if ($nivel === null) {
+      return null;
+    }
+
+    $value = Str::lower(trim((string) $nivel));
+    return in_array($value, ['primaria', 'secundaria'], true) ? $value : null;
   }
 
   private function authorizeReportAccess(): void
