@@ -378,7 +378,10 @@ class AsistenciaController extends Controller
                 return redirect()->back()->with('error', 'No se encontró la sección asociada');
             }
 
-            $estudiantes = $horario->asignacion->seccion->estudiantes()->orderBy('apellidos')->get();
+            $estudiantes = $horario->asignacion->seccion->estudiantes()
+                ->where('estado', 'activo')
+                ->orderBy('apellidos')
+                ->get();
 
             if ($estudiantes->isEmpty()) {
                 return redirect()->back()->with('error', 'No hay estudiantes asignados a esta sección');

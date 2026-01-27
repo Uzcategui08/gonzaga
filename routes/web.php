@@ -77,6 +77,14 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('secciones', SeccionController::class)->parameters(['secciones' => 'seccion']);
     Route::get('/api/secciones/por-nivel', [SeccionController::class, 'seccionesPorNivel'])->name('secciones.por.nivel');
     Route::get('/api/asignaciones/secciones/por-nivel', [SeccionController::class, 'seccionesPorNivel'])->name('asignaciones.por.nivel');
+
+    Route::get('estudiantes/retiros', [EstudianteController::class, 'retiros'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':admin'])
+        ->name('estudiantes.retiros');
+    Route::post('estudiantes/{estudiante}/retirar', [EstudianteController::class, 'retirar'])
+        ->middleware([\App\Http\Middleware\CheckUserType::class . ':admin'])
+        ->name('estudiantes.retirar');
+
     Route::resource('estudiantes', EstudianteController::class);
     Route::resource('materias', MateriaController::class);
     Route::resource('profesores', ProfesorController::class)->parameters(['profesores' => 'profesor']);

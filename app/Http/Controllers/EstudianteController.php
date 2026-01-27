@@ -8,6 +8,7 @@ use App\Models\Asignacion;
 use App\Models\Horario;
 use App\Models\Grado;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class EstudianteController extends Controller
@@ -175,6 +176,62 @@ class EstudianteController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Error al eliminar el estudiante: ' . $e->getMessage());
+        }
+    }
+
+    public function retiros()
+    {
+        $estudiantes = Estudiante::with(['seccion.grado'])
+            ->where('estado', 'activo')
+            ->orderBy('apellidos')
+            ->orderBy('nombres')
+            ->get();
+
+        return view('estudiantes.retiros', compact('estudiantes'));
+    }
+
+    public function retirar(Request $request, Estudiante $estudiante)
+    {
+        try {
+            if ($estudiante->estado !== 'activo') {
+                return redirect()->route('estudiantes.retiros')
+                    ->with('warning', 'El estudiante ya no está activo.');
+            }
+
+            DB::transaction(function () use ($estudiante) {
+                // 1) Marcar como inactivo (no borrar historial de asistencias)
+                $estudiante->update(['estado' => 'inactivo']);
+
+                // 2) Quitar de asignaciones de profesores (sin tocar asistencias pasadas)
+                if ($estudiante->seccion_id) {
+                    $asignaciones = Asignacion::where('seccion_id', $estudiante->seccion_id)
+                        ->whereNotNull('estudiantes_id')
+                        ->get();
+
+                    foreach ($asignaciones as $asignacion) {
+                        $ids = json_decode($asignacion->estudiantes_id, true);
+                        if (!is_array($ids)) {
+                            $ids = [];
+                        }
+
+                        $idsFiltrados = array_values(array_filter($ids, function ($id) use ($estudiante) {
+                            return (int) $id !== (int) $estudiante->id;
+                        }));
+
+                        if (count($idsFiltrados) !== count($ids)) {
+                            $asignacion->estudiantes_id = json_encode($idsFiltrados);
+                            $asignacion->save();
+                        }
+                    }
+                }
+            });
+
+            return redirect()->route('estudiantes.retiros')
+                ->with('success', 'Estudiante retirado: marcado como inactivo y removido de asignaciones.');
+        } catch (\Exception $e) {
+            Log::error('Error en EstudianteController@retirar: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Error al retirar el estudiante: ' . $e->getMessage());
         }
     }
 

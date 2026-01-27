@@ -381,8 +381,20 @@ return [
             'submenu' => [
                 [
                     'text' => 'Estudiantes',
-                    'url' => 'estudiantes',
-                    'icon' => 'fas fa-user-graduate'
+                    'icon' => 'fas fa-user-graduate',
+                    'submenu' => [
+                        [
+                            'text' => 'Listado',
+                            'url' => 'estudiantes',
+                            'icon' => 'fas fa-list'
+                        ],
+                        [
+                            'text' => 'Retiros',
+                            'url' => 'estudiantes/retiros',
+                            'icon' => 'fas fa-user-slash',
+                            'can' => 'admin'
+                        ],
+                    ]
                 ],
                 [
                     'text' => 'Profesores',

@@ -353,6 +353,7 @@ class LimpiezaController extends Controller
                     $hora_fin = Carbon::parse($horarioSeleccionado->hora_fin)->format('H:i');
 
                     $estudiantesDeSeccion = $horarioSeleccionado->asignacion->seccion->estudiantes()
+                        ->where('estado', 'activo')
                         ->orderBy('apellidos')
                         ->get();
 
@@ -395,7 +396,11 @@ class LimpiezaController extends Controller
 
     public function getEstudiantes(Horario $clase)
     {
-        $estudiantes = $clase->asignacion->seccion->estudiantes;
+        $estudiantes = $clase->asignacion->seccion->estudiantes()
+            ->where('estado', 'activo')
+            ->orderBy('apellidos')
+            ->get();
+
         return response()->json($estudiantes);
     }
 

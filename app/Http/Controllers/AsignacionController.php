@@ -143,11 +143,13 @@ class AsignacionController extends Controller
             $aplicarTodosEstudiantes = $request->boolean('aplicar_todos_estudiantes');
             if ($aplicarTodosEstudiantes) {
                 $estudiantes = Estudiante::whereIn('seccion_id', $seccionIds)
+                    ->where('estado', 'activo')
                     ->get(['id', 'seccion_id']);
             } else {
                 $selectedIds = $validated['estudiantes_id'];
                 $estudiantes = Estudiante::whereIn('id', $selectedIds)
                     ->whereIn('seccion_id', $seccionIds)
+                    ->where('estado', 'activo')
                     ->get(['id', 'seccion_id']);
             }
 
@@ -359,6 +361,7 @@ class AsignacionController extends Controller
             ]);
 
             $estudiantes = Estudiante::where('seccion_id', $request->seccion_id)
+                ->where('estado', 'activo')
                 ->select('id', 'seccion_id', 'nombres', 'apellidos', 'codigo_estudiante', 'estado', 'genero')
                 ->orderBy('apellidos', 'asc')
                 ->get()
@@ -437,6 +440,7 @@ class AsignacionController extends Controller
                 $seccionNombre = $secciones->mapWithKeys(fn($s) => [$s->id => $s->nombre]);
 
                 $estudiantes = Estudiante::whereIn('seccion_id', $seccionIds)
+                    ->where('estado', 'activo')
                     ->select('id', 'seccion_id', 'nombres', 'apellidos', 'codigo_estudiante', 'estado', 'genero')
                     ->orderBy('seccion_id')
                     ->orderBy('apellidos', 'asc')
