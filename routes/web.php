@@ -20,6 +20,10 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\TestController;
 use App\Http\Controllers\AsistenciaMensualController;
 use App\Http\Controllers\HorarioPrimariaController;
+use App\Http\Controllers\Extracurricular\ExtracurricularDashboardController;
+use App\Http\Controllers\Extracurricular\ClaseExtracurricularController;
+use App\Http\Controllers\Extracurricular\AsistenciaExtracurricularController;
+use App\Http\Controllers\Extracurricular\ExtracurricularHistoricoController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -164,4 +168,24 @@ Route::middleware(['auth'])->group(function () {
         Route::put('{justificativo}/approve', [JustificativoController::class, 'approve'])->name('justificativos.approve');
         Route::delete('{justificativo}', [JustificativoController::class, 'destroy'])->name('justificativos.destroy');
     });
+
+    Route::prefix('extracurricular')
+        ->middleware(['auth', \App\Http\Middleware\CheckUserType::class . ':pedagogia,profesor_extracurricular,admin'])
+        ->name('extracurricular.')
+        ->group(function () {
+            Route::get('/', [ExtracurricularDashboardController::class, 'index'])->name('index');
+
+            Route::get('/historico', [ExtracurricularHistoricoController::class, 'index'])->name('historico.index');
+            Route::get('/historico/{asistencia}', [ExtracurricularHistoricoController::class, 'show'])->name('historico.show');
+
+            Route::middleware([\App\Http\Middleware\CheckUserType::class . ':admin'])->group(function () {
+                Route::get('/clases/create', [ClaseExtracurricularController::class, 'create'])->name('clases.create');
+                Route::post('/clases', [ClaseExtracurricularController::class, 'store'])->name('clases.store');
+                Route::get('/clases/{clase}/edit', [ClaseExtracurricularController::class, 'edit'])->name('clases.edit');
+                Route::put('/clases/{clase}', [ClaseExtracurricularController::class, 'update'])->name('clases.update');
+            });
+
+            Route::get('/clases/{clase}/asistencia', [AsistenciaExtracurricularController::class, 'form'])->name('asistencia.form');
+            Route::post('/clases/{clase}/asistencia', [AsistenciaExtracurricularController::class, 'store'])->name('asistencia.store');
+        });
 });

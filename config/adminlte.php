@@ -337,6 +337,62 @@ return [
             'icon' => 'fas fa-home',
         ],
         [
+            'text' => 'Extracurricular',
+            'icon' => 'fas fa-layer-group',
+            'can' => 'pedagogia',
+            'submenu' => [
+                [
+                    'text' => 'Dashboard',
+                    'url' => 'extracurricular',
+                    'icon' => 'fas fa-chart-pie',
+                ],
+                [
+                    'text' => 'Histórico',
+                    'url' => 'extracurricular/historico',
+                    'icon' => 'fas fa-history',
+                ],
+            ],
+        ],
+        [
+            'text' => 'Extracurricular',
+            'icon' => 'fas fa-layer-group',
+            'can' => 'admin',
+            'submenu' => [
+                [
+                    'text' => 'Dashboard',
+                    'url' => 'extracurricular',
+                    'icon' => 'fas fa-chart-pie',
+                ],
+                [
+                    'text' => 'Histórico',
+                    'url' => 'extracurricular/historico',
+                    'icon' => 'fas fa-history',
+                ],
+                [
+                    'text' => 'Crear clase',
+                    'url' => 'extracurricular/clases/create',
+                    'icon' => 'fas fa-plus-circle',
+                ],
+            ],
+        ],
+        [
+            'text' => 'Asistencia Extracurricular',
+            'icon' => 'fas fa-clipboard-check',
+            'can' => 'profesor_extracurricular',
+            'submenu' => [
+                [
+                    'text' => 'Dashboard',
+                    'url' => 'extracurricular',
+                    'icon' => 'fas fa-calendar-check',
+                ],
+                [
+                    'text' => 'Histórico',
+                    'url' => 'extracurricular/historico',
+                    'icon' => 'fas fa-history',
+                ],
+            ],
+        ],
+        [
             'type' => 'navbar-item',
             'text' => 'Reporte Secretaría',
             'url' => 'asistencias/reporte-secretaria',

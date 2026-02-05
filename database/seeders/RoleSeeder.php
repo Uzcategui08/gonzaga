@@ -9,7 +9,7 @@ class RoleSeeder extends Seeder
 {
     public function run()
     {
-    $roles = ['admin', 'profesor', 'coordinador', 'secretaria'];
+        $roles = ['admin', 'profesor', 'coordinador', 'secretaria', 'pedagogia', 'profesor_extracurricular'];
         foreach ($roles as $roleName) {
             if (!Role::where('name', $roleName)->exists()) {
                 Role::create(['name' => $roleName]);
@@ -18,16 +18,27 @@ class RoleSeeder extends Seeder
 
         $users = \App\Models\User::all();
         foreach ($users as $user) {
-            $user->roles()->detach();
+            $baseRoles = ['admin', 'profesor', 'coordinador', 'secretaria', 'pedagogia'];
+            $currentRoles = $user->roles()->pluck('name')->all();
+            $extraRoles = array_values(array_diff($currentRoles, $baseRoles));
 
+            $roleToAssign = null;
             if ($user->tipo === 'admin') {
-                $user->assignRole('admin');
+                $roleToAssign = 'admin';
             } elseif ($user->tipo === 'profesor') {
-                $user->assignRole('profesor');
+                $roleToAssign = 'profesor';
             } elseif ($user->tipo === 'coordinador') {
-                $user->assignRole('coordinador');
+                $roleToAssign = 'coordinador';
             } elseif ($user->tipo === 'secretaria') {
-                $user->assignRole('secretaria');
+                $roleToAssign = 'secretaria';
+            } elseif ($user->tipo === 'pedagogia') {
+                $roleToAssign = 'pedagogia';
+            } elseif ($user->tipo === 'extracurricular') {
+                $roleToAssign = 'profesor_extracurricular';
+            }
+
+            if ($roleToAssign) {
+                $user->syncRoles(array_values(array_unique(array_merge([$roleToAssign], $extraRoles))));
             }
         }
     }
