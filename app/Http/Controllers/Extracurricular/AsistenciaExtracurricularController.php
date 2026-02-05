@@ -80,6 +80,14 @@ class AsistenciaExtracurricularController extends Controller
     public function store(ClaseExtracurricular $clase, Request $request)
     {
         $usuario = Auth::user();
+        $esPedagogia = $usuario instanceof User
+            ? (($usuario->tipo ?? null) === 'pedagogia' || $usuario->hasRole('pedagogia'))
+            : false;
+
+        if ($esPedagogia) {
+            abort(403, 'Pedagogía solo puede consultar la información; no puede registrar asistencia.');
+        }
+
         $esProfesorExtracurricular = $usuario instanceof User
             ? $usuario->hasRole('profesor_extracurricular')
             : false;

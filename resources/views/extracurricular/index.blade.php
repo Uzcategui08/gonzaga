@@ -150,9 +150,18 @@
                                             <span class="badge badge-primary badge-pill">{{ $clase->estudiantes_count ?? 0 }}</span>
                                         </td>
                                         <td class="text-right">
-                                            <a class="btn btn-sm btn-outline-primary" href="{{ route('extracurricular.asistencia.form', $clase->id) }}">
-                                                <i class="fas fa-clipboard-check mr-1"></i> Pasar asistencia
+                                            @php
+                                                $user = auth()->user();
+                                                $esPedagogia = ($user?->tipo ?? null) === 'pedagogia' || (method_exists($user, 'hasRole') && $user?->hasRole('pedagogia'));
+                                            @endphp
+                                            <a class="btn btn-sm btn-outline-secondary" href="{{ route('extracurricular.clases.show', $clase->id) }}">
+                                                <i class="fas fa-eye mr-1"></i> Consultar
                                             </a>
+                                            @if(!$esPedagogia)
+                                                <a class="btn btn-sm btn-outline-primary" href="{{ route('extracurricular.asistencia.form', $clase->id) }}">
+                                                    <i class="fas fa-clipboard-check mr-1"></i> Pasar asistencia
+                                                </a>
+                                            @endif
                                             @if(auth()->user()?->hasRole('admin'))
                                                 <a class="btn btn-sm btn-outline-secondary" href="{{ route('extracurricular.clases.edit', $clase->id) }}">
                                                     <i class="fas fa-edit mr-1"></i> Editar

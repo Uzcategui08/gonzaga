@@ -185,7 +185,13 @@ Route::middleware(['auth'])->group(function () {
                 Route::put('/clases/{clase}', [ClaseExtracurricularController::class, 'update'])->name('clases.update');
             });
 
-            Route::get('/clases/{clase}/asistencia', [AsistenciaExtracurricularController::class, 'form'])->name('asistencia.form');
-            Route::post('/clases/{clase}/asistencia', [AsistenciaExtracurricularController::class, 'store'])->name('asistencia.store');
+            Route::get('/clases/{clase}', [ClaseExtracurricularController::class, 'show'])
+                ->whereNumber('clase')
+                ->name('clases.show');
+
+            Route::middleware([\App\Http\Middleware\CheckUserType::class . ':profesor_extracurricular,admin'])->group(function () {
+                Route::get('/clases/{clase}/asistencia', [AsistenciaExtracurricularController::class, 'form'])->name('asistencia.form');
+                Route::post('/clases/{clase}/asistencia', [AsistenciaExtracurricularController::class, 'store'])->name('asistencia.store');
+            });
         });
 });

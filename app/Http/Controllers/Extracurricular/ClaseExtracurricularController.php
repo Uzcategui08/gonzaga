@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClaseExtracurricular;
 use App\Models\Estudiante;
 use App\Models\Profesor;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -137,6 +138,38 @@ class ClaseExtracurricularController extends Controller
             'profesores' => $profesores,
             'estudiantes' => $estudiantes,
             'seleccionados' => $clase->estudiantes->pluck('id')->all(),
+        ]);
+    }
+
+    public function show(ClaseExtracurricular $clase)
+    {
+        $usuario = Auth::user();
+        $esProfesorExtracurricular = $usuario instanceof User
+            ? $usuario->hasRole('profesor_extracurricular')
+            : false;
+
+        if ($esProfesorExtracurricular) {
+            $profesorId = Profesor::where('user_id', $usuario->id)->value('id');
+            if (!empty($profesorId) && (int) $clase->profesor_id !== (int) $profesorId) {
+                abort(403, 'No tiene permiso para esta clase.');
+            }
+        }
+
+        $clase->load([
+            'profesor.user:id,name,tipo',
+            'estudiantes.seccion.grado',
+        ]);
+
+        $estudiantes = $clase->estudiantes
+            ->sortBy([
+                fn($e) => $e->apellidos,
+                fn($e) => $e->nombres,
+            ])
+            ->values();
+
+        return view('extracurricular.clases.show', [
+            'clase' => $clase,
+            'estudiantes' => $estudiantes,
         ]);
     }
 
