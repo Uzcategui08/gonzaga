@@ -69,10 +69,10 @@ class ExtracurricularHistoricoController extends Controller
         $conteos = $asistenciaIds->isEmpty()
             ? collect([])
             : DB::table('asistencia_extracurricular_estudiante')
-                ->whereIn('asistencia_extracurricular_id', $asistenciaIds)
-                ->select('asistencia_extracurricular_id', 'estado', DB::raw('count(*) as total'))
-                ->groupBy('asistencia_extracurricular_id', 'estado')
-                ->get();
+            ->whereIn('asistencia_extracurricular_id', $asistenciaIds)
+            ->select('asistencia_extracurricular_id', 'estado', DB::raw('count(*) as total'))
+            ->groupBy('asistencia_extracurricular_id', 'estado')
+            ->get();
 
         $statsPorAsistencia = $conteos
             ->groupBy('asistencia_extracurricular_id')

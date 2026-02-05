@@ -47,10 +47,10 @@ class ExtracurricularDashboardController extends Controller
         $estadoHoy = $asistenciasHoy->isEmpty()
             ? collect([])
             : DB::table('asistencia_extracurricular_estudiante')
-                ->whereIn('asistencia_extracurricular_id', $asistenciasHoy)
-                ->select('estado', DB::raw('count(*) as total'))
-                ->groupBy('estado')
-                ->pluck('total', 'estado');
+            ->whereIn('asistencia_extracurricular_id', $asistenciasHoy)
+            ->select('estado', DB::raw('count(*) as total'))
+            ->groupBy('estado')
+            ->pluck('total', 'estado');
 
         $presentes = (int) (($estadoHoy['A'] ?? 0) + ($estadoHoy['P'] ?? 0));
         $pases = (int) ($estadoHoy['P'] ?? 0);
