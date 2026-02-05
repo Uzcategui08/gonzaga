@@ -83,7 +83,7 @@
                         </div>
                     </div>
                     <div class="mt-4 mt-lg-0 d-flex align-items-center">
-                        @if(auth()->user()?->hasRole('admin') || auth()->user()?->hasRole('pedagogia'))
+                        @if(auth()->user()?->hasRole('admin'))
                             <a href="{{ route('extracurricular.clases.create') }}" class="btn btn-light btn-lg">
                                 <i class="fas fa-plus mr-1"></i> Nueva clase
                             </a>

@@ -12,9 +12,16 @@ use Illuminate\Support\Facades\Schema;
 
 class ClaseExtracurricularController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware(\App\Http\Middleware\CheckUserType::class . ':admin')->only(['create', 'store']);
+    }
+
     public function create()
     {
         $profesores = Profesor::with('user:id,name')
+            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
             ->orderBy('id')
             ->get();
 
@@ -44,6 +51,17 @@ class ClaseExtracurricularController extends Controller
             'estudiantes_id' => 'required|array|min:1',
             'estudiantes_id.*' => 'integer|exists:estudiantes,id',
         ]);
+
+        $profesorEsExtracurricular = Profesor::query()
+            ->whereKey($validated['profesor_id'])
+            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
+            ->exists();
+
+        if (!$profesorEsExtracurricular) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['profesor_id' => 'El profesor seleccionado no es profesor extracurricular.']);
+        }
 
         if (strtotime($validated['hora_fin']) <= strtotime($validated['hora_inicio'])) {
             return redirect()->back()
@@ -75,6 +93,7 @@ class ClaseExtracurricularController extends Controller
         $clase->load('estudiantes');
 
         $profesores = Profesor::with('user:id,name')
+            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
             ->orderBy('id')
             ->get();
 
@@ -107,6 +126,17 @@ class ClaseExtracurricularController extends Controller
             'estudiantes_id.*' => 'integer|exists:estudiantes,id',
             'activo' => 'nullable|in:0,1',
         ]);
+
+        $profesorEsExtracurricular = Profesor::query()
+            ->whereKey($validated['profesor_id'])
+            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
+            ->exists();
+
+        if (!$profesorEsExtracurricular) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors(['profesor_id' => 'El profesor seleccionado no es profesor extracurricular.']);
+        }
 
         if (strtotime($validated['hora_fin']) <= strtotime($validated['hora_inicio'])) {
             return redirect()->back()
