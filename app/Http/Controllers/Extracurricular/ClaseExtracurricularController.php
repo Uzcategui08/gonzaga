@@ -9,9 +9,21 @@ use App\Models\Profesor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class ClaseExtracurricularController extends Controller
 {
+    private function assertClasesExtracurricularesColumns(array $requiredColumns): void
+    {
+        $missing = array_values(array_filter($requiredColumns, fn($col) => !Schema::hasColumn('clases_extracurriculares', $col)));
+
+        if (!empty($missing)) {
+            throw ValidationException::withMessages([
+                'nombre' => 'Faltan columnas en la BD para guardar la clase: ' . implode(', ', $missing) . '. Ejecuta las migraciones.',
+            ]);
+        }
+    }
+
     public function create()
     {
         $profesores = Profesor::with('user:id,name,tipo')
@@ -46,6 +58,8 @@ class ClaseExtracurricularController extends Controller
             'estudiantes_id.*' => 'integer|exists:estudiantes,id',
         ]);
 
+        $this->assertClasesExtracurricularesColumns(['profesor_id', 'hora_inicio', 'hora_fin', 'dia_semana']);
+
         $profesorEsExtracurricular = Profesor::query()
             ->whereKey($validated['profesor_id'])
             ->whereHas('user', fn($query) => $query->where('tipo', 'profesor_extracurricular'))
@@ -65,17 +79,37 @@ class ClaseExtracurricularController extends Controller
 
         $activoColumn = Schema::hasColumn('clases_extracurriculares', 'activo') ? 'activo' : 'activa';
 
-        $clase = ClaseExtracurricular::create([
+        $data = [
             'nombre' => $validated['nombre'],
-            'profesor_id' => $validated['profesor_id'],
-            'aula' => $validated['aula'] ?? null,
-            'descripcion' => $validated['descripcion'] ?? null,
-            'hora_inicio' => $validated['hora_inicio'],
-            'hora_fin' => $validated['hora_fin'],
-            'dia_semana' => $validated['dia_semana'],
             $activoColumn => true,
             'created_by' => Auth::id(),
-        ]);
+        ];
+
+        if (Schema::hasColumn('clases_extracurriculares', 'profesor_id')) {
+            $data['profesor_id'] = $validated['profesor_id'];
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'aula')) {
+            $data['aula'] = $validated['aula'] ?? null;
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'descripcion')) {
+            $data['descripcion'] = $validated['descripcion'] ?? null;
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'hora_inicio')) {
+            $data['hora_inicio'] = $validated['hora_inicio'];
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'hora_fin')) {
+            $data['hora_fin'] = $validated['hora_fin'];
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'dia_semana')) {
+            $data['dia_semana'] = $validated['dia_semana'];
+        }
+
+        $clase = ClaseExtracurricular::create($data);
 
         $clase->estudiantes()->sync($validated['estudiantes_id']);
 
@@ -121,6 +155,8 @@ class ClaseExtracurricularController extends Controller
             'activo' => 'nullable|in:0,1',
         ]);
 
+        $this->assertClasesExtracurricularesColumns(['profesor_id', 'hora_inicio', 'hora_fin', 'dia_semana']);
+
         $profesorEsExtracurricular = Profesor::query()
             ->whereKey($validated['profesor_id'])
             ->whereHas('user', fn($query) => $query->where('tipo', 'profesor_extracurricular'))
@@ -140,16 +176,36 @@ class ClaseExtracurricularController extends Controller
 
         $activoColumn = Schema::hasColumn('clases_extracurriculares', 'activo') ? 'activo' : 'activa';
 
-        $clase->update([
+        $data = [
             'nombre' => $validated['nombre'],
-            'profesor_id' => $validated['profesor_id'],
-            'aula' => $validated['aula'] ?? null,
-            'descripcion' => $validated['descripcion'] ?? null,
-            'hora_inicio' => $validated['hora_inicio'],
-            'hora_fin' => $validated['hora_fin'],
-            'dia_semana' => $validated['dia_semana'],
             $activoColumn => $request->boolean('activo'),
-        ]);
+        ];
+
+        if (Schema::hasColumn('clases_extracurriculares', 'profesor_id')) {
+            $data['profesor_id'] = $validated['profesor_id'];
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'aula')) {
+            $data['aula'] = $validated['aula'] ?? null;
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'descripcion')) {
+            $data['descripcion'] = $validated['descripcion'] ?? null;
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'hora_inicio')) {
+            $data['hora_inicio'] = $validated['hora_inicio'];
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'hora_fin')) {
+            $data['hora_fin'] = $validated['hora_fin'];
+        }
+
+        if (Schema::hasColumn('clases_extracurriculares', 'dia_semana')) {
+            $data['dia_semana'] = $validated['dia_semana'];
+        }
+
+        $clase->update($data);
 
         $clase->estudiantes()->sync($validated['estudiantes_id']);
 
