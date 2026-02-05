@@ -33,7 +33,7 @@ class RoleSeeder extends Seeder
                 $roleToAssign = 'secretaria';
             } elseif ($user->tipo === 'pedagogia') {
                 $roleToAssign = 'pedagogia';
-            } elseif ($user->tipo === 'extracurricular') {
+            } elseif ($user->tipo === 'extracurricular' || $user->tipo === 'profesor_extracurricular') {
                 $roleToAssign = 'profesor_extracurricular';
             }
 
