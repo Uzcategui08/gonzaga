@@ -29,9 +29,12 @@
 
                 <div class="form-row">
                     <div class="form-group col-md-6">
-                        <label for="profesor_id" class="font-weight-bold">Profesor *</label>
+                        <label for="profesor_id" class="font-weight-bold">Profesor extracurricular *</label>
                         <select id="profesor_id" name="profesor_id" class="form-control form-control-lg select2 @error('profesor_id') is-invalid @enderror" required>
-                            <option value="">Seleccione un profesor</option>
+                            <option value="">Seleccione un profesor extracurricular</option>
+                            @if(($profesores ?? collect())->isEmpty())
+                                <option value="" disabled>No hay profesores extracurriculares</option>
+                            @endif
                             @foreach(($profesores ?? collect()) as $profesor)
                                 @php
                                     $selectedProfesor = old('profesor_id', $clase->profesor_id);
@@ -158,7 +161,7 @@
 @push('js')
 <script>
     $(document).ready(function() {
-        $('.select2').select2({
+        $('#estudiantes_id').select2({
             theme: 'bootstrap4',
             width: '100%',
             placeholder: 'Seleccione estudiantes'
@@ -167,7 +170,7 @@
         $('#profesor_id').select2({
             theme: 'bootstrap4',
             width: '100%',
-            placeholder: 'Seleccione un profesor'
+            placeholder: 'Seleccione un profesor extracurricular'
         });
     });
 </script>

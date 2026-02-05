@@ -12,16 +12,10 @@ use Illuminate\Support\Facades\Schema;
 
 class ClaseExtracurricularController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware(\App\Http\Middleware\CheckUserType::class . ':admin')->only(['create', 'store']);
-    }
-
     public function create()
     {
-        $profesores = Profesor::with('user:id,name')
-            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
+        $profesores = Profesor::with('user:id,name,tipo')
+            ->whereHas('user', fn($query) => $query->where('tipo', 'profesor_extracurricular'))
             ->orderBy('id')
             ->get();
 
@@ -54,7 +48,7 @@ class ClaseExtracurricularController extends Controller
 
         $profesorEsExtracurricular = Profesor::query()
             ->whereKey($validated['profesor_id'])
-            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
+            ->whereHas('user', fn($query) => $query->where('tipo', 'profesor_extracurricular'))
             ->exists();
 
         if (!$profesorEsExtracurricular) {
@@ -92,8 +86,8 @@ class ClaseExtracurricularController extends Controller
     {
         $clase->load('estudiantes');
 
-        $profesores = Profesor::with('user:id,name')
-            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
+        $profesores = Profesor::with('user:id,name,tipo')
+            ->whereHas('user', fn($query) => $query->where('tipo', 'profesor_extracurricular'))
             ->orderBy('id')
             ->get();
 
@@ -129,7 +123,7 @@ class ClaseExtracurricularController extends Controller
 
         $profesorEsExtracurricular = Profesor::query()
             ->whereKey($validated['profesor_id'])
-            ->whereHas('user', fn($query) => $query->role('profesor_extracurricular'))
+            ->whereHas('user', fn($query) => $query->where('tipo', 'profesor_extracurricular'))
             ->exists();
 
         if (!$profesorEsExtracurricular) {
