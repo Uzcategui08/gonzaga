@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Log;
 
 class ProfesorController extends Controller
 {
+    private const TIPOS_VALIDOS_PROFESOR = ['profesor', 'profesor_extracurricular'];
+
     /**
      * Muestra la lista de profesores
      */
@@ -16,15 +18,15 @@ class ProfesorController extends Controller
     {
         try {
             $profesores = Profesor::with('user')->orderBy('user_id')->get();
-            $users = User::where('tipo', 'profesor')->get();
-            
+            $users = User::whereIn('tipo', self::TIPOS_VALIDOS_PROFESOR)->get();
+
             if ($profesores === null) {
                 $profesores = collect([]);
             }
             if ($users === null) {
                 $users = collect([]);
             }
-            
+
             return view('profesores.index', [
                 'profesores' => $profesores,
                 'users' => $users
@@ -39,7 +41,7 @@ class ProfesorController extends Controller
      */
     public function create()
     {
-        $users = User::where('tipo', 'profesor')->get();
+        $users = User::whereIn('tipo', self::TIPOS_VALIDOS_PROFESOR)->get();
         return view('profesores.create', compact('users'));
     }
 
@@ -58,10 +60,10 @@ class ProfesorController extends Controller
             ]);
 
             $user = User::findOrFail($validated['user_id']);
-            if ($user->tipo !== 'profesor') {
+            if (!in_array($user->tipo, self::TIPOS_VALIDOS_PROFESOR, true)) {
                 return redirect()->back()
                     ->withInput()
-                    ->with('error', 'El usuario seleccionado no es de tipo profesor');
+                    ->with('error', 'El usuario seleccionado no es de tipo profesor/profesor extracurricular');
             }
 
             $profesor = new Profesor();
@@ -74,7 +76,6 @@ class ProfesorController extends Controller
 
             return redirect()->route('profesores.index')
                 ->with('success', 'Profesor creado exitosamente.');
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()
                 ->withInput()
